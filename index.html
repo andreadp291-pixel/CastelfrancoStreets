@@ -5,8 +5,8 @@
   <title>OSM Castelfranco - Proposed & Infrastructure</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 
-  //unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-  //fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
@@ -27,7 +27,9 @@
     }
 
     *, *::before, *::after { box-sizing: border-box; }
-    html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: 'Inter', sans-serif; }
+
+    /* FIX: rimosso overflow:hidden che causava il rendering a isole */
+    html, body { height: 100%; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
     #map { position: absolute; inset: 0; z-index: 1; }
 
     /* ─── TOPBAR ─── */
@@ -39,7 +41,6 @@
     }
     #topbar > * { pointer-events: auto; }
 
-    /* Counter chips */
     .chip {
       height: 42px; padding: 0 14px; border-radius: 30px;
       font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px;
@@ -119,7 +120,7 @@
       opacity: 0; pointer-events: none;
       transition: opacity .3s, transform .3s; white-space: nowrap;
     }
-    #status.show  { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #status.show    { opacity: 1; transform: translateX(-50%) translateY(0); }
     #status.error   { background: #dc2626; }
     #status.success { background: #16a34a; }
 
@@ -132,7 +133,6 @@
 </head>
 <body>
 
-  <!-- TOPBAR: solo contatori + refresh -->
   <div id="topbar">
     <span class="chip proposed" id="cntProposed" title="Strade proposte">— Proposte</span>
     <span class="chip cycle"    id="cntCycle"    title="Ciclabili">— Ciclabili</span>
@@ -142,7 +142,6 @@
 
   <div id="map"></div>
 
-  <!-- INFO PANEL -->
   <div id="infoPanel">
     <div class="info-header" id="infoHeader">
       <div style="display:flex;align-items:center;gap:8px">
@@ -167,6 +166,10 @@
     lucide.createIcons();
 
     const map = L.map('map', { zoomControl: false }).setView([45.671, 11.928], 14);
+
+    // FIX: ricalcola dimensioni container dopo il render del browser
+    setTimeout(() => map.invalidateSize(), 100);
+
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -205,17 +208,17 @@
     };
 
     function getType(tags) {
-      if (tags.highway === 'proposed')                       return 'proposed';
-      if (tags.highway === 'cycleway' || tags.cycleway)      return 'cycleway';
-      if (tags.footway === 'sidewalk')                       return 'sidewalk';
+      if (tags.highway === 'proposed')                  return 'proposed';
+      if (tags.highway === 'cycleway' || tags.cycleway) return 'cycleway';
+      if (tags.footway === 'sidewalk')                  return 'sidewalk';
       return 'default';
     }
 
     const TYPE_META = {
-      proposed: { label: 'Proposta',    bg: '#f97316' },
-      cycleway:  { label: 'Ciclabile',  bg: '#06b6d4' },
-      sidewalk:  { label: 'Marciapiede',bg: '#64748b' },
-      default:   { label: 'Via',         bg: '#1e293b' }
+      proposed: { label: 'Proposta',     bg: '#f97316' },
+      cycleway:  { label: 'Ciclabile',   bg: '#06b6d4' },
+      sidewalk:  { label: 'Marciapiede', bg: '#64748b' },
+      default:   { label: 'Via',          bg: '#1e293b' }
     };
 
     function openInfoPanel(feature) {
@@ -262,19 +265,19 @@
         out body; >; out skel qt;`;
 
       try {
-        const res  = await fetch('https://overpass-api.de/api/interpreter', {
+        const res   = await fetch('https://overpass-api.de/api/interpreter', {
           method: 'POST', body: 'data=' + encodeURIComponent(query)
         });
-        const data = await res.json();
+        const data  = await res.json();
         const geojson = osmtogeojson(data);
 
         L.geoJSON(geojson, {
           style: f => ({ ...STYLES[getType(f.properties)] }),
           onEachFeature: (feature, layer) => {
-            const tags  = feature.properties;
-            const type  = getType(tags);
-            const name  = tags.name || tags['name:it'] || '';
-            const base  = { ...STYLES[type] };
+            const tags = feature.properties;
+            const type = getType(tags);
+            const name = tags.name || tags['name:it'] || '';
+            const base = { ...STYLES[type] };
 
             if (name) layer.bindTooltip(name, { sticky: true, className: 'osm-tooltip', direction: 'top' });
             layer.on('mouseover', () => layer.setStyle({ ...base, weight: base.weight + 2, opacity: 1 }));
