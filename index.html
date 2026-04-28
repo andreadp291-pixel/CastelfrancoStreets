@@ -5,25 +5,25 @@
   <title>OSM Castelfranco - Proposed & Infrastructure</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  //unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+  //fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
     :root {
-      --primary:   #f97316;
-      --primary-glow: rgba(249,115,21,0.35);
-      --cycle:     #06b6d4;
-      --cycle-glow: rgba(6,182,212,0.35);
-      --sidewalk:  #94a3b8;
-      --sidewalk-glow: rgba(148,163,184,0.35);
-      --bg-dark:   #0f172a;
-      --bg-card:   rgba(255,255,255,0.92);
-      --text-main: #1e293b;
-      --text-light:#64748b;
-      --radius:    14px;
-      --shadow:    0 8px 32px rgba(0,0,0,0.12);
-      --border:    1px solid rgba(255,255,255,0.6);
+      --primary:      #f97316;
+      --primary-glow: rgba(249,115,22,0.35);
+      --cycle:        #06b6d4;
+      --cycle-glow:   rgba(6,182,212,0.35);
+      --sidewalk:     #94a3b8;
+      --sidewalk-glow:rgba(148,163,184,0.35);
+      --bg-dark:      #0f172a;
+      --bg-card:      rgba(255,255,255,0.92);
+      --text-main:    #1e293b;
+      --text-light:   #64748b;
+      --radius:       14px;
+      --shadow:       0 8px 32px rgba(0,0,0,0.12);
+      --border:       1px solid rgba(255,255,255,0.6);
     }
 
     *, *::before, *::after { box-sizing: border-box; }
@@ -33,53 +33,34 @@
     /* ─── TOPBAR ─── */
     #topbar {
       position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
-      width: calc(100% - 28px); max-width: 620px; z-index: 1000;
-      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      width: calc(100% - 28px); max-width: 480px; z-index: 1000;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
       pointer-events: none;
     }
     #topbar > * { pointer-events: auto; }
 
-    #titleBadge {
-      background: var(--bg-dark); color: #fff;
-      height: 50px; padding: 0 20px; border-radius: var(--radius);
-      display: flex; align-items: center; gap: 10px;
-      font-size: 15px; font-weight: 700; box-shadow: var(--shadow);
-      letter-spacing: -0.3px;
-    }
-    #titleBadge .dot {
-      width: 8px; height: 8px; border-radius: 50%; background: var(--primary);
-      box-shadow: 0 0 8px var(--primary);
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-
-    /* Counter chips (accanto al titolo) */
-    #counters {
-      display: flex; gap: 6px; align-items: center;
-    }
+    /* Counter chips */
     .chip {
-      height: 28px; padding: 0 10px; border-radius: 30px;
-      font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 5px;
-      color: white; letter-spacing: .3px;
+      height: 42px; padding: 0 14px; border-radius: 30px;
+      font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px;
+      color: white; letter-spacing: .3px; box-shadow: var(--shadow);
     }
-    .chip.proposed { background: var(--primary); box-shadow: 0 2px 8px var(--primary-glow); }
-    .chip.cycle    { background: var(--cycle);   box-shadow: 0 2px 8px var(--cycle-glow); }
-    .chip.sidewalk { background: var(--sidewalk);box-shadow: 0 2px 8px var(--sidewalk-glow); }
+    .chip.proposed { background: var(--primary); box-shadow: 0 2px 12px var(--primary-glow); }
+    .chip.cycle    { background: var(--cycle);   box-shadow: 0 2px 12px var(--cycle-glow); }
+    .chip.sidewalk { background: var(--sidewalk);box-shadow: 0 2px 12px var(--sidewalk-glow); }
 
-    .ctrl-row { display: flex; gap: 8px; }
     .ctrl-btn {
-      height: 50px; width: 50px; background: var(--bg-card);
+      height: 42px; width: 42px; background: var(--bg-card);
       backdrop-filter: blur(14px); border: var(--border);
       border-radius: var(--radius); display: flex; align-items: center;
       justify-content: center; cursor: pointer; box-shadow: var(--shadow);
-      transition: background .2s, transform .15s;
-      color: var(--text-main);
+      transition: background .2s, transform .15s; color: var(--text-main);
     }
     .ctrl-btn:hover { background: white; transform: scale(1.06); }
     .ctrl-btn.spinning svg { animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ─── LAYER CONTROL (override Leaflet) ─── */
+    /* ─── LAYER CONTROL ─── */
     .leaflet-control-layers {
       border-radius: 14px !important; box-shadow: var(--shadow) !important;
       border: var(--border) !important; padding: 8px 4px !important;
@@ -87,26 +68,11 @@
     }
     .leaflet-control-layers-overlays label { padding: 4px 8px; font-size: 12px; }
 
-    /* ─── LEGENDA ─── */
-    #legend {
-      position: fixed; bottom: 56px; right: 14px;
-      background: var(--bg-card); backdrop-filter: blur(14px);
-      border: var(--border); border-radius: var(--radius);
-      box-shadow: var(--shadow); z-index: 1000;
-      padding: 12px 16px; min-width: 170px;
-    }
-    #legend h4 { margin: 0 0 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--text-light); }
-    .leg-item { display: flex; align-items: center; gap: 9px; margin-bottom: 7px; font-size: 12px; font-weight: 500; color: var(--text-main); }
-    .leg-line { width: 28px; height: 4px; border-radius: 2px; flex-shrink: 0; }
-    .leg-line.proposed { background: var(--primary); border-top: 2px dashed var(--primary); background: none; }
-    .leg-line.cycle    { background: var(--cycle); }
-    .leg-line.sidewalk { background: var(--sidewalk); }
-
     /* ─── INFO PANEL ─── */
     #infoPanel {
-      position: fixed; top: 80px; right: 14px;
+      position: fixed; top: 74px; right: 14px;
       width: 320px; max-width: calc(100% - 28px);
-      max-height: calc(100vh - 110px);
+      max-height: calc(100vh - 100px);
       background: var(--bg-card); backdrop-filter: blur(18px);
       border: var(--border); border-radius: 20px;
       box-shadow: var(--shadow); z-index: 1000;
@@ -120,12 +86,10 @@
       padding: 14px 16px; border-radius: 20px 20px 0 0;
       display: flex; justify-content: space-between; align-items: center;
       font-weight: 700; font-size: 14px; color: white;
-      background: var(--bg-dark);
-      transition: background .3s;
+      background: var(--bg-dark); transition: background .3s;
     }
     .info-header .close-btn { cursor: pointer; opacity: .7; transition: opacity .2s; }
     .info-header .close-btn:hover { opacity: 1; }
-
     .info-type-badge {
       font-size: 10px; font-weight: 600; letter-spacing: .5px;
       padding: 2px 8px; border-radius: 20px; background: rgba(255,255,255,0.2);
@@ -138,8 +102,7 @@
     .tag-table th {
       background: #f8fafc; padding: 9px 12px;
       text-align: left; color: var(--text-light);
-      width: 38%; border-bottom: 1px solid #f1f5f9;
-      font-weight: 600;
+      width: 38%; border-bottom: 1px solid #f1f5f9; font-weight: 600;
     }
     .tag-table td {
       padding: 9px 12px; color: var(--text-main);
@@ -154,14 +117,12 @@
       border-radius: 30px; font-size: 13px; font-weight: 500;
       z-index: 2000; display: flex; align-items: center; gap: 8px;
       opacity: 0; pointer-events: none;
-      transition: opacity .3s, transform .3s;
-      white-space: nowrap;
+      transition: opacity .3s, transform .3s; white-space: nowrap;
     }
-    #status.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-    #status.error { background: #dc2626; }
+    #status.show  { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #status.error   { background: #dc2626; }
     #status.success { background: #16a34a; }
 
-    /* ─── Spinner ─── */
     .spinner {
       width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3);
       border-top-color: white; border-radius: 50%;
@@ -171,32 +132,15 @@
 </head>
 <body>
 
-  <!-- TOPBAR -->
+  <!-- TOPBAR: solo contatori + refresh -->
   <div id="topbar">
-    <div id="titleBadge">
-      <div class="dot"></div>
-      <span>OSM Castelfranco</span>
-    </div>
-    <div id="counters">
-      <span class="chip proposed" id="cntProposed" title="Strade proposte">— P</span>
-      <span class="chip cycle"    id="cntCycle"    title="Ciclabili">— C</span>
-      <span class="chip sidewalk" id="cntSidewalk" title="Marciapiedi">— M</span>
-    </div>
-    <div class="ctrl-row">
-      <button id="refreshBtn" class="ctrl-btn" title="Aggiorna dati"><i data-lucide="refresh-cw" width="18" height="18"></i></button>
-    </div>
+    <span class="chip proposed" id="cntProposed" title="Strade proposte">— Proposte</span>
+    <span class="chip cycle"    id="cntCycle"    title="Ciclabili">— Ciclabili</span>
+    <span class="chip sidewalk" id="cntSidewalk" title="Marciapiedi">— Marciapiedi</span>
+    <button id="refreshBtn" class="ctrl-btn" title="Aggiorna dati"><i data-lucide="refresh-cw" width="18" height="18"></i></button>
   </div>
 
-  <!-- MAP -->
   <div id="map"></div>
-
-  <!-- LEGENDA -->
-  <div id="legend">
-    <h4>Legenda</h4>
-    <div class="leg-item"><div class="leg-line proposed" style="border-top:3px dashed var(--primary);height:0"></div> Strade proposte</div>
-    <div class="leg-item"><div class="leg-line cycle"></div> Ciclabili</div>
-    <div class="leg-item"><div class="leg-line sidewalk"></div> Marciapiedi</div>
-  </div>
 
   <!-- INFO PANEL -->
   <div id="infoPanel">
@@ -215,7 +159,6 @@
     </div>
   </div>
 
-  <!-- STATUS TOAST -->
   <div id="status"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -223,29 +166,21 @@
   <script>
     lucide.createIcons();
 
-    /* ── MAP INIT ── */
     const map = L.map('map', { zoomControl: false }).setView([45.671, 11.928], 14);
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
-    const tiles = {
-      'Chiara': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-        { attribution: '© OSM © CARTO', maxZoom: 20 }),
-      'Scura': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-        { attribution: '© OSM © CARTO', maxZoom: 20 }),
-      'OSM Standard': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        { attribution: '© OSM', maxZoom: 19 })
-    };
-    tiles['Chiara'].addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors', maxZoom: 19
+    }).addTo(map);
 
-    /* ── LAYER GROUPS ── */
     const proposedLayer = L.layerGroup().addTo(map);
     const cycleLayer    = L.layerGroup().addTo(map);
     const sidewalkLayer = L.layerGroup().addTo(map);
 
-    L.control.layers(tiles, {
-      "<span style='color:var(--primary);font-weight:700'>Proposte</span>":   proposedLayer,
-      "<span style='color:var(--cycle);font-weight:700'>Ciclabili</span>":    cycleLayer,
-      "<span style='color:var(--sidewalk);font-weight:700'>Marciapiedi</span>": sidewalkLayer
+    L.control.layers(null, {
+      "<span style='color:#f97316;font-weight:700'>Proposte</span>":    proposedLayer,
+      "<span style='color:#06b6d4;font-weight:700'>Ciclabili</span>":   cycleLayer,
+      "<span style='color:#94a3b8;font-weight:700'>Marciapiedi</span>": sidewalkLayer
     }, { collapsed: false, position: 'bottomleft' }).addTo(map);
 
     /* ── STATUS ── */
@@ -256,34 +191,31 @@
       s.className = type ? `show ${type}` : 'show';
       s.innerHTML = type === 'loading'
         ? `<div class="spinner"></div>${msg}`
-        : `<i data-lucide="${type === 'success' ? 'check-circle' : type === 'error' ? 'alert-circle' : 'info'}" width="14" height="14" style="flex-shrink:0"></i>${msg}`;
+        : `<i data-lucide="${type === 'success' ? 'check-circle' : 'alert-circle'}" width="14" height="14" style="flex-shrink:0"></i>${msg}`;
       lucide.createIcons();
       if (duration) statusTimer = setTimeout(() => s.classList.remove('show'), duration);
     }
-    function clearStatus() { document.getElementById('status').classList.remove('show'); }
 
-    /* ── FEATURE STYLE ── */
+    /* ── STILI ── */
     const STYLES = {
       proposed: { color: '#f97316', weight: 5, dashArray: '10 6', lineCap: 'round', opacity: .9 },
       cycleway:  { color: '#06b6d4', weight: 4, lineCap: 'round', opacity: .9 },
       sidewalk:  { color: '#94a3b8', weight: 2.5, lineCap: 'round', opacity: .85 },
       default:   { color: '#475569', weight: 2 }
     };
-    const HOVER = { weight: 7, opacity: 1 };
 
     function getType(tags) {
-      if (tags.highway === 'proposed')  return 'proposed';
-      if (tags.highway === 'cycleway' || tags.cycleway) return 'cycleway';
-      if (tags.footway === 'sidewalk')  return 'sidewalk';
+      if (tags.highway === 'proposed')                       return 'proposed';
+      if (tags.highway === 'cycleway' || tags.cycleway)      return 'cycleway';
+      if (tags.footway === 'sidewalk')                       return 'sidewalk';
       return 'default';
     }
 
-    /* ── INFO PANEL ── */
     const TYPE_META = {
-      proposed: { label: 'Proposta',   color: '#f97316', bg: '#f97316' },
-      cycleway:  { label: 'Ciclabile', color: '#06b6d4', bg: '#06b6d4' },
-      sidewalk:  { label: 'Marciapiede', color: '#64748b', bg: '#64748b' },
-      default:   { label: 'Via',        color: '#1e293b', bg: '#1e293b' }
+      proposed: { label: 'Proposta',    bg: '#f97316' },
+      cycleway:  { label: 'Ciclabile',  bg: '#06b6d4' },
+      sidewalk:  { label: 'Marciapiede',bg: '#64748b' },
+      default:   { label: 'Via',         bg: '#1e293b' }
     };
 
     function openInfoPanel(feature) {
@@ -304,9 +236,15 @@
     /* ── LOAD DATA ── */
     let counts = { proposed: 0, cycle: 0, sidewalk: 0 };
 
+    function updateCounters() {
+      document.getElementById('cntProposed').textContent = counts.proposed + ' Proposte';
+      document.getElementById('cntCycle').textContent    = counts.cycle    + ' Ciclabili';
+      document.getElementById('cntSidewalk').textContent = counts.sidewalk + ' Marciapiedi';
+    }
+
     async function loadData() {
       document.getElementById('refreshBtn').classList.add('spinning');
-      setStatus('Interrogazione Overpass API…', 'loading');
+      setStatus('Caricamento dati…', 'loading');
       proposedLayer.clearLayers();
       cycleLayer.clearLayers();
       sidewalkLayer.clearLayers();
@@ -331,64 +269,47 @@
         const geojson = osmtogeojson(data);
 
         L.geoJSON(geojson, {
-          style: f => {
-            const t = getType(f.properties);
-            return { ...STYLES[t] };
-          },
+          style: f => ({ ...STYLES[getType(f.properties)] }),
           onEachFeature: (feature, layer) => {
-            const tags   = feature.properties;
-            const type   = getType(tags);
-            const name   = tags.name || tags['name:it'] || '';
+            const tags  = feature.properties;
+            const type  = getType(tags);
+            const name  = tags.name || tags['name:it'] || '';
+            const base  = { ...STYLES[type] };
 
-            /* tooltip hover */
             if (name) layer.bindTooltip(name, { sticky: true, className: 'osm-tooltip', direction: 'top' });
+            layer.on('mouseover', () => layer.setStyle({ ...base, weight: base.weight + 2, opacity: 1 }));
+            layer.on('mouseout',  () => layer.setStyle(base));
+            layer.on('click', e  => { L.DomEvent.stopPropagation(e); openInfoPanel(feature); });
 
-            /* hover glow */
-            const baseStyle = { ...STYLES[type] };
-            layer.on('mouseover', () => layer.setStyle({ ...baseStyle, ...HOVER }));
-            layer.on('mouseout',  () => layer.setStyle(baseStyle));
-
-            /* click → info */
-            layer.on('click', e => { L.DomEvent.stopPropagation(e); openInfoPanel(feature); });
-
-            /* smistamento */
-            if (type === 'proposed') { layer.addTo(proposedLayer); counts.proposed++; }
-            else if (type === 'cycleway') { layer.addTo(cycleLayer); counts.cycle++; }
+            if      (type === 'proposed') { layer.addTo(proposedLayer); counts.proposed++; }
+            else if (type === 'cycleway') { layer.addTo(cycleLayer);    counts.cycle++; }
             else if (type === 'sidewalk') { layer.addTo(sidewalkLayer); counts.sidewalk++; }
           }
         });
 
         updateCounters();
-        setStatus(`Caricati ${geojson.features.length} elementi`, 'success', 3000);
-      } catch (err) {
+        setStatus(`${geojson.features.length} elementi caricati`, 'success', 3000);
+      } catch {
         setStatus('Errore caricamento dati', 'error', 4000);
       } finally {
         document.getElementById('refreshBtn').classList.remove('spinning');
       }
     }
 
-    function updateCounters() {
-      document.getElementById('cntProposed').textContent = counts.proposed + ' P';
-      document.getElementById('cntCycle').textContent    = counts.cycle    + ' C';
-      document.getElementById('cntSidewalk').textContent = counts.sidewalk + ' M';
-    }
-
-    /* ── EVENTS ── */
     document.getElementById('closeInfo').onclick = () =>
       document.getElementById('infoPanel').classList.remove('active');
     document.getElementById('refreshBtn').onclick = loadData;
     map.on('click', () => document.getElementById('infoPanel').classList.remove('active'));
 
-    /* ── TOOLTIP STYLE (iniettato dinamicamente) ── */
-    const s = document.createElement('style');
-    s.textContent = `.osm-tooltip {
+    const style = document.createElement('style');
+    style.textContent = `.osm-tooltip {
       background: #0f172a; color: white; border: none;
       border-radius: 8px; padding: 4px 10px; font-size: 12px;
       font-family: Inter, sans-serif; font-weight: 600;
       box-shadow: 0 4px 12px rgba(0,0,0,.3);
     }
     .osm-tooltip::before { display: none; }`;
-    document.head.appendChild(s);
+    document.head.appendChild(style);
 
     loadData();
   </script>
