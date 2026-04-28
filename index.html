@@ -11,28 +11,25 @@
 
   <style>
     :root {
-      --primary:      #f97316;
-      --primary-glow: rgba(249,115,22,0.35);
-      --cycle:        #06b6d4;
-      --cycle-glow:   rgba(6,182,212,0.35);
-      --sidewalk:     #94a3b8;
-      --sidewalk-glow:rgba(148,163,184,0.35);
-      --bg-dark:      #0f172a;
-      --bg-card:      rgba(255,255,255,0.92);
-      --text-main:    #1e293b;
-      --text-light:   #64748b;
-      --radius:       14px;
-      --shadow:       0 8px 32px rgba(0,0,0,0.12);
-      --border:       1px solid rgba(255,255,255,0.6);
+      --primary:       #f97316;
+      --primary-glow:  rgba(249,115,22,0.35);
+      --cycle:         #06b6d4;
+      --cycle-glow:    rgba(6,182,212,0.35);
+      --sidewalk:      #94a3b8;
+      --sidewalk-glow: rgba(148,163,184,0.35);
+      --bg-dark:       #0f172a;
+      --bg-card:       rgba(255,255,255,0.92);
+      --text-main:     #1e293b;
+      --text-light:    #64748b;
+      --radius:        14px;
+      --shadow:        0 8px 32px rgba(0,0,0,0.12);
+      --border:        1px solid rgba(255,255,255,0.6);
     }
 
     *, *::before, *::after { box-sizing: border-box; }
-
-    /* FIX: rimosso overflow:hidden che causava il rendering a isole */
     html, body { height: 100%; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
     #map { position: absolute; inset: 0; z-index: 1; }
 
-    /* ─── TOPBAR ─── */
     #topbar {
       position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
       width: calc(100% - 28px); max-width: 480px; z-index: 1000;
@@ -44,7 +41,7 @@
     .chip {
       height: 42px; padding: 0 14px; border-radius: 30px;
       font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px;
-      color: white; letter-spacing: .3px; box-shadow: var(--shadow);
+      color: white; letter-spacing: .3px;
     }
     .chip.proposed { background: var(--primary); box-shadow: 0 2px 12px var(--primary-glow); }
     .chip.cycle    { background: var(--cycle);   box-shadow: 0 2px 12px var(--cycle-glow); }
@@ -61,7 +58,6 @@
     .ctrl-btn.spinning svg { animation: spin 1s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ─── LAYER CONTROL ─── */
     .leaflet-control-layers {
       border-radius: 14px !important; box-shadow: var(--shadow) !important;
       border: var(--border) !important; padding: 8px 4px !important;
@@ -72,7 +68,7 @@
     /* ─── INFO PANEL ─── */
     #infoPanel {
       position: fixed; top: 74px; right: 14px;
-      width: 320px; max-width: calc(100% - 28px);
+      width: 340px; max-width: calc(100% - 28px);
       max-height: calc(100vh - 100px);
       background: var(--bg-card); backdrop-filter: blur(18px);
       border: var(--border); border-radius: 20px;
@@ -89,29 +85,84 @@
       font-weight: 700; font-size: 14px; color: white;
       background: var(--bg-dark); transition: background .3s;
     }
-    .info-header .close-btn { cursor: pointer; opacity: .7; transition: opacity .2s; }
-    .info-header .close-btn:hover { opacity: 1; }
+    /* FIX X: il wrapper ha il cursore e l'handler, non l'icona */
+    #closeInfo {
+      cursor: pointer; opacity: .7; transition: opacity .2s;
+      display: flex; align-items: center; padding: 4px;
+      border-radius: 6px;
+    }
+    #closeInfo:hover { opacity: 1; background: rgba(255,255,255,0.15); }
+
     .info-type-badge {
       font-size: 10px; font-weight: 600; letter-spacing: .5px;
       padding: 2px 8px; border-radius: 20px; background: rgba(255,255,255,0.2);
       text-transform: uppercase;
     }
 
+    /* Sezione nome strada */
+    .info-road-name {
+      padding: 14px 16px 10px;
+      border-bottom: 2px solid #f1f5f9;
+    }
+    .info-road-name h3 {
+      margin: 0 0 4px; font-size: 15px; color: var(--text-main); font-weight: 700;
+    }
+    .info-road-name p {
+      margin: 0; font-size: 12px; color: var(--text-light);
+    }
+
     .info-content { overflow-y: auto; flex-grow: 1; border-radius: 0 0 20px 20px; }
-    .tag-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .tag-table tr:last-child td, .tag-table tr:last-child th { border-bottom: none; }
+
+    /* Sezioni raggruppate */
+    .info-section { padding: 10px 16px 4px; }
+    .info-section-title {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .8px; color: var(--text-light); margin-bottom: 6px;
+    }
+    .info-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 7px 0; border-bottom: 1px solid #f1f5f9; gap: 10px;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-label {
+      font-size: 12px; color: var(--text-light); font-weight: 500;
+      display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+    }
+    .info-label svg { flex-shrink: 0; }
+    .info-value {
+      font-size: 12px; color: var(--text-main); font-weight: 600;
+      text-align: right; word-break: break-word;
+    }
+    .info-badge-val {
+      font-size: 11px; font-weight: 700; padding: 2px 8px;
+      border-radius: 20px; white-space: nowrap;
+    }
+    .badge-green  { background: #dcfce7; color: #16a34a; }
+    .badge-red    { background: #fee2e2; color: #dc2626; }
+    .badge-blue   { background: #dbeafe; color: #2563eb; }
+    .badge-orange { background: #ffedd5; color: #ea580c; }
+    .badge-gray   { background: #f1f5f9; color: #475569; }
+
+    /* Raw tags toggle */
+    #rawToggle {
+      display: flex; align-items: center; gap: 6px;
+      padding: 10px 16px; cursor: pointer; font-size: 11px;
+      color: var(--text-light); font-weight: 600;
+      border-top: 1px solid #f1f5f9; user-select: none;
+    }
+    #rawToggle:hover { color: var(--text-main); }
+    #rawTags { display: none; }
+    #rawTags.open { display: block; }
+    .tag-table { width: 100%; border-collapse: collapse; font-size: 11px; }
     .tag-table th {
-      background: #f8fafc; padding: 9px 12px;
-      text-align: left; color: var(--text-light);
-      width: 38%; border-bottom: 1px solid #f1f5f9; font-weight: 600;
+      background: #f8fafc; padding: 7px 12px; text-align: left;
+      color: var(--text-light); width: 38%; border-bottom: 1px solid #f1f5f9; font-weight: 600;
     }
     .tag-table td {
-      padding: 9px 12px; color: var(--text-main);
+      padding: 7px 12px; color: var(--text-main);
       border-bottom: 1px solid #f1f5f9; word-break: break-all;
     }
-    .tag-table tr:hover td, .tag-table tr:hover th { background: #f0f9ff; }
 
-    /* ─── STATUS TOAST ─── */
     #status {
       position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%) translateY(6px);
       background: var(--bg-dark); color: white; padding: 10px 20px;
@@ -134,10 +185,10 @@
 <body>
 
   <div id="topbar">
-    <span class="chip proposed" id="cntProposed" title="Strade proposte">— Proposte</span>
-    <span class="chip cycle"    id="cntCycle"    title="Ciclabili">— Ciclabili</span>
-    <span class="chip sidewalk" id="cntSidewalk" title="Marciapiedi">— Marciapiedi</span>
-    <button id="refreshBtn" class="ctrl-btn" title="Aggiorna dati"><i data-lucide="refresh-cw" width="18" height="18"></i></button>
+    <span class="chip proposed" id="cntProposed">— Proposte</span>
+    <span class="chip cycle"    id="cntCycle">— Ciclabili</span>
+    <span class="chip sidewalk" id="cntSidewalk">— Marciapiedi</span>
+    <button id="refreshBtn" class="ctrl-btn" title="Aggiorna"><i data-lucide="refresh-cw" width="18" height="18"></i></button>
   </div>
 
   <div id="map"></div>
@@ -145,16 +196,32 @@
   <div id="infoPanel">
     <div class="info-header" id="infoHeader">
       <div style="display:flex;align-items:center;gap:8px">
-        <i data-lucide="info" width="15" height="15"></i>
+        <i data-lucide="map-pin" width="15" height="15"></i>
         <span id="infoTitle">Dettagli</span>
       </div>
-      <div style="display:flex;align-items:center;gap:10px">
+      <div style="display:flex;align-items:center;gap:8px">
         <span class="info-type-badge" id="infoBadge"></span>
-        <i data-lucide="x" class="close-btn" id="closeInfo" width="16" height="16"></i>
+        <!-- FIX: listener sul div wrapper, non sull'icona lucide -->
+        <div id="closeInfo"><i data-lucide="x" width="16" height="16"></i></div>
       </div>
     </div>
+
+    <div id="infoRoadName" class="info-road-name" style="display:none">
+      <h3 id="infoRoadNameText"></h3>
+      <p id="infoRoadNameSub"></p>
+    </div>
+
     <div class="info-content">
-      <table class="tag-table" id="infoTable"></table>
+      <div id="infoSections"></div>
+
+      <div id="rawToggle">
+        <i data-lucide="code" width="13" height="13"></i>
+        Dati tecnici grezzi
+        <i data-lucide="chevron-down" width="13" height="13" id="rawChevron"></i>
+      </div>
+      <div id="rawTags">
+        <table class="tag-table" id="infoTable"></table>
+      </div>
     </div>
   </div>
 
@@ -165,13 +232,10 @@
   <script>
     lucide.createIcons();
 
+    // ── MAP ──
     const map = L.map('map', { zoomControl: false }).setView([45.671, 11.928], 14);
-
-    // FIX: ricalcola dimensioni container dopo il render del browser
     setTimeout(() => map.invalidateSize(), 100);
-
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
-
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors', maxZoom: 19
     }).addTo(map);
@@ -186,7 +250,7 @@
       "<span style='color:#94a3b8;font-weight:700'>Marciapiedi</span>": sidewalkLayer
     }, { collapsed: false, position: 'bottomleft' }).addTo(map);
 
-    /* ── STATUS ── */
+    // ── STATUS ──
     let statusTimer;
     function setStatus(msg, type = '', duration = 0) {
       clearTimeout(statusTimer);
@@ -199,7 +263,7 @@
       if (duration) statusTimer = setTimeout(() => s.classList.remove('show'), duration);
     }
 
-    /* ── STILI ── */
+    // ── STILI MAPPA ──
     const STYLES = {
       proposed: { color: '#f97316', weight: 5, dashArray: '10 6', lineCap: 'round', opacity: .9 },
       cycleway:  { color: '#06b6d4', weight: 4, lineCap: 'round', opacity: .9 },
@@ -215,28 +279,243 @@
     }
 
     const TYPE_META = {
-      proposed: { label: 'Proposta',     bg: '#f97316' },
-      cycleway:  { label: 'Ciclabile',   bg: '#06b6d4' },
-      sidewalk:  { label: 'Marciapiede', bg: '#64748b' },
-      default:   { label: 'Via',          bg: '#1e293b' }
+      proposed: { label: 'Strada proposta', bg: '#f97316' },
+      cycleway:  { label: 'Pista ciclabile', bg: '#06b6d4' },
+      sidewalk:  { label: 'Marciapiede',     bg: '#64748b' },
+      default:   { label: 'Via',              bg: '#1e293b' }
     };
 
+    // ── DIZIONARIO ITALIANO TAG OSM ──
+    const TAG_LABELS = {
+      // Identità
+      'name':        { it: 'Nome',           icon: 'tag' },
+      'name:it':     { it: 'Nome (IT)',       icon: 'tag' },
+      'ref':         { it: 'Codice/Ref.',    icon: 'hash' },
+      'alt_name':    { it: 'Nome alternativo',icon: 'tag' },
+      'official_name':{ it: 'Nome ufficiale', icon: 'tag' },
+      // Tipo e infrastruttura
+      'highway':     { it: 'Tipo di via',    icon: 'road' },
+      'cycleway':    { it: 'Tipo ciclabile', icon: 'bike' },
+      'footway':     { it: 'Tipo percorso',  icon: 'footprints' },
+      'proposed':    { it: 'Proposta',       icon: 'clock' },
+      'construction':{ it: 'In costruzione', icon: 'hard-hat' },
+      // Caratteristiche fisiche
+      'surface':     { it: 'Superficie',     icon: 'layers' },
+      'width':       { it: 'Larghezza',      icon: 'ruler' },
+      'lanes':       { it: 'Corsie',         icon: 'align-justify' },
+      'maxspeed':    { it: 'Velocità max',   icon: 'gauge' },
+      'lit':         { it: 'Illuminazione',  icon: 'lamp' },
+      'incline':     { it: 'Pendenza',       icon: 'trending-up' },
+      'smoothness':  { it: 'Qualità fondo',  icon: 'activity' },
+      'segregated':  { it: 'Separato',       icon: 'separator-horizontal' },
+      // Accesso
+      'access':      { it: 'Accesso',        icon: 'lock' },
+      'bicycle':     { it: 'Biciclette',     icon: 'bike' },
+      'foot':        { it: 'Pedoni',         icon: 'footprints' },
+      'motor_vehicle':{ it: 'Veicoli a motore', icon: 'car' },
+      'oneway':      { it: 'Senso unico',    icon: 'arrow-right' },
+      'oneway:bicycle':{ it: 'Senso unico bici', icon: 'arrow-right' },
+      // Stato
+      'condition':   { it: 'Condizioni',     icon: 'alert-circle' },
+      'start_date':  { it: 'Data inizio',    icon: 'calendar' },
+      'opening_date':{ it: 'Data apertura',  icon: 'calendar-check' },
+      'operator':    { it: 'Gestore',        icon: 'building' },
+      'source':      { it: 'Fonte dati',     icon: 'database' },
+      'note':        { it: 'Note',           icon: 'message-square' },
+      'description': { it: 'Descrizione',    icon: 'file-text' },
+    };
+
+    const VALUE_LABELS = {
+      // highway
+      'proposed':    'Proposta',
+      'cycleway':    'Pista ciclabile',
+      'footway':     'Percorso pedonale',
+      'path':        'Sentiero',
+      'residential': 'Strada residenziale',
+      'primary':     'Strada principale',
+      'secondary':   'Strada secondaria',
+      'tertiary':    'Strada locale',
+      'service':     'Accesso privato',
+      'track':       'Pista sterrata',
+      'steps':       'Scalinata',
+      'pedestrian':  'Zona pedonale',
+      'living_street':'Zona 30',
+      // surface
+      'asphalt':     'Asfalto',
+      'concrete':    'Calcestruzzo',
+      'paving_stones':'Pavé / Sampietrini',
+      'gravel':      'Ghiaia',
+      'unpaved':     'Non asfaltato',
+      'dirt':        'Terra battuta',
+      'grass':       'Erba',
+      'cobblestone': 'Selciato',
+      'wood':        'Legno',
+      'compacted':   'Stabilizzato',
+      // accesso
+      'yes':         'Sì',
+      'no':          'No',
+      'private':     'Privato',
+      'permissive':  'Consentito',
+      'designated':  'Dedicato',
+      'dismount':    'Solo a mano',
+      'destination': 'Solo destinazione',
+      'customers':   'Solo clienti',
+      // oneway
+      '-1':          'Senso inverso',
+      // lit
+      'automatic':   'Automatica',
+      // smoothness
+      'excellent':   'Eccellente',
+      'good':        'Buono',
+      'intermediate':'Discreto',
+      'bad':         'Scarso',
+      'very_bad':    'Pessimo',
+      'horrible':    'Impraticabile',
+      // segregated
+      'sidewalk':    'Marciapiede',
+      'lane':        'Corsia',
+      'track':       'Pista separata',
+      'share_busway':'Con autobus',
+      'shared_lane': 'Corsia condivisa',
+      'opposite':    'Contromano consentito',
+    };
+
+    // Gruppi tematici per l'info panel
+    const GROUPS = [
+      {
+        title: 'Caratteristiche',
+        icon: 'info',
+        keys: ['highway','cycleway','footway','surface','width','lanes','lit','smoothness','incline','segregated']
+      },
+      {
+        title: 'Accesso',
+        icon: 'lock',
+        keys: ['access','bicycle','foot','motor_vehicle','oneway','oneway:bicycle']
+      },
+      {
+        title: 'Stato & Progetto',
+        icon: 'calendar',
+        keys: ['condition','start_date','opening_date','operator','note','description']
+      }
+    ];
+
+    function translateValue(key, val) {
+      if (!val || val === 'null') return null;
+      return VALUE_LABELS[val] || val;
+    }
+
+    function valueBadge(key, val) {
+      const v = translateValue(key, val);
+      if (!v) return null;
+      let cls = 'badge-gray';
+      if (['yes','designated','permissive','excellent','good'].includes(val)) cls = 'badge-green';
+      if (['no','private','bad','very_bad','horrible'].includes(val))         cls = 'badge-red';
+      if (['proposed','construction'].includes(val))                           cls = 'badge-orange';
+      if (['cycleway','footway','pedestrian'].includes(val))                   cls = 'badge-blue';
+      return `<span class="info-badge-val ${cls}">${v}</span>`;
+    }
+
+    // ── APRI INFO PANEL ──
     function openInfoPanel(feature) {
       const tags = feature.properties;
       const type = getType(tags);
       const meta = TYPE_META[type];
+
+      // Header
       document.getElementById('infoHeader').style.background = meta.bg;
-      document.getElementById('infoTitle').textContent = tags.name || tags['name:it'] || 'Dettagli';
       document.getElementById('infoBadge').textContent = meta.label;
-      const rows = Object.keys(tags).sort()
+
+      // Nome strada
+      const name = tags.name || tags['name:it'] || tags['alt_name'] || '';
+      const sub  = tags.ref ? `Riferimento: ${tags.ref}` : (tags['name:it'] && tags.name ? tags['name:it'] : '');
+      const nameBlock = document.getElementById('infoRoadName');
+      if (name) {
+        document.getElementById('infoRoadNameText').textContent = name;
+        document.getElementById('infoRoadNameSub').textContent  = sub;
+        nameBlock.style.display = 'block';
+        document.getElementById('infoTitle').textContent = name;
+      } else {
+        nameBlock.style.display = 'none';
+        document.getElementById('infoTitle').textContent = meta.label;
+      }
+
+      // Sezioni tematiche
+      const sectionsEl = document.getElementById('infoSections');
+      let sectionsHTML = '';
+      const usedKeys = new Set(['name','name:it','alt_name','official_name','ref']);
+
+      GROUPS.forEach(group => {
+        const rows = [];
+        group.keys.forEach(key => {
+          const val = tags[key];
+          if (!val || val === 'null') return;
+          usedKeys.add(key);
+          const info  = TAG_LABELS[key] || { it: key, icon: 'tag' };
+          const badge = valueBadge(key, val);
+          rows.push(`
+            <div class="info-row">
+              <span class="info-label">
+                <i data-lucide="${info.icon}" width="13" height="13"></i>
+                ${info.it}
+              </span>
+              <span class="info-value">${badge || translateValue(key, val) || val}</span>
+            </div>`);
+        });
+        if (rows.length) {
+          sectionsHTML += `
+            <div class="info-section">
+              <div class="info-section-title">${group.title}</div>
+              ${rows.join('')}
+            </div>`;
+        }
+      });
+
+      // Eventuali tag non categorizzati (esclusi tecnici OSM)
+      const skipKeys = new Set(['id','type','@id','@timestamp','@version','@changeset','@uid','@user']);
+      const extraRows = [];
+      Object.keys(tags).sort().forEach(key => {
+        if (usedKeys.has(key) || skipKeys.has(key)) return;
+        const val = tags[key];
+        if (!val || val === 'null') return;
+        const info = TAG_LABELS[key] || { it: key, icon: 'tag' };
+        const badge = valueBadge(key, val);
+        extraRows.push(`
+          <div class="info-row">
+            <span class="info-label">
+              <i data-lucide="${info.icon}" width="13" height="13"></i>
+              ${info.it}
+            </span>
+            <span class="info-value">${badge || translateValue(key, val) || val}</span>
+          </div>`);
+      });
+      if (extraRows.length) {
+        sectionsHTML += `<div class="info-section"><div class="info-section-title">Altre info</div>${extraRows.join('')}</div>`;
+      }
+
+      sectionsEl.innerHTML = sectionsHTML || `<div style="padding:16px;font-size:13px;color:var(--text-light)">Nessun dettaglio disponibile.</div>`;
+
+      // Raw tags
+      const rawRows = Object.keys(tags).sort()
         .filter(k => tags[k] !== null && tags[k] !== '')
         .map(k => `<tr><th>${k}</th><td>${tags[k]}</td></tr>`).join('');
-      document.getElementById('infoTable').innerHTML = rows;
+      document.getElementById('infoTable').innerHTML = rawRows;
+      document.getElementById('rawTags').classList.remove('open');
+      document.getElementById('rawChevron').setAttribute('data-lucide','chevron-down');
+
       document.getElementById('infoPanel').classList.add('active');
-      lucide.createIcons();
+      lucide.createIcons(); // sicuro: la X è sul wrapper #closeInfo, non sull'icona
     }
 
-    /* ── LOAD DATA ── */
+    // ── RAW TOGGLE ──
+    document.getElementById('rawToggle').addEventListener('click', () => {
+      const raw = document.getElementById('rawTags');
+      const chev = document.getElementById('rawChevron');
+      raw.classList.toggle('open');
+      chev.setAttribute('data-lucide', raw.classList.contains('open') ? 'chevron-up' : 'chevron-down');
+      lucide.createIcons();
+    });
+
+    // ── LOAD DATA ──
     let counts = { proposed: 0, cycle: 0, sidewalk: 0 };
 
     function updateCounters() {
@@ -248,9 +527,7 @@
     async function loadData() {
       document.getElementById('refreshBtn').classList.add('spinning');
       setStatus('Caricamento dati…', 'loading');
-      proposedLayer.clearLayers();
-      cycleLayer.clearLayers();
-      sidewalkLayer.clearLayers();
+      proposedLayer.clearLayers(); cycleLayer.clearLayers(); sidewalkLayer.clearLayers();
       counts = { proposed: 0, cycle: 0, sidewalk: 0 };
       updateCounters();
 
@@ -265,10 +542,10 @@
         out body; >; out skel qt;`;
 
       try {
-        const res   = await fetch('https://overpass-api.de/api/interpreter', {
+        const res    = await fetch('https://overpass-api.de/api/interpreter', {
           method: 'POST', body: 'data=' + encodeURIComponent(query)
         });
-        const data  = await res.json();
+        const data   = await res.json();
         const geojson = osmtogeojson(data);
 
         L.geoJSON(geojson, {
@@ -299,20 +576,23 @@
       }
     }
 
-    document.getElementById('closeInfo').onclick = () =>
-      document.getElementById('infoPanel').classList.remove('active');
-    document.getElementById('refreshBtn').onclick = loadData;
+    // ── EVENTI ──
+    // FIX X: listener sul wrapper div, sopravvive a lucide.createIcons()
+    document.getElementById('closeInfo').addEventListener('click', () =>
+      document.getElementById('infoPanel').classList.remove('active'));
+    document.getElementById('refreshBtn').addEventListener('click', loadData);
     map.on('click', () => document.getElementById('infoPanel').classList.remove('active'));
 
-    const style = document.createElement('style');
-    style.textContent = `.osm-tooltip {
+    // Tooltip style
+    const s = document.createElement('style');
+    s.textContent = `.osm-tooltip {
       background: #0f172a; color: white; border: none;
       border-radius: 8px; padding: 4px 10px; font-size: 12px;
       font-family: Inter, sans-serif; font-weight: 600;
       box-shadow: 0 4px 12px rgba(0,0,0,.3);
     }
     .osm-tooltip::before { display: none; }`;
-    document.head.appendChild(style);
+    document.head.appendChild(s);
 
     loadData();
   </script>
