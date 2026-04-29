@@ -497,9 +497,9 @@
     </div>
   </div>
 
-  <!-- LEGEND PANEL -->
-  <div id="legendPanel">
-    <div class="panel-header">
+<!-- LEGEND PANEL -->
+<div id="legendPanel">
+  <div class="panel-header">
     <div style="display:flex;align-items:center;gap:8px">
       <i data-lucide="info" width="15" height="15"></i>
       <span>Informazioni</span>
@@ -509,80 +509,81 @@
     </div>
   </div>
 
-<div class="legend-section" style="border-bottom: 1px solid #f1f5f9; padding-bottom: 16px;">
-  <div class="legend-section-title">OSM Castelfranco Veneto</div>
-  <p style="font-size:13px;color:var(--text-main);font-weight:600;margin:0 0 6px">
-    Mappa interattiva dell'infrastruttura viaria
-  </p>
-  <p style="font-size:12px;color:var(--text-light);line-height:1.55;margin:0 0 10px">
-    Visualizza i dati <strong>OpenStreetMap</strong> relativi alle infrastrutture di mobilità
-    del territorio di Castelfranco Veneto: strade proposte, piste ciclabili, percorsi pedonali,
-    attraversamenti, cantieri, limiti di velocità e restrizioni per i mezzi pesanti.
-  </p>
-  <p style="font-size:12px;color:var(--text-light);line-height:1.55;margin:0 0 10px">
-    I dati vengono scaricati in tempo reale da <strong>Overpass API</strong> ogni volta che
-    premi il pulsante di aggiornamento 🔄. Clicca su qualsiasi segmento sulla mappa per
-    vedere i dettagli del tratto selezionato.
-  </p>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
-    <div style="background:#f8fafc;border-radius:10px;padding:10px;font-size:11px">
-      <div style="font-weight:700;color:var(--text-main);margin-bottom:4px">🗺️ Layer disponibili</div>
-      <div style="color:var(--text-light);line-height:1.6">
-        Strade proposte<br>
-        Piste ciclabili<br>
-        Percorsi pedonali<br>
-        Attraversamenti<br>
-        In costruzione<br>
-        Velocità massime<br>
-        Camion / HGV
-      </div>
-    </div>
-    <div style="background:#f8fafc;border-radius:10px;padding:10px;font-size:11px">
-      <div style="font-weight:700;color:var(--text-main);margin-bottom:4px">ℹ️ Come usare</div>
-      <div style="color:var(--text-light);line-height:1.6">
-        Attiva i layer dal controllo in basso a sinistra<br><br>
-        Clicca un segmento per i dettagli<br><br>
-        🔄 per aggiornare i dati
-      </div>
-    </div>
-  </div>
-  <div style="margin-top:10px;padding:8px 10px;background:#eff6ff;border-radius:8px;font-size:11px;color:#1d4ed8">
-    📡 Fonte: <strong>OpenStreetMap</strong> — dati aperti © contributori OSM
-  </div>
-</div>
+  <!-- ✅ legend-content racchiude TUTTO: descrizione + legende -->
+  <div class="legend-content">
 
-    <div class="legend-content">
-      <div class="legend-section">
-        <div class="legend-section-title">Velocità massime</div>
-        <div class="legend-list">
-          <div class="legend-item"><span class="legend-line" style="border-color:#86efac"></span><span>10 km/h o meno</span></div>
-          <div class="legend-item"><span class="legend-line" style="border-color:#22c55e"></span><span>30 km/h</span></div>
-          <div class="legend-item"><span class="legend-line" style="border-color:#facc15"></span><span>50 km/h</span></div>
-          <div class="legend-item"><span class="legend-line" style="border-color:#fb923c"></span><span>70 km/h</span></div>
-          <div class="legend-item"><span class="legend-line" style="border-color:#f87171"></span><span>90 km/h</span></div>
-          <div class="legend-item"><span class="legend-line" style="border-color:#dc2626"></span><span>Oltre 90 km/h</span></div>
+    <!-- Sezione descrizione app -->
+    <div class="legend-section" style="border-bottom: 1px solid #f1f5f9;">
+      <div class="legend-section-title">OSM Castelfranco Veneto</div>
+      <p style="font-size:13px;color:var(--text-main);font-weight:600;margin:0 0 6px">
+        Mappa interattiva dell'infrastruttura viaria
+      </p>
+      <p style="font-size:12px;color:var(--text-light);line-height:1.55;margin:0 0 10px">
+        Visualizza i dati <strong>OpenStreetMap</strong> relativi alle infrastrutture di mobilità
+        del territorio di Castelfranco Veneto: strade proposte, piste ciclabili, percorsi pedonali,
+        attraversamenti, cantieri, limiti di velocità e restrizioni per i mezzi pesanti.
+      </p>
+      <p style="font-size:12px;color:var(--text-light);line-height:1.55;margin:0 0 10px">
+        I dati vengono scaricati in tempo reale da <strong>Overpass API</strong> ogni volta che
+        premi il pulsante di aggiornamento 🔄. Clicca su qualsiasi segmento sulla mappa per
+        vedere i dettagli del tratto selezionato.
+      </p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+        <div style="background:#f8fafc;border-radius:10px;padding:10px;font-size:11px">
+          <div style="font-weight:700;color:var(--text-main);margin-bottom:4px">🗺️ Layer disponibili</div>
+          <div style="color:var(--text-light);line-height:1.6">
+            Strade proposte<br>Piste ciclabili<br>Percorsi pedonali<br>
+            Attraversamenti<br>In costruzione<br>Velocità massime<br>Camion / HGV
+          </div>
         </div>
-        <div class="legend-note">
-          Mostra solo strade con tag <code>maxspeed</code>; i binari non vengono inclusi nel layer velocità.
+        <div style="background:#f8fafc;border-radius:10px;padding:10px;font-size:11px">
+          <div style="font-weight:700;color:var(--text-main);margin-bottom:4px">ℹ️ Come usare</div>
+          <div style="color:var(--text-light);line-height:1.6">
+            Attiva i layer dal controllo in basso a sinistra<br><br>
+            Clicca un segmento per i dettagli<br><br>
+            🔄 per aggiornare i dati
+          </div>
         </div>
       </div>
-
-      <div class="legend-section">
-        <div class="legend-section-title">Camion / HGV</div>
-        <div class="legend-list">
-          <div class="legend-item"><span class="legend-line" style="border-color:#22c55e"></span><span>Libero: <code>hgv=yes</code> / <code>goods=yes</code></span></div>
-          <div class="legend-item"><span class="legend-line" style="border-color:#3b82f6"></span><span>Designato / consigliato</span></div>
-          <div class="legend-item"><span class="legend-line" style="border-color:#d946ef"></span><span>Solo destinazione / delivery / local</span></div>
-          <div class="legend-item"><span class="legend-line" style="border-color:#f59e0b"></span><span>Limiti fisici: altezza, peso, larghezza, assi</span></div>
-          <div class="legend-item"><span class="legend-line" style="border-color:#ef4444"></span><span>Divieto camion / merci</span></div>
-          <div class="legend-item"><span class="legend-line dashed" style="border-color:#0f766e"></span><span>Condizioni o restrizioni speciali</span></div>
-        </div>
-        <div class="legend-note">
-          Il layer camion usa i tag classici di accesso e limitazione dei mezzi pesanti, come <code>hgv</code>, <code>goods</code>, <code>maxweight</code>, <code>maxheight</code>, <code>hazmat</code> e affini.
-        </div>
+      <div style="margin-top:10px;padding:8px 10px;background:#eff6ff;border-radius:8px;font-size:11px;color:#1d4ed8">
+        📡 Fonte: <strong>OpenStreetMap</strong> — dati aperti © contributori OSM
       </div>
     </div>
-  </div>
+
+    <!-- Legenda velocità -->
+    <div class="legend-section">
+      <div class="legend-section-title">Velocità massime</div>
+      <div class="legend-list">
+        <div class="legend-item"><span class="legend-line" style="border-color:#86efac"></span><span>≤ 10 km/h</span></div>
+        <div class="legend-item"><span class="legend-line" style="border-color:#22c55e"></span><span>≤ 30 km/h</span></div>
+        <div class="legend-item"><span class="legend-line" style="border-color:#facc15"></span><span>≤ 50 km/h</span></div>
+        <div class="legend-item"><span class="legend-line" style="border-color:#fb923c"></span><span>≤ 70 km/h</span></div>
+        <div class="legend-item"><span class="legend-line" style="border-color:#f87171"></span><span>≤ 90 km/h</span></div>
+        <div class="legend-item"><span class="legend-line" style="border-color:#dc2626"></span><span>Oltre 90 km/h</span></div>
+      </div>
+      <div class="legend-note">
+        Mostra solo strade con tag <code>maxspeed</code>; i binari non vengono inclusi.
+      </div>
+    </div>
+
+    <!-- Legenda HGV -->
+    <div class="legend-section">
+      <div class="legend-section-title">Camion / HGV</div>
+      <div class="legend-list">
+        <div class="legend-item"><span class="legend-line" style="border-color:#22c55e"></span><span>Libero: <code>hgv=yes</code> / <code>goods=yes</code></span></div>
+        <div class="legend-item"><span class="legend-line" style="border-color:#3b82f6"></span><span>Designato / consigliato</span></div>
+        <div class="legend-item"><span class="legend-line" style="border-color:#d946ef"></span><span>Solo destinazione / delivery / local</span></div>
+        <div class="legend-item"><span class="legend-line" style="border-color:#f59e0b"></span><span>Limiti fisici: altezza, peso, larghezza, assi</span></div>
+        <div class="legend-item"><span class="legend-line" style="border-color:#ef4444"></span><span>Divieto camion / merci</span></div>
+        <div class="legend-item"><span class="legend-line dashed" style="border-color:#0f766e"></span><span>Condizioni o restrizioni speciali</span></div>
+      </div>
+      <div class="legend-note">
+        Tag usati: <code>hgv</code>, <code>goods</code>, <code>maxweight</code>, <code>maxheight</code>, <code>hazmat</code> e affini.
+      </div>
+    </div>
+
+  </div><!-- fine legend-content -->
+</div><!-- fine legendPanel -->
 
   <div id="status"></div>
 
