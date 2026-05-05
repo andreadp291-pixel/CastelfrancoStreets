@@ -26,6 +26,10 @@
       --shadow:        0 8px 32px rgba(0,0,0,0.13);
       --border:        1px solid rgba(255,255,255,0.65);
       --panel-w:       340px;
+      --ref-ss: #dc2626;
+      --ref-sr: #7c3aed;
+      --ref-sp: #d97706;
+      --ref-sc: #0369a1;
     }
 
     *, *::before, *::after { box-sizing: border-box; }
@@ -453,6 +457,7 @@
     <span class="chip construction" id="cnt4">— Costruzione</span>
     <span class="chip maxspeed"     id="cnt5">— Velocità</span>
     <span class="chip hgv"          id="cnt6">— Camion</span>
+    <span class="chip" id="cnt7" style="background:#dc2626">— Ref Strade</span>
 
   <button id="legendBtn" class="ctrl-btn" title="Info app">
     <i data-lucide="info" width="15" height="15"></i>
@@ -582,6 +587,20 @@
       </div>
     </div>
 
+    <!-- Legenda Strade per Ref -->
+    <div class="legend-section">
+      <div class="legend-section-title">🛣️ Strade per Ref</div>
+      <div class="legend-list">
+        <div class="legend-item"><span class="legend-line" style="border-color:#dc2626"></span><span><strong>SS</strong> – Strada Statale</span></div>
+        <div class="legend-item"><span class="legend-line" style="border-color:#7c3aed"></span><span><strong>SR</strong> – Strada Regionale</span></div>
+        <div class="legend-item"><span class="legend-line" style="border-color:#d97706"></span><span><strong>SP</strong> – Strada Provinciale</span></div>
+        <div class="legend-item"><span class="legend-line" style="border-color:#0369a1"></span><span><strong>SC</strong> – Strada Comunale</span></div>
+      </div>
+      <div class="legend-note">
+        Colorazione basata sul tag <code>ref</code> (es. <code>SP68</code>, <code>SS53</code>). Le strade senza ref non vengono mostrate.
+      </div>
+    </div>
+
   </div><!-- fine legend-content -->
 </div><!-- fine legendPanel -->
 
@@ -702,7 +721,8 @@
       crossing:     L.layerGroup(),
       construction: L.layerGroup(),
       maxspeed:     L.layerGroup(),
-      hgv:          L.layerGroup()
+      hgv:          L.layerGroup(),
+      strade_ref:   L.layerGroup()
     };
 
     L.control.layers(null, {
@@ -712,7 +732,8 @@
       "<span style='color:#8b5cf6;font-weight:700'>🔀 Attraversamenti</span>":   layers.crossing,
       "<span style='color:#f59e0b;font-weight:700'>🚧 In costruzione</span>":    layers.construction,
       "<span style='color:#ef4444;font-weight:700'>⚡ Velocità massime</span>":  layers.maxspeed,
-      "<span style='color:#0f766e;font-weight:700'>🚛 Camion / HGV</span>":      layers.hgv
+      "<span style='color:#0f766e;font-weight:700'>🚛 Camion / HGV</span>":      layers.hgv,
+      "<span style='color:#dc2626;font-weight:700'>🛣️ Strade per Ref (SS/SR/SP/SC)</span>": layers.strade_ref
     }, { collapsed: false, position: 'bottomleft' }).addTo(map);
 
     // ─────────────────────────────────────────────────────────────
@@ -753,9 +774,12 @@
       if (tags.hgv === 'designated' || tags.goods === 'designated' || tags.hazmat === 'designated') {
         return { color: '#3b82f6', weight: 5, opacity: .9, dashArray: null, label: 'Designato' };
       }
+      const hgvVals = String(tags.hgv || '').split(';').map(v => v.trim());
+      const goodsVals = String(tags.goods || '').split(';').map(v => v.trim());
+      const restrictedValues = ['destination', 'delivery', 'local'];
       if (
-        ['destination', 'delivery', 'local'].includes(tags.hgv) ||
-        ['destination', 'delivery', 'local'].includes(tags.goods)
+        hgvVals.some(v => restrictedValues.includes(v)) ||
+        goodsVals.some(v => restrictedValues.includes(v))
       ) {
         return { color: '#d946ef', weight: 5, opacity: .9, dashArray: null, label: 'Solo locale/destinazione' };
       }
@@ -778,6 +802,15 @@
         'hgv_articulated', 'hgv_articulated:conditional'
       ];
       return !!tags.highway && keys.some(k => tags[k] !== undefined && tags[k] !== null && tags[k] !== '');
+    }
+
+    function classifyRef(ref) {
+      const r = String(ref).toUpperCase();
+      if (/\bSS\d/.test(r) || r.startsWith('SS')) return { color: '#dc2626', label: 'SS – Statale' };
+      if (/\bSR\d/.test(r) || r.startsWith('SR')) return { color: '#7c3aed', label: 'SR – Regionale' };
+      if (/\bSP\d/.test(r) || r.startsWith('SP')) return { color: '#d97706', label: 'SP – Provinciale' };
+      if (/\bSC\d/.test(r) || r.startsWith('SC')) return { color: '#0369a1', label: 'SC – Comunale' };
+      return null;
     }
 
     function getType(tags) {
@@ -962,10 +995,17 @@
 
     function translateValue(key, val) {
       if (val === undefined || val === null || val === '') return null;
-
+    
       const specialLink = linkifySpecialValue(key, val);
       if (specialLink) return specialLink;
-
+    
+      // Gestisce valori multipli separati da ";" (es. hgv=local;delivery)
+      if (String(val).includes(';')) {
+        const parts = String(val).split(';').map(v => v.trim()).filter(Boolean);
+        const translated = parts.map(p => VALUE_LABELS[p] || p).join(' + ');
+        return escapeHtml(translated);
+      }
+    
       let out = VALUE_LABELS[val] || String(val);
 
       if (key === 'maxspeed') out = appendUnitIfPlain(out, 'km/h');
@@ -1176,9 +1216,10 @@
       construction: 0,
       maxspeed: 0,
       hgv: 0
+      strade_ref: 0
     };
 
-    const COUNTER_KEYS = ['proposed','cycleway','pedestrian','crossing','construction','maxspeed','hgv'];
+    const COUNTER_KEYS = ['proposed','cycleway','pedestrian','crossing','construction','maxspeed','hgv','strade_ref'];
     const COUNTER_IDS  = ['cnt0','cnt1','cnt2','cnt3','cnt4','cnt5','cnt6'];
     const COUNTER_LABELS = ['Proposte','Ciclabili','Pedonali','Attraversamenti','Costruzione','Velocità','Camion'];
 
@@ -1234,6 +1275,7 @@
           way["highway"]["trailer:maxweight"](area.a);
           way["highway"]["hgv_articulated"](area.a);
           way["highway"]["hgv_articulated:conditional"](area.a);
+          way["ref"~"^(SS|SR|SP|SC)"](area.a);
         );
         out body; >; out skel qt;`;
 
@@ -1314,6 +1356,31 @@
                 counts.hgv++;
               }
             }
+
+            if (tags.ref) {
+              const refStyle = classifyRef(tags.ref);
+              if (refStyle) {
+                const refLayer = L.geoJSON(feature, {
+                  style: () => ({
+                    color: refStyle.color,
+                    weight: 4,
+                    opacity: 0.85,
+                    dashArray: null,
+                    lineCap: 'round'
+                  })
+                });
+                wireLayerInteractions(refLayer, feature, {
+                  color: refStyle.color, weight: 4, opacity: 0.85, lineCap: 'round'
+                }, name ? `${name} (${tags.ref})` : tags.ref);
+                forEachSubLayer(refLayer, sub => layers.strade_ref.addLayer(sub));
+                if (!seenMain['strade_ref']) seenMain['strade_ref'] = new Set();
+                if (!seenMain['strade_ref'].has(key)) {
+                  seenMain['strade_ref'].add(key);
+                  counts.strade_ref++;
+                }
+              }
+            }
+            
           }
         });
 
