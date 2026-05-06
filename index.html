@@ -896,6 +896,10 @@
       'hazmat:conditional':       { it: 'Merci pericolose - condizionale', icon: 'alert-triangle' },
       'trailer':                  { it: 'Rimorchi', icon: 'truck' },
       'trailer:maxweight':        { it: 'Peso max rimorchio', icon: 'scale' },
+      'maxweight:hgv:conditional': { it: 'Peso camion – condizionale', icon: 'scale' },
+      'maxweight:conditional':      { it: 'Peso – condizionale',        icon: 'scale' },
+      'maxheight:conditional':      { it: 'Altezza – condizionale',     icon: 'ruler' },
+      'maxwidth:conditional':       { it: 'Larghezza – condizionale',   icon: 'ruler' },
 
       'start_date':               { it: 'Data inizio', icon: 'calendar' },
       'opening_date':             { it: 'Data apertura prevista', icon: 'calendar-check' },
@@ -997,6 +1001,22 @@
       if (val === undefined || val === null || val === '') return null;
     
       const specialLink = linkifySpecialValue(key, val);
+
+      // Gestione tag :conditional  →  "none @ (delivery; destination)"
+      if (key.endsWith(':conditional') && typeof val === 'string' && val.includes('@')) {
+        const parts = val.split('@');
+        const restriction = parts[0].trim();   // "none"
+        const condition   = parts.slice(1).join('@').trim(); // "(delivery; destination)"
+      
+        const transRestriction = VALUELABELS[restriction] ?? restriction;
+        // Traduce ogni condizione dentro le parentesi
+        const condInner = condition.replace(/[()]/g, '').split(';')
+          .map(c => VALUELABELS[c.trim()] ?? c.trim())
+          .join(' / ');
+      
+        return escapeHtml(`${transRestriction} se: ${condInner}`);
+      }
+      
       if (specialLink) return specialLink;
     
       // Gestisce valori multipli separati da ";" (es. hgv=local;delivery)
@@ -1010,7 +1030,7 @@
 
       if (key === 'maxspeed') out = appendUnitIfPlain(out, 'km/h');
       if (['maxheight', 'maxwidth', 'maxlength'].includes(key)) out = appendUnitIfPlain(out, 'm');
-      if (['maxweight', 'maxweight:hgv', 'maxweightrating', 'maxaxleload', 'trailer:maxweight'].includes(key)) {
+      if (['maxweight','maxweight:hgv','maxweight:rating','maxaxleload','trailer:maxweight'].includes(key)) {
         out = appendUnitIfPlain(out, 't');
       }
 
@@ -1046,6 +1066,8 @@
       if (['cycleway', 'footway', 'pedestrian'].includes(val)) cls = 'badge-blue';
       if (['destination', 'delivery', 'local'].includes(val)) cls = 'badge-purple';
       if (['hgv', 'goods', 'hgv:conditional'].includes(key)) cls = 'badge-teal';
+
+      if (key.endsWith(':conditional')) cls = 'badge-amber'; // colore ambra = condizione speciale
 
       return `<span class="info-badge-val ${cls}">${translated}</span>`;
     }
