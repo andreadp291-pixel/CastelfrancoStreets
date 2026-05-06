@@ -872,7 +872,7 @@
       'maxlength':                { it: 'Lunghezza massima', icon: 'ruler' },
       'maxweight':                { it: 'Peso massimo', icon: 'scale' },
       'maxweight:hgv':            { it: 'Peso massimo camion', icon: 'scale' },
-      'maxweightrating':          { it: 'Massa a pieno carico', icon: 'scale' },
+      'maxweight:rating':         { it: 'Massa a pieno carico', icon: 'scale' },
       'maxaxleload':              { it: 'Carico massimo per asse', icon: 'scale' },
       'lit':                      { it: 'Illuminazione', icon: 'lightbulb' },
       'incline':                  { it: 'Pendenza', icon: 'tag' },
@@ -969,7 +969,8 @@
       'traffic_signals':'Con semaforo',
       'zebra':          'Strisce pedonali',
 
-      '-1':             'Senso inverso'
+      '-1':             'Senso inverso',
+      'none':           'Nessuna restrizione'
     };
 
     const GROUPS = [
@@ -979,11 +980,11 @@
       },
       {
         title: 'Velocità & limiti',
-        keys: ['maxspeed','maxheight','maxwidth','maxlength','maxweight','maxweight:hgv','maxweightrating','maxaxleload']
+        keys: ['maxspeed','maxheight','maxwidth','maxlength','maxweight','maxweight:hgv','maxweight:rating','maxaxleload']
       },
       {
         title: 'Camion & merci',
-        keys: ['hgv','hgv:conditional','hgv:national','hgv_articulated','hgv_articulated:conditional','goods','hazmat','hazmat:conditional','trailer','trailer:maxweight']
+        keys: ['hgv','hgv:conditional','hgv:national','hgv:articulated','hgv:articulated:conditional','goods','hazmat','hazmat:conditional','trailer','trailer:maxweight','maxweight:hgv','maxweight:hgv:conditional','maxweight:rating','maxaxleload']
       },
       {
         title: 'Accesso',
