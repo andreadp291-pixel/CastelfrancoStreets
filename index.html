@@ -538,7 +538,7 @@
           <div style="font-weight:700;color:var(--text-main);margin-bottom:4px">🗺️ Layer disponibili</div>
           <div style="color:var(--text-light);line-height:1.6">
             Strade proposte<br>Piste ciclabili<br>Percorsi pedonali<br>
-            Attraversamenti<br>In costruzione<br>Velocità massime<br>Camion / HGV
+            Attraversamenti<br>In costruzione<br>Limiti di velocità<br>Mezzi pesanti
           </div>
         </div>
         <div style="background:#f8fafc;border-radius:10px;padding:10px;font-size:11px">
@@ -557,7 +557,7 @@
 
     <!-- Legenda velocità -->
     <div class="legend-section">
-      <div class="legend-section-title">Velocità massime</div>
+      <div class="legend-section-title">Limiti di velocità</div>
       <div class="legend-list">
         <div class="legend-item"><span class="legend-line" style="border-color:#86efac"></span><span>≤ 10 km/h</span></div>
         <div class="legend-item"><span class="legend-line" style="border-color:#22c55e"></span><span>≤ 30 km/h</span></div>
@@ -573,7 +573,7 @@
 
     <!-- Legenda HGV -->
     <div class="legend-section">
-      <div class="legend-section-title">Camion / HGV</div>
+      <div class="legend-section-title">Mezzi pesanti</div>
       <div class="legend-list">
         <div class="legend-item"><span class="legend-line" style="border-color:#22c55e"></span><span>Libero: <code>hgv=yes</code> / <code>goods=yes</code></span></div>
         <div class="legend-item"><span class="legend-line" style="border-color:#3b82f6"></span><span>Designato / consigliato</span></div>
@@ -587,9 +587,9 @@
       </div>
     </div>
 
-    <!-- Legenda Strade per Ref -->
+    <!-- Legenda Strade per proprietà -->
     <div class="legend-section">
-      <div class="legend-section-title">🛣️ Strade per Ref</div>
+      <div class="legend-section-title">🛣️ Strade per proprietà</div>
       <div class="legend-list">
         <div class="legend-item"><span class="legend-line" style="border-color:#dc2626"></span><span><strong>SS</strong> – Strada Statale</span></div>
         <div class="legend-item"><span class="legend-line" style="border-color:#7c3aed"></span><span><strong>SR</strong> – Strada Regionale</span></div>
@@ -731,9 +731,9 @@
       "<span style='color:#22c55e;font-weight:700'>🚶 Pedonali</span>":          layers.pedestrian,
       "<span style='color:#8b5cf6;font-weight:700'>🔀 Attraversamenti</span>":   layers.crossing,
       "<span style='color:#f59e0b;font-weight:700'>🚧 In costruzione</span>":    layers.construction,
-      "<span style='color:#ef4444;font-weight:700'>⚡ Velocità massime</span>":  layers.maxspeed,
-      "<span style='color:#0f766e;font-weight:700'>🚛 Camion / HGV</span>":      layers.hgv,
-      "<span style='color:#dc2626;font-weight:700'>🛣️ Strade per Ref (SS/SR/SP/SC)</span>": layers.strade_ref
+      "<span style='color:#ef4444;font-weight:700'>⚡ Limiti di velocità</span>":  layers.maxspeed,
+      "<span style='color:#0f766e;font-weight:700'>🚛 Mezzi pesanti</span>":      layers.hgv,
+      "<span style='color:#dc2626;font-weight:700'>🛣️ Proprietà (SS/SR/SP/SC)</span>": layers.strade_ref
     }, { collapsed: false, position: 'bottomleft' }).addTo(map);
 
     // ─────────────────────────────────────────────────────────────
@@ -763,7 +763,8 @@
       const limitKeys = [
         'maxheight','maxweight','maxweight:hgv','maxweight:rating',
         'maxwidth','maxlength','maxaxleload','trailer:maxweight',
-        'maxweight:hgv:conditional'
+        'maxweight:hgv:conditional',
+        'maxweight:rating:hgv'
       ];
 
       if (tags.hgv === 'no' || tags.goods === 'no') {
@@ -801,7 +802,8 @@
         'maxweight:rating', 'maxwidth', 'maxlength', 'maxaxleload',
         'hazmat', 'hazmat:conditional', 'trailer', 'trailer:maxweight',
         'hgv:articulated', 'hgv:articulated:conditional',
-        'maxweight:hgv:conditional'
+        'maxweight:hgv:conditional',
+        'maxweight:rating:hgv'
       ];
       return !!tags.highway && keys.some(k => tags[k] !== undefined && tags[k] !== null && tags[k] !== '');
     }
@@ -980,11 +982,11 @@
       },
       {
         title: 'Velocità & limiti',
-        keys: ['maxspeed','maxheight','maxwidth','maxlength','maxweight','maxweight:hgv','maxweight:rating','maxaxleload']
+        keys: ['maxspeed','maxheight','maxwidth','maxlength','maxweight']
       },
       {
         title: 'Camion & merci',
-        keys: ['hgv','hgv:conditional','hgv:national','hgv:articulated','hgv:articulated:conditional','goods','hazmat','hazmat:conditional','trailer','trailer:maxweight','maxweight:hgv','maxweight:hgv:conditional','maxweight:rating','maxaxleload']
+        keys: ['hgv','hgv:conditional','hgv:national','hgv:articulated','hgv:articulated:conditional','goods','hazmat','hazmat:conditional','trailer','trailer:maxweight','maxweight:hgv','maxweight:hgv:conditional','maxweight:rating','maxweight:rating:hgv','maxaxleload']
       },
       {
         title: 'Accesso',
@@ -1070,7 +1072,10 @@
       if (['destination', 'delivery', 'local'].includes(val)) cls = 'badge-purple';
       if (['hgv', 'goods', 'hgv:conditional'].includes(key)) cls = 'badge-teal';
 
-      if (key.endsWith(':conditional')) cls = 'badge-amber'; // colore ambra = condizione speciale
+      if (key.endsWith(':conditional')) {
+        // Valore condizionale: testo potenzialmente lungo, mostra senza badge
+        return `<span style="font-size:11px;color:#b45309;font-weight:600;word-break:break-word;white-space:normal;text-align:right">${translated}</span>`;
+      }
 
       return `<span class="info-badge-val ${cls}">${translated}</span>`;
     }
@@ -1292,6 +1297,9 @@
           way["highway"]["maxweight:hgv"](area.a);
           way["highway"]["maxweight:rating"](area.a);
           way["highway"]["maxweight:hgv:conditional"](area.a);
+          way["highway"]["maxweigh:hgv"](area.a);
+          way["highway"]["maxweigh:hgv:conditional"](area.a);
+          way["highway"]["maxweigh"](area.a);
           way["highway"]["maxwidth"](area.a);
           way["highway"]["maxlength"](area.a);
           way["highway"]["maxaxleload"](area.a);
@@ -1312,6 +1320,26 @@
         });
         const data = await res.json();
         const geojson = osmtogeojson(data);
+
+        // Normalizza typo comuni nei tag OSM
+        const TAG_TYPOS = {
+          'maxweigh:hgv':              'maxweight:hgv',
+          'maxweighrating:hgv':        'maxweight:rating:hgv',
+          'maxweigh:hgv:conditional':  'maxweight:hgv:conditional',
+          'maxweigh':                  'maxweight',
+          'maxweigh:rating':           'maxweight:rating',
+          'hgv_articulated':           'hgv:articulated',
+          'hgv_articulated:conditional':'hgv:articulated:conditional',
+        };
+        geojson.features.forEach(f => {
+          if (!f.properties) return;
+          Object.keys(TAG_TYPOS).forEach(typo => {
+            if (f.properties[typo] !== undefined) {
+              f.properties[TAG_TYPOS[typo]] = f.properties[typo];
+              delete f.properties[typo];
+            }
+          });
+        });
 
         const seenMain = {
           proposed: new Set(),
@@ -1341,6 +1369,9 @@
                 seenMain[type].add(key);
                 counts[type]++;
               }
+            } else if (hasHGVData(tags) || (tags.maxspeed && isRoadForMaxspeed(tags))) {
+              // Strada normale con dati HGV o velocità: rendi il layer base cliccabile
+              wireLayerInteractions(layer, feature, STYLES.default, name);
             }
 
             if (tags.maxspeed && isRoadForMaxspeed(tags)) {
