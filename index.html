@@ -1010,10 +1010,10 @@
         const restriction = parts[0].trim();   // "none"
         const condition   = parts.slice(1).join('@').trim(); // "(delivery; destination)"
       
-        const transRestriction = VALUELABELS[restriction] ?? restriction;
+        const transRestriction = VALUE_LABELS[restriction] ?? restriction;
         // Traduce ogni condizione dentro le parentesi
         const condInner = condition.replace(/[()]/g, '').split(';')
-          .map(c => VALUELABELS[c.trim()] ?? c.trim())
+          .map(c => VALUE_LABELS[c.trim()] ?? c.trim())
           .join(' / ');
       
         return escapeHtml(`${transRestriction} se: ${condInner}`);
