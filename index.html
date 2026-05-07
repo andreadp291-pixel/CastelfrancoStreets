@@ -697,9 +697,31 @@
     setTimeout(() => map.invalidateSize(), 100);
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors',
+    const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
       maxZoom: 19
+    });
+
+    const satelliteLayer = L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      {
+        attribution: '© Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+        maxZoom: 19
+      }
+    );
+
+    // Aggiunge OSM come default
+    osmLayer.addTo(map);
+
+    // Controllo per switchare tra basemap
+    const baseMaps = {
+      '🗺️ OpenStreetMap': osmLayer,
+      '🛰️ Satellite (Esri)': satelliteLayer
+    };
+
+    L.control.layers(baseMaps, null, {
+      position: 'bottomleft',
+      collapsed: false
     }).addTo(map);
 
     // blocca la propagazione click/scroll sui pannelli
