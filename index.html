@@ -104,15 +104,49 @@
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* ─── CONTROLLI LEAFLET ─── */
-    .leaflet-control-layers {
-      border-radius: 14px !important;
-      box-shadow: var(--shadow) !important;
-      border: var(--border) !important;
-      padding: 8px 4px !important;
-      background: var(--bg-card) !important;
-      backdrop-filter: blur(14px) !important;
+    /* ─── LAYERS PANEL ─── */
+    #layersPanel {
+      position: fixed;
+      top: 62px;
+      left: 12px;
+      width: 230px;
+      background: var(--bg-card);
+      backdrop-filter: blur(14px);
+      border: var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      z-index: 1000;
+      padding: 10px 4px 8px 4px;
+      display: none;
+      flex-direction: column;
+      gap: 2px;
     }
-    .leaflet-control-layers-overlays label { padding: 4px 8px; font-size: 12px; }
+    #layersPanel.open { display: flex; }
+    #layersPanel .lp-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-light);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      padding: 0 10px 6px 10px;
+      border-bottom: 1px solid rgba(0,0,0,.07);
+      margin-bottom: 4px;
+    }
+    #layersPanel label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      border-radius: 8px;
+      transition: background .12s;
+    }
+    #layersPanel label:hover { background: rgba(0,0,0,.04); }
+    #layersPanel input[type=checkbox] { accent-color: var(--text-main); width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; }
+    #layersPanelSep { height: 1px; background: rgba(0,0,0,.07); margin: 6px 10px; }
 
     /* ─── PANNELLI LATERALI ─── */
 #infoPanel,
@@ -466,6 +500,27 @@
     <button id="refreshBtn" class="ctrl-btn" title="Aggiorna">
       <i data-lucide="refresh-cw" width="15" height="15"></i>
     </button>
+  <button id="layersBtn" class="ctrl-btn" title="Layer" style="gap:4px;padding:0 10px;font-size:11px;font-weight:700;color:var(--text-main)">
+    <i data-lucide="layers" width="15" height="15"></i>
+    <span>Layer</span>
+  </button>
+  </div>
+
+  <!-- LAYERS PANEL -->
+  <div id="layersPanel">
+    <div class="lp-title"><i data-lucide="map" width="11" height="11" style="vertical-align:middle;margin-right:4px"></i>Mappa base</div>
+    <label><input type="radio" name="basemap" id="bm-osm" checked> 🗺️ OpenStreetMap</label>
+    <label><input type="radio" name="basemap" id="bm-sat"> 🛰️ Satellite (Esri)</label>
+    <div id="layersPanelSep" style="height:1px;background:rgba(0,0,0,.07);margin:6px 10px"></div>
+    <div class="lp-title" style="margin-top:2px"><i data-lucide="layers" width="11" height="11" style="vertical-align:middle;margin-right:4px"></i>Layer visibili</div>
+    <label><input type="checkbox" id="lyr-proposed"> <span style="color:#f97316">🔶</span> Strade proposte</label>
+    <label><input type="checkbox" id="lyr-cycleway"> <span style="color:#06b6d4">🚲</span> Ciclabili</label>
+    <label><input type="checkbox" id="lyr-pedestrian"> <span style="color:#22c55e">🚶</span> Pedonali</label>
+    <label><input type="checkbox" id="lyr-crossing"> <span style="color:#8b5cf6">🔀</span> Attraversamenti</label>
+    <label><input type="checkbox" id="lyr-construction"> <span style="color:#f59e0b">🚧</span> In costruzione</label>
+    <label><input type="checkbox" id="lyr-maxspeed"> <span style="color:#ef4444">⚡</span> Limiti di velocità</label>
+    <label><input type="checkbox" id="lyr-hgv"> <span style="color:#0f766e">🚛</span> Mezzi pesanti</label>
+    <label><input type="checkbox" id="lyr-strade_ref"> <span style="color:#dc2626">🛣️</span> Proprietà (SS/SR/SP/SC)</label>
   </div>
 
   <div id="map"></div>
@@ -719,10 +774,7 @@
       '🛰️ Satellite (Esri)': satelliteLayer
     };
 
-    L.control.layers(baseMaps, null, {
-      position: 'bottomleft',
-      collapsed: false
-    }).addTo(map);
+    // basemap control handled by custom panel
 
     // blocca la propagazione click/scroll sui pannelli
     ['topbar', 'infoPanel', 'legendPanel'].forEach(id => {
@@ -747,16 +799,52 @@
       strade_ref:   L.layerGroup()
     };
 
-    L.control.layers(null, {
-      "<span style='color:#f97316;font-weight:700'>🔶 Strade proposte</span>":  layers.proposed,
-      "<span style='color:#06b6d4;font-weight:700'>🚲 Ciclabili</span>":         layers.cycleway,
-      "<span style='color:#22c55e;font-weight:700'>🚶 Pedonali</span>":          layers.pedestrian,
-      "<span style='color:#8b5cf6;font-weight:700'>🔀 Attraversamenti</span>":   layers.crossing,
-      "<span style='color:#f59e0b;font-weight:700'>🚧 In costruzione</span>":    layers.construction,
-      "<span style='color:#ef4444;font-weight:700'>⚡ Limiti di velocità</span>":  layers.maxspeed,
-      "<span style='color:#0f766e;font-weight:700'>🚛 Mezzi pesanti</span>":      layers.hgv,
-      "<span style='color:#dc2626;font-weight:700'>🛣️ Proprietà (SS/SR/SP/SC)</span>": layers.strade_ref
-    }, { collapsed: false, position: 'bottomleft' }).addTo(map);
+    // ─── Custom layer toggle panel ───
+    const layerCheckboxMap = {
+      'lyr-proposed':     layers.proposed,
+      'lyr-cycleway':     layers.cycleway,
+      'lyr-pedestrian':   layers.pedestrian,
+      'lyr-crossing':     layers.crossing,
+      'lyr-construction': layers.construction,
+      'lyr-maxspeed':     layers.maxspeed,
+      'lyr-hgv':          layers.hgv,
+      'lyr-strade_ref':   layers.strade_ref
+    };
+    Object.entries(layerCheckboxMap).forEach(([id, layerGroup]) => {
+      const cb = document.getElementById(id);
+      if (!cb) return;
+      cb.addEventListener('change', () => {
+        if (cb.checked) layerGroup.addTo(map);
+        else map.removeLayer(layerGroup);
+      });
+    });
+
+    // Toggle layers panel
+    const layersBtn   = document.getElementById('layersBtn');
+    const layersPanel = document.getElementById('layersPanel');
+    layersBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      layersPanel.classList.toggle('open');
+    });
+    document.addEventListener('click', (e) => {
+      if (!layersPanel.contains(e.target) && e.target !== layersBtn) {
+        layersPanel.classList.remove('open');
+      }
+    });
+
+    // Basemap radio switch
+    document.getElementById('bm-osm').addEventListener('change', () => {
+      if (!map.hasLayer(osmLayer)) {
+        map.removeLayer(satelliteLayer);
+        osmLayer.addTo(map);
+      }
+    });
+    document.getElementById('bm-sat').addEventListener('change', () => {
+      if (!map.hasLayer(satelliteLayer)) {
+        map.removeLayer(osmLayer);
+        satelliteLayer.addTo(map);
+      }
+    });
 
     // ─────────────────────────────────────────────────────────────
     // Stili
