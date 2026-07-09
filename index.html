@@ -57,29 +57,6 @@
     #topbar::-webkit-scrollbar { display: none; }
     #topbar > * { pointer-events: auto; flex-shrink: 0; }
 
-    .chip {
-      height: 38px;
-      padding: 0 11px;
-      border-radius: 999px;
-      font-size: 11px;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      color: white;
-      white-space: nowrap;
-      box-shadow: var(--shadow);
-      transition: transform .15s;
-    }
-    .chip:hover { transform: scale(1.04); }
-    .chip.proposed     { background: var(--proposed); }
-    .chip.cycleway     { background: var(--cycleway); }
-    .chip.pedestrian   { background: var(--pedestrian); }
-    .chip.crossing     { background: var(--crossing); }
-    .chip.construction { background: var(--construction); }
-    .chip.maxspeed     { background: var(--maxspeed); }
-    .chip.hgv          { background: var(--hgv); }
-
     .ctrl-btn {
       height: 38px;
       min-width: 38px;
@@ -484,15 +461,6 @@
 <body>
 
   <div id="topbar">
-    <span class="chip proposed"     id="cnt0">— Proposte</span>
-    <span class="chip cycleway"     id="cnt1">— Ciclabili</span>
-    <span class="chip pedestrian"   id="cnt2">— Pedonali</span>
-    <span class="chip crossing"     id="cnt3">— Attraversamenti</span>
-    <span class="chip construction" id="cnt4">— Costruzione</span>
-    <span class="chip maxspeed"     id="cnt5">— Velocità</span>
-    <span class="chip hgv"          id="cnt6">— Camion</span>
-    <span class="chip" id="cnt7" style="background:#dc2626">— Ref Strade</span>
-
   <button id="legendBtn" class="ctrl-btn" title="Info app">
     <i data-lucide="info" width="15" height="15"></i>
   </button>
@@ -521,6 +489,13 @@
     <label><input type="checkbox" id="lyr-maxspeed"> <span style="color:#ef4444">⚡</span> Limiti di velocità</label>
     <label><input type="checkbox" id="lyr-hgv"> <span style="color:#0f766e">🚛</span> Mezzi pesanti</label>
     <label><input type="checkbox" id="lyr-strade_ref"> <span style="color:#dc2626">🛣️</span> Proprietà (SS/SR/SP/SC)</label>
+    <div id="layersPanelSep2" style="height:1px;background:rgba(0,0,0,.07);margin:6px 10px"></div>
+    <div class="lp-title" style="margin-top:2px"><i data-lucide="map-pin" width="11" height="11" style="vertical-align:middle;margin-right:4px"></i>Arredo urbano</div>
+    <label><input type="checkbox" id="lyr-signs"> <span style="color:#eab308">🪧</span> Segnali stradali</label>
+    <label><input type="checkbox" id="lyr-lamps"> <span style="color:#facc15">💡</span> Lampioni</label>
+    <label><input type="checkbox" id="lyr-busstops"> <span style="color:#2563eb">🚌</span> Fermate bus</label>
+    <label><input type="checkbox" id="lyr-bins"> <span style="color:#16a34a">🗑️</span> Cestini</label>
+    <label><input type="checkbox" id="lyr-parking"> <span style="color:#0ea5e9">🅿️</span> Parcheggi e stalli</label>
   </div>
 
   <div id="map"></div>
@@ -593,7 +568,8 @@
           <div style="font-weight:700;color:var(--text-main);margin-bottom:4px">🗺️ Layer disponibili</div>
           <div style="color:var(--text-light);line-height:1.6">
             Strade proposte<br>Piste ciclabili<br>Percorsi pedonali<br>
-            Attraversamenti<br>In costruzione<br>Limiti di velocità<br>Mezzi pesanti
+            Attraversamenti<br>In costruzione<br>Limiti di velocità<br>Mezzi pesanti<br>
+            Segnali stradali<br>Lampioni<br>Fermate bus<br>Cestini<br>Parcheggi e stalli
           </div>
         </div>
         <div style="background:#f8fafc;border-radius:10px;padding:10px;font-size:11px">
@@ -718,13 +694,6 @@
       return null;
     }
 
-    function getFeatureKey(feature) {
-      return feature.id ||
-        feature.properties?.['@id'] ||
-        feature.properties?.id ||
-        JSON.stringify(feature.geometry?.coordinates || Math.random());
-    }
-
     function forEachSubLayer(layer, callback) {
       if (layer && typeof layer.eachLayer === 'function' && !(layer instanceof L.Path)) {
         layer.eachLayer(callback);
@@ -796,7 +765,12 @@
       construction: L.layerGroup(),
       maxspeed:     L.layerGroup(),
       hgv:          L.layerGroup(),
-      strade_ref:   L.layerGroup()
+      strade_ref:   L.layerGroup(),
+      signs:        L.layerGroup(),
+      lamps:        L.layerGroup(),
+      busstops:     L.layerGroup(),
+      bins:         L.layerGroup(),
+      parking:      L.layerGroup()
     };
 
     // ─── Custom layer toggle panel ───
@@ -808,7 +782,12 @@
       'lyr-construction': layers.construction,
       'lyr-maxspeed':     layers.maxspeed,
       'lyr-hgv':          layers.hgv,
-      'lyr-strade_ref':   layers.strade_ref
+      'lyr-strade_ref':   layers.strade_ref,
+      'lyr-signs':        layers.signs,
+      'lyr-lamps':        layers.lamps,
+      'lyr-busstops':     layers.busstops,
+      'lyr-bins':         layers.bins,
+      'lyr-parking':      layers.parking
     };
     Object.entries(layerCheckboxMap).forEach(([id, layerGroup]) => {
       const cb = document.getElementById(id);
@@ -855,6 +834,7 @@
       pedestrian:   { color: '#22c55e', weight: 3.5, lineCap: 'round', opacity: .88 },
       crossing:     { color: '#8b5cf6', weight: 4, dashArray: '4 4', lineCap: 'round', opacity: .92 },
       construction: { color: '#f59e0b', weight: 5, dashArray: '6 4', lineCap: 'round', opacity: .92 },
+      parking:      { color: '#0ea5e9', weight: 2, fillColor: '#38bdf8', fillOpacity: .35, opacity: .85 },
       default:      { color: '#94a3b8', weight: 2, opacity: .6 }
     };
 
@@ -928,6 +908,12 @@
     }
 
     function getType(tags) {
+      if (tags.traffic_sign !== undefined) return 'signs';
+      if (tags.highway === 'street_lamp') return 'lamps';
+      if (tags.highway === 'bus_stop' || (tags.public_transport === 'platform' && tags.bus === 'yes')) return 'busstops';
+      if (tags.amenity === 'waste_basket') return 'bins';
+      if (tags.amenity === 'parking' || tags.amenity === 'parking_space') return 'parking';
+
       if (tags.highway === 'proposed') return 'proposed';
       if (tags.highway === 'construction') return 'construction';
 
@@ -956,6 +942,11 @@
       pedestrian:   { label: 'Percorso pedonale', bg: '#22c55e' },
       crossing:     { label: 'Attraversamento',   bg: '#8b5cf6' },
       construction: { label: 'In costruzione',    bg: '#f59e0b' },
+      signs:        { label: 'Segnale stradale',  bg: '#eab308' },
+      lamps:        { label: 'Lampione',          bg: '#facc15' },
+      busstops:     { label: 'Fermata bus',       bg: '#2563eb' },
+      bins:         { label: 'Cestino',           bg: '#16a34a' },
+      parking:      { label: 'Parcheggio / stallo', bg: '#0ea5e9' },
       default:      { label: 'Via',               bg: '#1e293b' }
     };
 
@@ -1021,6 +1012,14 @@
       'source':                   { it: 'Fonte dati', icon: 'database' },
       'note':                     { it: 'Note', icon: 'message-square' },
       'description':              { it: 'Descrizione', icon: 'file-text' },
+
+      'traffic_sign':             { it: 'Segnale stradale', icon: 'octagon-alert' },
+      'amenity':                  { it: 'Tipo elemento', icon: 'map-pin' },
+      'public_transport':         { it: 'Trasporto pubblico', icon: 'bus' },
+      'bus':                      { it: 'Fermata bus', icon: 'bus' },
+      'capacity':                 { it: 'Capienza', icon: 'hash' },
+      'parking':                  { it: 'Tipo parcheggio', icon: 'square-parking' },
+      'fee':                      { it: 'A pagamento', icon: 'euro' },
 
       'website':                  { it: 'Sito web', icon: 'globe' },
       'url':                      { it: 'Link', icon: 'link' },
@@ -1089,6 +1088,10 @@
       {
         title: 'Caratteristiche',
         keys: ['highway','cycleway','footway','crossing','construction','surface','width','lanes','lit','smoothness','incline','segregated','tactile_paving','wheelchair']
+      },
+      {
+        title: 'Arredo urbano',
+        keys: ['traffic_sign','amenity','public_transport','bus','parking','capacity','fee']
       },
       {
         title: 'Velocità & limiti',
@@ -1303,6 +1306,41 @@
     }
 
     // ─────────────────────────────────────────────────────────────
+    // Marker punti (arredo urbano)
+    // ─────────────────────────────────────────────────────────────
+    const POINT_ICONS = {
+      signs:    { emoji: '🪧', bg: '#eab308' },
+      lamps:    { emoji: '💡', bg: '#facc15' },
+      busstops: { emoji: '🚌', bg: '#2563eb' },
+      bins:     { emoji: '🗑️', bg: '#16a34a' },
+      parking:  { emoji: '🅿️', bg: '#0ea5e9' }
+    };
+
+    function makePointIcon(type) {
+      const meta = POINT_ICONS[type];
+      return L.divIcon({
+        className: 'point-marker',
+        html: `<div style="background:${meta.bg};width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 2px 6px rgba(0,0,0,.35);border:2px solid white">${meta.emoji}</div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+      });
+    }
+
+    function wirePointInteractions(marker, feature, tooltipText) {
+      if (tooltipText) {
+        marker.bindTooltip(escapeHtml(tooltipText), {
+          sticky: true,
+          className: 'osm-tooltip',
+          direction: 'top'
+        });
+      }
+      marker.on('click', e => {
+        L.DomEvent.stopPropagation(e);
+        openInfoPanel(feature);
+      });
+    }
+
+    // ─────────────────────────────────────────────────────────────
     // Interazioni layer
     // ─────────────────────────────────────────────────────────────
     function wireLayerInteractions(layerObj, feature, baseStyle, tooltipText) {
@@ -1346,30 +1384,6 @@
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Counters
-    // ─────────────────────────────────────────────────────────────
-    const counts = {
-      proposed: 0,
-      cycleway: 0,
-      pedestrian: 0,
-      crossing: 0,
-      construction: 0,
-      maxspeed: 0,
-      hgv: 0,
-      strade_ref: 0
-    };
-
-    const COUNTER_KEYS = ['proposed','cycleway','pedestrian','crossing','construction','maxspeed','hgv','strade_ref'];
-    const COUNTER_IDS  = ['cnt0','cnt1','cnt2','cnt3','cnt4','cnt5','cnt6','cnt7'];
-    const COUNTER_LABELS = ['Proposte','Ciclabili','Pedonali','Attraversamenti','Costruzione','Velocità','Camion','Ref'];
-
-    function updateCounters() {
-      COUNTER_KEYS.forEach((key, idx) => {
-        document.getElementById(COUNTER_IDS[idx]).textContent = `${counts[key]} ${COUNTER_LABELS[idx]}`;
-      });
-    }
-
-    // ─────────────────────────────────────────────────────────────
     // Load data
     // ─────────────────────────────────────────────────────────────
     async function loadData() {
@@ -1377,8 +1391,6 @@
       setStatus('Caricamento dati…', 'loading');
 
       Object.values(layers).forEach(layer => layer.clearLayers());
-      COUNTER_KEYS.forEach(k => counts[k] = 0);
-      updateCounters();
 
       const query = `[out:json][timeout:45];
         area["name"="Castelfranco Veneto"]->.a;
@@ -1420,6 +1432,15 @@
           way["highway"]["hgv:articulated"](area.a);
           way["highway"]["hgv:articulated:conditional"](area.a);
           way["ref"~"^(SS|SR|SP|SC)"](area.a);
+
+          node["traffic_sign"](area.a);
+          node["highway"="street_lamp"](area.a);
+          node["highway"="bus_stop"](area.a);
+          node["public_transport"="platform"]["bus"="yes"](area.a);
+          node["amenity"="waste_basket"](area.a);
+          way["amenity"="parking"](area.a);
+          node["amenity"="parking_space"](area.a);
+          way["amenity"="parking_space"](area.a);
         );
         out body; >; out skel qt;`;
 
@@ -1451,22 +1472,11 @@
           });
         });
 
-        const seenMain = {
-          proposed: new Set(),
-          cycleway: new Set(),
-          pedestrian: new Set(),
-          crossing: new Set(),
-          construction: new Set()
-        };
-        const seenSpeed = new Set();
-        const seenHGV = new Set();
-
         L.geoJSON(geojson, {
           filter: feature => feature.geometry && feature.geometry.type !== 'Point',
           style: feature => ({ ...(STYLES[getType(feature.properties || {})] || STYLES.default) }),
           onEachFeature: (feature, layer) => {
             const tags = feature.properties || {};
-            const key = getFeatureKey(feature);
             const type = getType(tags);
             const name = tags.name || tags['name:it'] || '';
 
@@ -1474,11 +1484,6 @@
               const base = { ...(STYLES[type] || STYLES.default) };
               wireLayerInteractions(layer, feature, base, name);
               layers[type].addLayer(layer);
-
-              if (!seenMain[type].has(key)) {
-                seenMain[type].add(key);
-                counts[type]++;
-              }
             } else if (hasHGVData(tags) || (tags.maxspeed && isRoadForMaxspeed(tags))) {
               // Strada normale con dati HGV o velocità: rendi il layer base cliccabile
               wireLayerInteractions(layer, feature, STYLES.default, name);
@@ -1489,11 +1494,6 @@
               const speedLayer = L.geoJSON(feature, { style: () => ({ ...base }) });
               wireLayerInteractions(speedLayer, feature, base, name ? `${name} • ${tags.maxspeed}` : `${tags.maxspeed}`);
               forEachSubLayer(speedLayer, sub => layers.maxspeed.addLayer(sub));
-
-              if (!seenSpeed.has(key)) {
-                seenSpeed.add(key);
-                counts.maxspeed++;
-              }
             }
 
             if (hasHGVData(tags)) {
@@ -1517,11 +1517,6 @@
               }, name);
 
               forEachSubLayer(hgvLayer, sub => layers.hgv.addLayer(sub));
-
-              if (!seenHGV.has(key)) {
-                seenHGV.add(key);
-                counts.hgv++;
-              }
             }
 
             if (tags.ref) {
@@ -1540,18 +1535,27 @@
                   color: refStyle.color, weight: 4, opacity: 0.85, lineCap: 'round'
                 }, name ? `${name} (${tags.ref})` : tags.ref);
                 forEachSubLayer(refLayer, sub => layers.strade_ref.addLayer(sub));
-                if (!seenMain['strade_ref']) seenMain['strade_ref'] = new Set();
-                if (!seenMain['strade_ref'].has(key)) {
-                  seenMain['strade_ref'].add(key);
-                  counts.strade_ref++;
-                }
               }
             }
-            
+
           }
         });
 
-        updateCounters();
+        // ─── Punti (segnali, lampioni, fermate bus, cestini, stalli) ───
+        const POINT_TYPES = ['signs', 'lamps', 'busstops', 'bins', 'parking'];
+        geojson.features.forEach(feature => {
+          if (!feature.geometry || feature.geometry.type !== 'Point') return;
+          const tags = feature.properties || {};
+          const type = getType(tags);
+          if (!POINT_TYPES.includes(type)) return;
+
+          const name = tags.name || tags['name:it'] || '';
+          const [lng, lat] = feature.geometry.coordinates;
+          const marker = L.marker([lat, lng], { icon: makePointIcon(type) });
+          wirePointInteractions(marker, feature, name);
+          layers[type].addLayer(marker);
+        });
+
         setStatus(`${geojson.features.length} elementi caricati`, 'success', 3000);
       } catch (err) {
         console.error(err);
@@ -1602,7 +1606,6 @@ setTimeout(() => {
     `;
     document.head.appendChild(tooltipStyle);
 
-    updateCounters();
     loadData();
   </script>
 </body>
