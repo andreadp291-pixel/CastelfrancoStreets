@@ -565,14 +565,18 @@
     <label><input type="checkbox" id="lyr-maxspeed"> <i data-lucide="gauge" width="14" height="14" style="color:#ef4444"></i> Limiti di velocità</label>
     <label><input type="checkbox" id="lyr-hgv"> <i data-lucide="truck" width="14" height="14" style="color:#0f766e"></i> Mezzi pesanti</label>
     <label><input type="checkbox" id="lyr-strade_ref"> <i data-lucide="signpost" width="14" height="14" style="color:#dc2626"></i> Proprietà (SS/SR/SP/SC)</label>
+    <label><input type="checkbox" id="lyr-waterway"> <i data-lucide="waves" width="14" height="14" style="color:#0284c7"></i> Corsi d'acqua</label>
     <div id="layersPanelSep2" style="height:1px;background:rgba(0,0,0,.07);margin:6px 10px"></div>
     <div class="lp-title" style="margin-top:2px"><i data-lucide="map-pin" width="11" height="11" style="vertical-align:middle;margin-right:4px"></i>Arredo urbano</div>
     <label><input type="checkbox" id="lyr-signs"> <i data-lucide="octagon-alert" width="14" height="14" style="color:#eab308"></i> Segnali stradali</label>
     <label><input type="checkbox" id="lyr-lamps"> <i data-lucide="lightbulb" width="14" height="14" style="color:#facc15"></i> Lampioni</label>
+    <label><input type="checkbox" id="lyr-trafficsignals"> <i data-lucide="traffic-cone" width="14" height="14" style="color:#dc2626"></i> Semafori</label>
     <label><input type="checkbox" id="lyr-busstops"> <i data-lucide="bus" width="14" height="14" style="color:#2563eb"></i> Fermate bus</label>
     <label><input type="checkbox" id="lyr-bins"> <i data-lucide="trash-2" width="14" height="14" style="color:#16a34a"></i> Cestini</label>
+    <label><input type="checkbox" id="lyr-manholes"> <i data-lucide="circle-dot" width="14" height="14" style="color:#475569"></i> Tombini</label>
     <label><input type="checkbox" id="lyr-parking"> <i data-lucide="square-parking" width="14" height="14" style="color:#0ea5e9"></i> Aree e stalli parcheggio</label>
     <label><input type="checkbox" id="lyr-parkometers"> <i data-lucide="ticket" width="14" height="14" style="color:#ea580c"></i> Parcometri</label>
+    <label><input type="checkbox" id="lyr-bicycleparking"> <i data-lucide="bike" width="14" height="14" style="color:#65a30d"></i> Parcheggi bici</label>
   </div>
 
   <div id="map"></div>
@@ -646,7 +650,8 @@
           <div style="color:var(--text-light);line-height:1.6">
             Strade proposte<br>Piste ciclabili<br>Percorsi pedonali<br>
             Attraversamenti<br>In costruzione<br>Limiti di velocità<br>Mezzi pesanti<br>
-            Segnali stradali<br>Lampioni<br>Fermate bus<br>Cestini<br>Parcheggi, stalli e parcometri
+            Segnali stradali<br>Lampioni<br>Semafori<br>Fermate bus<br>Cestini<br>Tombini<br>
+            Corsi d'acqua<br>Parcheggi, stalli e parcometri<br>Parcheggi bici
           </div>
         </div>
         <div style="background:#f8fafc;border-radius:10px;padding:10px;font-size:11px">
@@ -821,10 +826,12 @@
     // Pane dedicati per i parcheggi: stanno sopra a strade/attraversamenti
     // (z-index più alto dell'overlayPane di default = 400) così i click
     // arrivano sempre a loro invece che alla strada sottostante.
-    map.createPane('parkingPane');
-    map.getPane('parkingPane').style.zIndex = 410;
+    map.createPane('parkingAreasPane');
+    map.getPane('parkingAreasPane').style.zIndex = 410;
+    map.createPane('parkingSpacesPane');
+    map.getPane('parkingSpacesPane').style.zIndex = 420;
     map.createPane('parkometersPane');
-    map.getPane('parkometersPane').style.zIndex = 420;
+    map.getPane('parkometersPane').style.zIndex = 430;
 
     const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
@@ -876,7 +883,11 @@
       busstops:     L.layerGroup(),
       bins:         L.layerGroup(),
       parking:      L.layerGroup(),
-      parkometers:  L.layerGroup()
+      parkometers:  L.layerGroup(),
+      waterway:     L.layerGroup(),
+      trafficsignals: L.layerGroup(),
+      manholes:     L.layerGroup(),
+      bicycleparking: L.layerGroup()
     };
 
     // ─── Custom layer toggle panel ───
@@ -894,14 +905,26 @@
       'lyr-busstops':     layers.busstops,
       'lyr-bins':         layers.bins,
       'lyr-parking':      layers.parking,
-      'lyr-parkometers':  layers.parkometers
+      'lyr-parkometers':  layers.parkometers,
+      'lyr-waterway':     layers.waterway,
+      'lyr-trafficsignals': layers.trafficsignals,
+      'lyr-manholes':     layers.manholes,
+      'lyr-bicycleparking': layers.bicycleparking
     };
     Object.entries(layerCheckboxMap).forEach(([id, layerGroup]) => {
       const cb = document.getElementById(id);
       if (!cb) return;
       cb.addEventListener('change', () => {
-        if (cb.checked) layerGroup.addTo(map);
-        else map.removeLayer(layerGroup);
+        if (cb.checked) {
+          layerGroup.addTo(map);
+          // I marker dei divIcon vengono creati nel DOM solo ora che il layer
+          // è visibile: le icone lucide (<i data-lucide>) vanno convertite ora,
+          // non al caricamento dati, altrimenti restano vuote finché non scatta
+          // un altro lucide.createIcons() (es. al click su un marker).
+          lucide.createIcons();
+        } else {
+          map.removeLayer(layerGroup);
+        }
       });
     });
 
@@ -942,6 +965,7 @@
       crossing:     { color: '#8b5cf6', weight: 4, dashArray: '4 4', lineCap: 'round', opacity: .92 },
       construction: { color: '#f59e0b', weight: 5, dashArray: '6 4', lineCap: 'round', opacity: .92 },
       parking:      { color: '#0ea5e9', weight: 2, fillColor: '#38bdf8', fillOpacity: .35, opacity: .85 },
+      waterway:     { color: '#0284c7', weight: 3, lineCap: 'round', opacity: .8 },
       default:      { color: '#94a3b8', weight: 2, opacity: .6 }
     };
 
@@ -1437,7 +1461,7 @@
               pane: 'parkometersPane', className: 'parking-marker', bubblingMouseEvents: false
             });
             marker.bindPopup(buildParkometerPopup(tags, lat, lng, osmMeta));
-            marker.on('click', e => { L.DomEvent.stopPropagation(e); marker.openPopup(); });
+            marker.on('click', e => L.DomEvent.stopPropagation(e));
             layers.parkometers.addLayer(marker);
             return;
           }
@@ -1447,7 +1471,7 @@
             radius: isSpecialSpace ? 8 : 7,
             color: theme.color, weight: 2,
             fillColor: theme.fill, fillOpacity: isSpecialSpace ? .9 : .75,
-            pane: 'parkingPane', className: 'parking-marker', bubblingMouseEvents: false
+            pane: isSpecialSpace ? 'parkingSpacesPane' : 'parkingAreasPane', className: 'parking-marker', bubblingMouseEvents: false
           });
           marker.bindPopup(buildParkingPopup(tags, lat, lng, osmMeta));
           marker.on('click', e => { L.DomEvent.stopPropagation(e); marker.openPopup(); });
@@ -1467,15 +1491,16 @@
         else if (geomType === 'MultiPolygon') latlngs = L.GeoJSON.coordsToLatLngs(feature.geometry.coordinates, 2);
         else return;
 
+        const pane = isSpecialSpace ? 'parkingSpacesPane' : 'parkingAreasPane';
         const shapeLayer = isPolygonType
-          ? L.polygon(latlngs, { color: theme.color, weight: 2, fillColor: theme.fill, fillOpacity: isSpecialSpace ? .8 : .4, pane: 'parkingPane' })
-          : L.polyline(latlngs, { color: theme.color, weight: 3, pane: 'parkingPane' });
+          ? L.polygon(latlngs, { color: theme.color, weight: 2, fillColor: theme.fill, fillOpacity: isSpecialSpace ? .8 : .4, pane })
+          : L.polyline(latlngs, { color: theme.color, weight: 3, pane });
 
         const bounds = shapeLayer.getBounds();
         if (!bounds.isValid()) return;
         const center = bounds.getCenter();
         shapeLayer.bindPopup(buildParkingPopup(tags, center.lat, center.lng, osmMeta));
-        shapeLayer.on('click', e => { L.DomEvent.stopPropagation(e); shapeLayer.openPopup(e.latlng); });
+        shapeLayer.on('click', e => L.DomEvent.stopPropagation(e));
         layers.parking.addLayer(shapeLayer);
       } catch (err) {
         console.error('Errore rendering parcheggio', err, feature);
@@ -1483,12 +1508,16 @@
     }
 
     function getType(tags) {
-      if (tags.traffic_sign !== undefined) return 'signs';
+      if (tags.traffic_sign !== undefined || tags.highway === 'stop' || tags.highway === 'give_way') return 'signs';
       if (tags.highway === 'street_lamp') return 'lamps';
+      if (tags.highway === 'traffic_signals') return 'trafficsignals';
       if (tags.highway === 'bus_stop' || (tags.public_transport === 'platform' && tags.bus === 'yes')) return 'busstops';
       if (tags.amenity === 'waste_basket') return 'bins';
       if (tags.amenity === 'vending_machine' && tags.vending === 'parking_tickets') return 'parkometers';
+      if (tags.amenity === 'bicycle_parking') return 'bicycleparking';
+      if (tags.man_made === 'manhole' || tags.manhole !== undefined) return 'manholes';
       if (tags.amenity === 'parking' || tags.amenity === 'parking_space') return 'parking';
+      if (tags.waterway) return 'waterway';
 
       if (tags.highway === 'proposed') return 'proposed';
       if (tags.highway === 'construction') return 'construction';
@@ -1524,6 +1553,10 @@
       bins:         { label: 'Cestino',           bg: '#16a34a' },
       parking:      { label: 'Parcheggio / stallo', bg: '#0ea5e9' },
       parkometers:  { label: 'Parcometro',        bg: '#ea580c' },
+      waterway:     { label: 'Corso d\'acqua',     bg: '#0284c7' },
+      trafficsignals: { label: 'Semaforo',         bg: '#dc2626' },
+      manholes:     { label: 'Tombino',            bg: '#475569' },
+      bicycleparking: { label: 'Parcheggio bici',  bg: '#65a30d' },
       default:      { label: 'Via',               bg: '#1e293b' }
     };
 
@@ -1590,7 +1623,10 @@
       'note':                     { it: 'Note', icon: 'message-square' },
       'description':              { it: 'Descrizione', icon: 'file-text' },
 
-      'traffic_sign':             { it: 'Segnale stradale', icon: 'octagon-alert' },
+      'traffic_sign':             { it: 'Tipo di segnale', icon: 'octagon-alert' },
+      'traffic_sign:distance':    { it: 'Distanza dal segnale', icon: 'ruler' },
+      'traffic_signals':          { it: 'Tipo di semaforo', icon: 'traffic-cone' },
+      'distance':                 { it: 'Distanza', icon: 'ruler' },
       'amenity':                  { it: 'Tipo elemento', icon: 'map-pin' },
       'public_transport':         { it: 'Trasporto pubblico', icon: 'bus' },
       'bus':                      { it: 'Fermata bus', icon: 'bus' },
@@ -1614,6 +1650,13 @@
       'steps':          'Scalinata',
       'bridleway':      'Percorso equestre',
       'crossing':       'Attraversamento',
+      'stop':           'Stop',
+      'give_way':       'Dare precedenza',
+      'traffic_signals':'Semaforo',
+      'street_lamp':    'Lampione',
+      'bus_priority':   'Priorità bus',
+      'emergency':      'Mezzi di soccorso',
+      'level_crossing': 'Passaggio a livello',
 
       'residential':    'Strada residenziale',
       'primary':        'Strada principale',
@@ -1664,11 +1707,11 @@
     const GROUPS = [
       {
         title: 'Caratteristiche',
-        keys: ['highway','cycleway','footway','crossing','construction','surface','width','lanes','lit','smoothness','incline','segregated','tactile_paving','wheelchair']
+        keys: ['highway','cycleway','footway','crossing','construction','traffic_signals','surface','width','lanes','lit','smoothness','incline','segregated','tactile_paving','wheelchair']
       },
       {
         title: 'Arredo urbano',
-        keys: ['traffic_sign','amenity','public_transport','bus','parking','capacity','fee']
+        keys: ['traffic_sign','traffic_sign:distance','distance','amenity','public_transport','bus','parking','capacity','fee']
       },
       {
         title: 'Velocità & limiti',
@@ -1692,7 +1735,58 @@
       }
     ];
 
+    // Traduzione dei valori testuali più comuni dello schema OSM traffic_sign=*
+    // (spesso più segnali sullo stesso palo, separati da ";", es. "stop;IT:36").
+    const TRAFFIC_SIGN_LABELS = {
+      'stop':                    'Stop',
+      'stop_ahead':              'Preavviso di stop',
+      'give_way':                'Dare precedenza',
+      'yield':                   'Dare precedenza',
+      'give_way_ahead':          'Preavviso di dare precedenza',
+      'priority':                'Diritto di precedenza',
+      'priority_road':           'Strada con diritto di precedenza',
+      'no_entry':                'Divieto di accesso',
+      'no_overtaking':           'Divieto di sorpasso',
+      'no_stopping':             'Divieto di sosta con fermata',
+      'no_parking':              'Divieto di sosta',
+      'no_left_turn':            'Divieto di svolta a sinistra',
+      'no_right_turn':           'Divieto di svolta a destra',
+      'no_u_turn':               'Divieto di inversione a U',
+      'one_way':                 'Senso unico',
+      'roundabout':              'Rotatoria',
+      'traffic_signals':         'Semaforo',
+      'crossing':                'Attraversamento pedonale',
+      'pedestrian_crossing':     'Attraversamento pedonale',
+      'city_limit':              'Inizio centro abitato',
+      'city_limit_out':          'Fine centro abitato',
+      'national_speed_limit':    'Fine limite di velocità',
+      'minimum_speed':           'Velocità minima',
+      'school_zone':             'Zona scuola',
+      'living_street':           'Zona residenziale (zona 30)',
+      'pedestrian_zone':         'Zona pedonale',
+      'bicycle_road':            'Strada ciclabile',
+      'no_bicycles':             'Divieto di transito bici',
+      'no_trucks':               'Divieto di transito camion',
+      'speed_camera':            'Autovelox',
+      'traffic_calming':         'Dosso / rallentatore',
+      'end_of_priority_road':    'Fine strada con diritto di precedenza'
+    };
+
+    function translateTrafficSign(val) {
+      const parts = String(val).split(';').map(v => v.trim()).filter(Boolean);
+      const translated = parts.map(p => {
+        // Rimuove prefisso nazione, es. "IT:36" -> codice "36"; se il resto è
+        // un codice numerico non tentiamo di indovinarne il significato.
+        const cleaned = p.replace(/^[A-Z]{2}:/, '');
+        return TRAFFIC_SIGN_LABELS[p] || TRAFFIC_SIGN_LABELS[cleaned] || p;
+      });
+      return translated.join(' + ');
+    }
+
     function translateValue(key, val) {
+      if (key === 'traffic_sign' && val !== undefined && val !== null && val !== '') {
+        return escapeHtml(translateTrafficSign(val));
+      }
       if (val === undefined || val === null || val === '') return null;
     
       const specialLink = linkifySpecialValue(key, val);
@@ -1752,6 +1846,10 @@
         return `<span class="info-badge-val badge-speed" style="color:${color};border-color:${color}">${translated}</span>`;
       }
 
+      if (key === 'traffic_sign') {
+        return `<span class="info-badge-val badge-purple">${translated}</span>`;
+      }
+
       let cls = 'badge-gray';
       if (['yes', 'designated', 'permissive', 'excellent', 'good'].includes(val)) cls = 'badge-green';
       if (['no', 'private', 'bad', 'very_bad', 'horrible'].includes(val)) cls = 'badge-red';
@@ -1781,7 +1879,10 @@
     function openInfoPanel(feature) {
       const tags = feature.properties || {};
       const type = getType(tags);
-      const meta = TYPE_META[type] || TYPE_META.default;
+      const meta = { ...(TYPE_META[type] || TYPE_META.default) };
+      if (type === 'trafficsignals' && tags.traffic_signals === 'level_crossing') {
+        meta.label = 'Passaggio a livello';
+      }
 
       document.getElementById('infoHeader').style.background = meta.bg;
       document.getElementById('infoBadge').textContent = meta.label;
@@ -1886,10 +1987,12 @@
     // Marker punti (arredo urbano)
     // ─────────────────────────────────────────────────────────────
     const POINT_ICONS = {
-      signs:    { icon: 'octagon-alert', bg: '#eab308' },
-      lamps:    { icon: 'lightbulb', bg: '#facc15' },
-      busstops: { icon: 'bus', bg: '#2563eb' },
-      bins:     { icon: 'trash-2', bg: '#16a34a' }
+      signs:          { icon: 'octagon-alert', bg: '#eab308' },
+      lamps:          { icon: 'lightbulb', bg: '#facc15' },
+      busstops:       { icon: 'bus', bg: '#2563eb' },
+      bins:           { icon: 'trash-2', bg: '#16a34a' },
+      manholes:       { icon: 'circle-dot', bg: '#475569' },
+      bicycleparking: { icon: 'bike', bg: '#65a30d' }
     };
 
     function makePointIcon(type) {
@@ -1899,6 +2002,216 @@
         html: `<div class="marker-pop-inner" style="background:${meta.bg};width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.35);border:2px solid white"><i data-lucide="${meta.icon}" width="13" height="13" style="color:white"></i></div>`,
         iconSize: [26, 26],
         iconAnchor: [13, 13]
+      });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Icone direzionali: semaforo "vero" e segnali stradali riconosciuti
+    // (stop, dare precedenza, divieto di accesso, limite di velocità con
+    // il numero corretto), con freccetta opzionale che indica la direzione
+    // (tag OSM "direction", in gradi o punto cardinale).
+    // ─────────────────────────────────────────────────────────────
+    const COMPASS_DEGREES = {
+      N: 0, NNE: 22.5, NE: 45, ENE: 67.5, E: 90, ESE: 112.5, SE: 135, SSE: 157.5,
+      S: 180, SSW: 202.5, SW: 225, WSW: 247.5, W: 270, WNW: 292.5, NW: 315, NNW: 337.5
+    };
+
+    // Rotta (bearing) in gradi da un punto [lat,lon] all'altro, 0°=Nord, orario.
+    function bearingDeg(from, to) {
+      if (!from || !to) return null;
+      const lat1 = from[0] * Math.PI / 180, lon1 = from[1] * Math.PI / 180;
+      const lat2 = to[0] * Math.PI / 180, lon2 = to[1] * Math.PI / 180;
+      const dLon = lon2 - lon1;
+      const y = Math.sin(dLon) * Math.cos(lat2);
+      const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+      return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+    }
+
+    // "forward"/"backward" in traffic_signals:direction (o simili) sono relativi
+    // al verso di percorrenza della way su cui sta il nodo, non un punto cardinale
+    // assoluto: serve la geometria grezza di Overpass per calcolarlo. Costruisce
+    // per ogni nodo il nodo precedente/successivo sulla prima way "highway" che lo
+    // contiene, così da poter ricavare il bearing locale della strada.
+    function buildWayBearingIndex(rawOverpassData) {
+      const nodeCoords = new Map();
+      rawOverpassData.elements.forEach(el => {
+        if (el.type === 'node') nodeCoords.set(el.id, [el.lat, el.lon]);
+      });
+      const index = new Map();
+      rawOverpassData.elements.forEach(el => {
+        if (el.type !== 'way' || !el.tags || !el.tags.highway || !Array.isArray(el.nodes)) return;
+        el.nodes.forEach((nid, i) => {
+          if (index.has(nid)) return; // la prima way "stradale" che lo contiene vince
+          const prev = i > 0 ? nodeCoords.get(el.nodes[i - 1]) : null;
+          const next = i < el.nodes.length - 1 ? nodeCoords.get(el.nodes[i + 1]) : null;
+          index.set(nid, { self: nodeCoords.get(nid), prev: prev || null, next: next || null });
+        });
+      });
+      return index;
+    }
+
+    function wayDirectionDeg(nodeId, wayBearingIndex, forwardOrBackward) {
+      const info = wayBearingIndex.get(nodeId);
+      if (!info || !info.self) return null;
+      let deg = null;
+      if (info.next) deg = bearingDeg(info.self, info.next);
+      else if (info.prev) deg = bearingDeg(info.prev, info.self);
+      if (deg === null) return null;
+      return forwardOrBackward === 'backward' ? (deg + 180) % 360 : deg;
+    }
+
+    function parseDirectionDeg(tags, feature, wayBearingIndex) {
+      const raw = tags.direction ?? tags['traffic_signals:direction'] ?? tags['traffic_sign:direction'];
+      if (raw === undefined || raw === null || raw === '') return null;
+      const s = String(raw).trim().toLowerCase();
+
+      if (s === 'forward' || s === 'backward') {
+        if (!feature || !wayBearingIndex) return null;
+        const idParts = String(feature.id || '').split('/');
+        if (idParts.length !== 2) return null;
+        const nodeId = parseInt(idParts[1], 10);
+        return wayDirectionDeg(nodeId, wayBearingIndex, s);
+      }
+
+      let deg;
+      if (/^-?\d+(\.\d+)?$/.test(s)) deg = parseFloat(s);
+      else deg = COMPASS_DEGREES[s.toUpperCase()];
+      if (deg === undefined || !Number.isFinite(deg)) return null;
+      // Il tag OSM "direction" su segnali/semafori indica il lato verso cui
+      // sono rivolti (cioè da dove arriva chi li guarda) — la freccetta deve
+      // invece puntare nel verso in cui "punta" il segnale, quindi opposto.
+      return ((deg + 180) % 360 + 360) % 360;
+    }
+
+    // Il sotto-tag traffic_signals=* (stessa chiave del highway=traffic_signals)
+    // distingue varianti del semaforo: bus_priority (semaforo dedicato ai bus)
+    // ed emergency (per mezzi di soccorso) hanno un badge colorato distintivo
+    // sopra il corpo nero del semaforo, oltre ai tre pallini standard.
+    function buildTrafficLightVisual(tags) {
+      // Semaforo di passaggio a livello (highway=traffic_signals + traffic_signals
+      // =level_crossing): i semafori ferroviari lampeggiano solo rosso (niente
+      // giallo/verde), quindi stessa sagoma nera del semaforo stradale ma con
+      // un solo cerchio rosso, centrato, al centro.
+      if (tags && tags.traffic_signals === 'level_crossing') {
+        return {
+          w: 18, h: 18,
+          html: `<div class="marker-pop-inner" style="width:18px;height:18px;background:#1e293b;border-radius:50%;border:2px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.4)">
+            <span style="width:7px;height:7px;border-radius:50%;background:#ef4444;box-shadow:0 0 4px rgba(239,68,68,1)"></span>
+          </div>`
+        };
+      }
+
+      const variant = String((tags && tags.traffic_signals) || '').toLowerCase();
+
+      const box = `<div style="width:15px;height:28px;background:#1e293b;border-radius:4px;border:2px solid white;display:flex;flex-direction:column;align-items:center;justify-content:space-evenly;padding:2px 0;box-shadow:0 2px 6px rgba(0,0,0,.4)">
+        <span style="width:6px;height:6px;border-radius:50%;background:#ef4444;box-shadow:0 0 3px rgba(239,68,68,.9)"></span>
+        <span style="width:6px;height:6px;border-radius:50%;background:#facc15;box-shadow:0 0 3px rgba(250,204,21,.7)"></span>
+        <span style="width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 3px rgba(34,197,94,.9)"></span>
+      </div>`;
+
+      let badge = '';
+      if (variant === 'bus_priority') {
+        badge = `<div style="position:absolute;top:-6px;right:-7px;width:13px;height:13px;border-radius:50%;background:#2563eb;border:1.5px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.4)"><i data-lucide="bus" width="8" height="8" style="color:white"></i></div>`;
+      } else if (variant === 'emergency') {
+        badge = `<div style="position:absolute;top:-6px;right:-7px;width:13px;height:13px;border-radius:50%;background:#dc2626;border:1.5px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.4)"><i data-lucide="siren" width="8" height="8" style="color:white"></i></div>`;
+      }
+
+      return {
+        w: 15, h: 28,
+        html: `<div class="marker-pop-inner" style="position:relative">${box}${badge}</div>`
+      };
+    }
+
+    // In Italia "*_ahead" non è un segnale a parte: è lo stesso segnale
+    // (stop / dare precedenza) con sotto un pannello integrativo che indica
+    // la distanza ("tra X m"). Cerchiamo la distanza sia in un eventuale tag
+    // dedicato sia dentro al valore stesso di traffic_sign (es. "IT:37[300]").
+    function extractAheadDistance(tags) {
+      const explicit = tags['traffic_sign:distance'] || tags['distance'];
+      if (explicit) return String(explicit).replace(/\s*m$/i, '').trim();
+      const raw = String(tags.traffic_sign || '');
+      const m = raw.match(/\[(\d+)\s*m?\]/i) || raw.match(/(\d+)\s*m\b/i);
+      return m ? m[1] : null;
+    }
+
+    // Sceglie la grafica del segnale in base al tag traffic_sign/maxspeed del nodo.
+    // Se il tipo non è tra quelli riconosciuti, torna al pallino giallo generico.
+    function buildSignVisual(tags) {
+      const signVal = String(tags.traffic_sign || '').toLowerCase();
+      const isAhead = /_ahead\b/.test(signVal);
+
+      let base;
+      if (tags.maxspeed) {
+        const num = String(tags.maxspeed).match(/\d+/)?.[0] || '?';
+        base = {
+          w: 26, h: 26,
+          html: `<div class="marker-pop-inner" style="width:26px;height:26px;border-radius:50%;background:#fff;border:3px solid #dc2626;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:${num.length > 2 ? '10px' : '12px'};color:#0f172a;box-shadow:0 2px 6px rgba(0,0,0,.35);font-family:'Inter',sans-serif;line-height:1">${escapeHtml(num)}</div>`
+        };
+      } else if (signVal.includes('stop') || tags.highway === 'stop') {
+        base = {
+          w: 24, h: 24,
+          html: `<div class="marker-pop-inner" style="width:24px;height:24px;background:#dc2626;clip-path:polygon(30% 0,70% 0,100% 30%,100% 70%,70% 100%,30% 100%,0 70%,0 30%);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.35)"><span style="color:#fff;font-size:6px;font-weight:800;letter-spacing:.4px;font-family:'Inter',sans-serif">STOP</span></div>`
+        };
+      } else if (signVal.includes('give_way') || signVal.includes('yield') || tags.highway === 'give_way') {
+        base = {
+          w: 26, h: 24,
+          html: `<div class="marker-pop-inner" style="width:26px;height:24px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 2px 4px rgba(0,0,0,.35))">
+            <div style="width:0;height:0;border-left:13px solid transparent;border-right:13px solid transparent;border-top:22px solid #dc2626;position:relative">
+              <div style="position:absolute;top:-19px;left:-9px;width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-top:15px solid #fff"></div>
+            </div>
+          </div>`
+        };
+      } else if (signVal.includes('no_entry')) {
+        base = {
+          w: 24, h: 24,
+          html: `<div class="marker-pop-inner" style="width:24px;height:24px;border-radius:50%;background:#dc2626;border:2px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.35)"><div style="width:14px;height:3px;background:#fff;border-radius:1px"></div></div>`
+        };
+      } else {
+        base = {
+          w: 26, h: 26,
+          html: `<div class="marker-pop-inner" style="background:#eab308;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.35);border:2px solid white"><i data-lucide="octagon-alert" width="13" height="13" style="color:white"></i></div>`
+        };
+      }
+
+      if (!isAhead) return base;
+
+      const distance = extractAheadDistance(tags);
+      if (!distance) return base; // niente distanza nota: mostra solo il segnale, senza inventare nulla
+
+      const plateText = `${distance} m`;
+      const plate = `<div style="margin-top:2px;background:#fff;border:1.5px solid #0f172a;border-radius:2px;padding:1px 4px;font-size:8px;font-weight:700;color:#0f172a;font-family:'Inter',sans-serif;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.3)">${escapeHtml(plateText)}</div>`;
+      return {
+        w: Math.max(base.w, plateText.length * 6 + 8),
+        h: base.h + 14,
+        html: `<div style="display:flex;flex-direction:column;align-items:center">${base.html}${plate}</div>`
+      };
+    }
+
+    // Compone l'icona (visual + eventuale freccetta di direzione, ruotata secondo
+    // il tag "direction": 0°=Nord, in senso orario, come rotate() in CSS).
+    function makeDirectionalDivIcon(visual, directionDeg) {
+      const { html, w, h } = visual;
+      const halfW = w / 2, halfH = h / 2;
+      const padTop = 14;
+      const totalW = w + 4;
+      const totalH = h + padTop + 2;
+      const cx = totalW / 2;
+      const cy = padTop + halfH;
+
+      let arrowHtml = '';
+      if (Number.isFinite(directionDeg)) {
+        arrowHtml = `<div style="position:absolute;left:${cx}px;top:${cy}px;width:0;height:0;transform-origin:0 0;transform:rotate(${directionDeg}deg) translate(-4px, -${cy - 1}px)">
+          <div style="width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-bottom:8px solid #0f172a;filter:drop-shadow(0 1px 1px rgba(0,0,0,.45))"></div>
+        </div>`;
+      }
+
+      const iconHtml = `<div style="position:absolute;left:${cx - halfW}px;top:${cy - halfH}px">${html}</div>`;
+
+      return L.divIcon({
+        className: 'point-marker',
+        html: `<div style="position:relative;width:${totalW}px;height:${totalH}px">${arrowHtml}${iconHtml}</div>`,
+        iconSize: [totalW, totalH],
+        iconAnchor: [cx, cy]
       });
     }
 
@@ -2010,7 +2323,10 @@
           way["ref"~"^(SS|SR|SP|SC)"](area.a);
 
           node["traffic_sign"](area.a);
+          node["highway"="stop"](area.a);
+          node["highway"="give_way"](area.a);
           node["highway"="street_lamp"](area.a);
+          node["highway"="traffic_signals"](area.a);
           node["highway"="bus_stop"](area.a);
           node["public_transport"="platform"]["bus"="yes"](area.a);
           node["amenity"="waste_basket"](area.a);
@@ -2020,8 +2336,23 @@
           way["amenity"="parking_space"](area.a);
           node["amenity"="vending_machine"]["vending"="parking_tickets"](area.a);
           way["amenity"="vending_machine"]["vending"="parking_tickets"](area.a);
-        );
-        out body; >; out skel qt;`;
+          node["amenity"="bicycle_parking"](area.a);
+          way["amenity"="bicycle_parking"](area.a);
+          node["man_made"="manhole"](area.a);
+          node["manhole"](area.a);
+          way["waterway"~"^(river|stream|canal|drain|ditch)$"](area.a);
+        )->.base;
+        (
+          node["traffic_sign"](area.a);
+          node["highway"="stop"](area.a);
+          node["highway"="give_way"](area.a);
+          node["highway"="traffic_signals"](area.a);
+        )->.signalNodes;
+        way(bn.signalNodes)["highway"](area.a)->.signalWays;
+        (.base; .signalWays;);
+        out body;
+        >;
+        out skel qt;`;
 
       try {
         const res = await fetch('https://overpass-api.de/api/interpreter', {
@@ -2030,6 +2361,7 @@
         });
         const data = await res.json();
         const geojson = osmtogeojson(data);
+        const wayBearingIndex = buildWayBearingIndex(data);
 
         // Normalizza typo comuni nei tag OSM
         const TAG_TYPOS = {
@@ -2126,7 +2458,7 @@
         });
 
         // ─── Punti (segnali, lampioni, fermate bus, cestini) ───
-        const POINT_TYPES = ['signs', 'lamps', 'busstops', 'bins'];
+        const POINT_TYPES = ['signs', 'lamps', 'busstops', 'bins', 'trafficsignals', 'manholes', 'bicycleparking'];
         geojson.features.forEach(feature => {
           if (!feature.geometry || feature.geometry.type !== 'Point') return;
           const tags = feature.properties || {};
@@ -2140,7 +2472,18 @@
 
           const name = tags.name || tags['name:it'] || '';
           const [lng, lat] = feature.geometry.coordinates;
-          const marker = L.marker([lat, lng], { icon: makePointIcon(type) });
+          const directionDeg = parseDirectionDeg(tags, feature, wayBearingIndex);
+
+          let icon;
+          if (type === 'trafficsignals') {
+            icon = makeDirectionalDivIcon(buildTrafficLightVisual(tags), directionDeg);
+          } else if (type === 'signs') {
+            icon = makeDirectionalDivIcon(buildSignVisual(tags), directionDeg);
+          } else {
+            icon = makePointIcon(type);
+          }
+
+          const marker = L.marker([lat, lng], { icon });
           wirePointInteractions(marker, feature, name);
           layers[type].addLayer(marker);
         });
