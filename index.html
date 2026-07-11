@@ -41,7 +41,7 @@
     html, body { height: 100%; margin: 0; padding: 0; font-family: 'Inter', sans-serif; background: #f1f5f9; }
     #map { position: absolute; inset: 0; z-index: 1; }
 
-    @keyframes fadeSlideDown { from { opacity: 0; transform: translate(-50%, -14px); } to { opacity: 1; transform: translate(-50%, 0); } }
+    @keyframes fadeSlideDown { from { opacity: 0; transform: translateY(-14px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes fadeSlideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes popIn { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
     @keyframes markerDrop { from { opacity: 0; transform: scale(0) translateY(-8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
@@ -53,8 +53,7 @@
     #topbar {
       position: fixed;
       top: 12px;
-      left: 50%;
-      transform: translateX(-50%);
+      left: 12px;
       width: calc(100% - 24px);
       max-width: 980px;
       z-index: 1000;
@@ -73,16 +72,15 @@
     .ctrl-btn {
       height: 38px;
       min-width: 38px;
-      background: var(--bg-card);
-      backdrop-filter: blur(14px);
-      border: var(--border);
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
       border-radius: var(--radius);
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      box-shadow: var(--shadow);
-      transition: background .2s, transform .15s;
+      box-shadow: 0 1px 3px rgba(15,23,42,0.08);
+      transition: background .2s, transform .15s, box-shadow .2s;
       color: var(--text-main);
       padding: 0 12px;
       gap: 6px;
@@ -520,7 +518,11 @@
     }
     .popup-links a:hover { background: var(--primary); color: #fff; border-color: var(--primary); transform: translateY(-1px); }
 
+    /* NB: l'animazione va SOLO su elementi interni: Leaflet posiziona i divIcon
+       tramite transform sul contenitore, un'animazione CSS transform su quello
+       stesso elemento sovrascrive il posizionamento e il marker "vola" al centro. */
     .parking-marker { animation: markerDrop .35s var(--ease) both; }
+    .marker-pop-inner { animation: markerDrop .35s var(--ease) both; }
 
     @media (max-width: 680px) {
       #infoPanel, #legendPanel {
@@ -815,6 +817,14 @@
     const map = L.map('map', { zoomControl: false }).setView([45.671, 11.928], 14);
     setTimeout(() => map.invalidateSize(), 100);
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
+
+    // Pane dedicati per i parcheggi: stanno sopra a strade/attraversamenti
+    // (z-index più alto dell'overlayPane di default = 400) così i click
+    // arrivano sempre a loro invece che alla strada sottostante.
+    map.createPane('parkingPane');
+    map.getPane('parkingPane').style.zIndex = 410;
+    map.createPane('parkometersPane');
+    map.getPane('parkometersPane').style.zIndex = 420;
 
     const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
@@ -1369,11 +1379,6 @@
           <span class="label">Note</span>
           <span class="val">${escapeHtml(tags.note)}</span>
         </div>` : ''}
-
-        <div class="popup-links">
-          <a href="${buildGMapsUrl(lat, lon)}" target="_blank" rel="noopener">Vai a</a>
-          <a href="${buildIdUrl(osmMeta.type, osmMeta.id, lat, lon)}" target="_blank" rel="noopener">Modifica</a>
-        </div>
       `;
     }
 
@@ -1409,11 +1414,6 @@
           <span class="label">Note</span>
           <span class="val">${escapeHtml(tags.note)}</span>
         </div>` : ''}
-
-        <div class="popup-links">
-          <a href="${buildGMapsUrl(lat, lon)}" target="_blank" rel="noopener">Vai a</a>
-          <a href="${buildIdUrl(osmMeta.type, osmMeta.id, lat, lon)}" target="_blank" rel="noopener">Modifica</a>
-        </div>
       `;
     }
 
@@ -1427,44 +1427,59 @@
       const isParkometer = tags.amenity === 'vending_machine' && tags.vending === 'parking_tickets';
       const isSpecialSpace = tags.amenity === 'parking_space' && tags.parking_space && tags.parking_space !== 'normal';
 
-      if (geomType === 'Point') {
-        const [lng, lat] = feature.geometry.coordinates;
+      try {
+        if (geomType === 'Point') {
+          const [lng, lat] = feature.geometry.coordinates;
 
-        if (isParkometer) {
-          const marker = L.circleMarker([lat, lng], { radius: 6, color: '#7c2d12', weight: 2, fillColor: '#ea580c', fillOpacity: .95, className: 'parking-marker' })
-            .bindPopup(buildParkometerPopup(tags, lat, lng, osmMeta));
-          marker.on('click', e => L.DomEvent.stopPropagation(e));
-          layers.parkometers.addLayer(marker);
+          if (isParkometer) {
+            const marker = L.circleMarker([lat, lng], {
+              radius: 6, color: '#7c2d12', weight: 2, fillColor: '#ea580c', fillOpacity: .95,
+              pane: 'parkometersPane', className: 'parking-marker', bubblingMouseEvents: false
+            });
+            marker.bindPopup(buildParkometerPopup(tags, lat, lng, osmMeta));
+            marker.on('click', e => { L.DomEvent.stopPropagation(e); marker.openPopup(); });
+            layers.parkometers.addLayer(marker);
+            return;
+          }
+
+          const theme = isSpecialSpace ? getSpecialSpaceColors(tags.parking_space) : getParkingAreaColors(tags);
+          const marker = L.circleMarker([lat, lng], {
+            radius: isSpecialSpace ? 8 : 7,
+            color: theme.color, weight: 2,
+            fillColor: theme.fill, fillOpacity: isSpecialSpace ? .9 : .75,
+            pane: 'parkingPane', className: 'parking-marker', bubblingMouseEvents: false
+          });
+          marker.bindPopup(buildParkingPopup(tags, lat, lng, osmMeta));
+          marker.on('click', e => { L.DomEvent.stopPropagation(e); marker.openPopup(); });
+          layers.parking.addLayer(marker);
           return;
         }
 
+        // Polygon / LineString (aree e stalli disegnati come poligono) — conversione
+        // diretta delle coordinate GeoJSON in LatLng, senza passare da un secondo
+        // L.geoJSON annidato (più semplice da debuggare e identica al riferimento).
         const theme = isSpecialSpace ? getSpecialSpaceColors(tags.parking_space) : getParkingAreaColors(tags);
-        const marker = L.circleMarker([lat, lng], {
-          radius: isSpecialSpace ? 8 : 7,
-          color: theme.color, weight: 2,
-          fillColor: theme.fill, fillOpacity: isSpecialSpace ? .9 : .75,
-          className: 'parking-marker'
-        }).bindPopup(buildParkingPopup(tags, lat, lng, osmMeta));
-        marker.on('click', e => L.DomEvent.stopPropagation(e));
-        layers.parking.addLayer(marker);
-        return;
-      }
+        const isPolygonType = geomType === 'Polygon' || geomType === 'MultiPolygon';
+        let latlngs;
+        if (geomType === 'LineString') latlngs = L.GeoJSON.coordsToLatLngs(feature.geometry.coordinates, 0);
+        else if (geomType === 'MultiLineString') latlngs = L.GeoJSON.coordsToLatLngs(feature.geometry.coordinates, 1);
+        else if (geomType === 'Polygon') latlngs = L.GeoJSON.coordsToLatLngs(feature.geometry.coordinates, 1);
+        else if (geomType === 'MultiPolygon') latlngs = L.GeoJSON.coordsToLatLngs(feature.geometry.coordinates, 2);
+        else return;
 
-      // Polygon / LineString (aree e stalli disegnati come poligono)
-      const theme = isSpecialSpace ? getSpecialSpaceColors(tags.parking_space) : getParkingAreaColors(tags);
-      const shape = L.geoJSON(feature, {
-        style: () => ({
-          color: theme.color, weight: 2,
-          fillColor: theme.fill, fillOpacity: isSpecialSpace ? .8 : .4
-        })
-      });
-      const center = shape.getBounds().isValid() ? shape.getBounds().getCenter() : null;
-      if (!center) return;
-      shape.bindPopup(buildParkingPopup(tags, center.lat, center.lng, osmMeta));
-      forEachSubLayer(shape, sub => {
-        sub.on('click', e => L.DomEvent.stopPropagation(e));
-        layers.parking.addLayer(sub);
-      });
+        const shapeLayer = isPolygonType
+          ? L.polygon(latlngs, { color: theme.color, weight: 2, fillColor: theme.fill, fillOpacity: isSpecialSpace ? .8 : .4, pane: 'parkingPane' })
+          : L.polyline(latlngs, { color: theme.color, weight: 3, pane: 'parkingPane' });
+
+        const bounds = shapeLayer.getBounds();
+        if (!bounds.isValid()) return;
+        const center = bounds.getCenter();
+        shapeLayer.bindPopup(buildParkingPopup(tags, center.lat, center.lng, osmMeta));
+        shapeLayer.on('click', e => { L.DomEvent.stopPropagation(e); shapeLayer.openPopup(e.latlng); });
+        layers.parking.addLayer(shapeLayer);
+      } catch (err) {
+        console.error('Errore rendering parcheggio', err, feature);
+      }
     }
 
     function getType(tags) {
@@ -1880,8 +1895,8 @@
     function makePointIcon(type) {
       const meta = POINT_ICONS[type];
       return L.divIcon({
-        className: 'point-marker parking-marker',
-        html: `<div style="background:${meta.bg};width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.35);border:2px solid white"><i data-lucide="${meta.icon}" width="13" height="13" style="color:white"></i></div>`,
+        className: 'point-marker',
+        html: `<div class="marker-pop-inner" style="background:${meta.bg};width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.35);border:2px solid white"><i data-lucide="${meta.icon}" width="13" height="13" style="color:white"></i></div>`,
         iconSize: [26, 26],
         iconAnchor: [13, 13]
       });
@@ -2162,7 +2177,7 @@ setTimeout(() => {
     });
 
     map.on('click', () => closePanel('infoPanel'));
-    map.on('popupopen', e => lucide.createIcons({ root: e.popup.getElement() }));
+    map.on('popupopen', () => lucide.createIcons());
 
     // Tooltip style
     const tooltipStyle = document.createElement('style');
