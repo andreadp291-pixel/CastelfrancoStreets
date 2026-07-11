@@ -11,6 +11,9 @@
 
   <style>
     :root {
+      --primary:       #4f46e5;
+      --primary-dark:  #4338ca;
+      --primary-light: #eef2ff;
       --proposed:      #f97316;
       --cycleway:      #06b6d4;
       --pedestrian:    #22c55e;
@@ -18,23 +21,33 @@
       --construction:  #f59e0b;
       --maxspeed:      #ef4444;
       --hgv:           #0f766e;
+      --danger:        #dc2626;
       --bg-dark:       #0f172a;
-      --bg-card:       rgba(255,255,255,0.93);
+      --bg-card:       rgba(255,255,255,0.9);
       --text-main:     #1e293b;
       --text-light:    #64748b;
       --radius:        14px;
-      --shadow:        0 8px 32px rgba(0,0,0,0.13);
-      --border:        1px solid rgba(255,255,255,0.65);
-      --panel-w:       340px;
+      --shadow:        0 10px 34px rgba(15,23,42,0.14), 0 2px 8px rgba(15,23,42,0.06);
+      --border:        1px solid rgba(255,255,255,0.7);
+      --panel-w:       350px;
       --ref-ss: #dc2626;
       --ref-sr: #7c3aed;
       --ref-sp: #d97706;
       --ref-sc: #0369a1;
+      --ease: cubic-bezier(.16,1,.3,1);
     }
 
     *, *::before, *::after { box-sizing: border-box; }
-    html, body { height: 100%; margin: 0; padding: 0; font-family: 'Inter', sans-serif; background: #f8fafc; }
+    html, body { height: 100%; margin: 0; padding: 0; font-family: 'Inter', sans-serif; background: #f1f5f9; }
     #map { position: absolute; inset: 0; z-index: 1; }
+
+    @keyframes fadeSlideDown { from { opacity: 0; transform: translate(-50%, -14px); } to { opacity: 1; transform: translate(-50%, 0); } }
+    @keyframes fadeSlideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes popIn { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
+    @keyframes markerDrop { from { opacity: 0; transform: scale(0) translateY(-8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    @keyframes rowFade { from { opacity: 0; transform: translateX(6px); } to { opacity: 1; transform: translateX(0); } }
+
+    #topbar { animation: fadeSlideDown .5s var(--ease); }
 
     /* ─── TOPBAR ───  */
     #topbar {
@@ -76,8 +89,9 @@
       font-size: 12px;
       font-weight: 600;
     }
-    .ctrl-btn:hover { background: white; transform: scale(1.06); }
-    .ctrl-btn.spinning svg { animation: spin 1s linear infinite; }
+    .ctrl-btn:hover { background: white; transform: translateY(-2px); box-shadow: 0 12px 28px rgba(15,23,42,0.18); }
+    .ctrl-btn:active { transform: translateY(0) scale(.96); }
+    .ctrl-btn.spinning svg { animation: spin .9s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* ─── CONTROLLI LEAFLET ─── */
@@ -98,7 +112,7 @@
       flex-direction: column;
       gap: 2px;
     }
-    #layersPanel.open { display: flex; }
+    #layersPanel.open { display: flex; animation: fadeSlideUp .22s var(--ease); }
     #layersPanel .lp-title {
       font-size: 11px;
       font-weight: 700;
@@ -121,7 +135,9 @@
       border-radius: 8px;
       transition: background .12s;
     }
-    #layersPanel label:hover { background: rgba(0,0,0,.04); }
+    #layersPanel label:hover { background: rgba(79,70,229,.08); }
+    #layersPanel label { transition: background .15s, transform .1s; }
+    #layersPanel label:active { transform: scale(.98); }
     #layersPanel input[type=checkbox] { accent-color: var(--text-main); width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; }
     #layersPanelSep { height: 1px; background: rgba(0,0,0,.07); margin: 6px 10px; }
 
@@ -283,6 +299,7 @@
   border-bottom: 1px solid #f8fafc;
   gap: 12px;
   transition: background .12s;
+  animation: rowFade .28s var(--ease) both;
 }
 .info-row:hover { background: #f8fafc; }
 .info-row:last-child { border-bottom: none; }
@@ -448,6 +465,63 @@
       flex-shrink: 0;
     }
 
+    /* ─── POPUP PARCHEGGI (stile professionale, come ParkMap) ─── */
+    .leaflet-popup-content-wrapper {
+      border-radius: 20px;
+      box-shadow: 0 20px 40px -12px rgba(15,23,42,0.28), 0 4px 12px -4px rgba(15,23,42,0.12);
+      padding: 0;
+      overflow: hidden;
+      animation: popIn .18s cubic-bezier(.34,1.56,.64,1);
+    }
+    .leaflet-popup-content { margin: 0; min-width: 250px !important; font-family: 'Inter', sans-serif; }
+    .leaflet-popup-tip { box-shadow: 0 4px 10px rgba(15,23,42,0.15); }
+    .leaflet-container a.leaflet-popup-close-button {
+      top: 14px; right: 14px; color: #fff; font-size: 18px; font-family: inherit;
+      width: 24px; height: 24px; padding: 0; margin: 0;
+      display: flex; align-items: center; justify-content: center; line-height: 1;
+      background: rgba(255,255,255,.2); border-radius: 50%; transition: background .15s;
+    }
+    .leaflet-container a.leaflet-popup-close-button:hover { background: rgba(255,255,255,.34); color: #fff; }
+
+    .popup-header-container {
+      display: flex; align-items: center; gap: 14px;
+      margin: 0; padding: 18px 20px;
+      transition: background .2s ease;
+    }
+    .popup-icon-box {
+      background: rgba(255,255,255,.22); color: #fff;
+      width: 42px; height: 42px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; box-shadow: inset 0 0 0 1px rgba(255,255,255,.25);
+    }
+    .popup-icon-box i { width: 21px; height: 21px; }
+    .popup-title { font-size: 15.5px; font-weight: 700; color: #fff; line-height: 1.3; }
+    .leaflet-popup-content > div:not(.popup-header-container):not(.popup-links) { padding: 0 20px; }
+    .leaflet-popup-content > .popup-header-container + * { margin-top: 16px; }
+    .popup-section { margin-bottom: 13px; padding-bottom: 13px; display: flex; flex-direction: column; border-bottom: 1px solid #f1f5f9; }
+    .popup-section:last-of-type { margin-bottom: 4px; padding-bottom: 0; border-bottom: none; }
+    .popup-section .label { color: var(--text-light); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 4px; }
+    .popup-section .val { color: var(--text-main); font-weight: 600; font-size: 13.5px; line-height: 1.55; }
+
+    .badge-note {
+      background: var(--primary-light); color: var(--primary-dark);
+      font-size: 11.5px; padding: 5px 10px; border-radius: 20px;
+      margin-top: 5px; margin-right: 6px; font-weight: 700;
+      display: inline-block; transition: transform .15s ease;
+    }
+    .badge-note.danger { background: #fef2f2; color: var(--danger); }
+    .badge-note.time { background: #f3e8ff; color: #6d28d9; border: 1px solid #e9d5ff; }
+
+    .popup-links { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 15px 20px 19px; }
+    .popup-links a {
+      text-align: center; padding: 10px; background: #f8fafc;
+      border: 1px solid #e2e8f0; border-radius: 12px; text-decoration: none;
+      font-weight: 600; font-size: 12px; color: var(--text-main); transition: all .15s ease;
+    }
+    .popup-links a:hover { background: var(--primary); color: #fff; border-color: var(--primary); transform: translateY(-1px); }
+
+    .parking-marker { animation: markerDrop .35s var(--ease) both; }
+
     @media (max-width: 680px) {
       #infoPanel, #legendPanel {
         width: calc(100% - 20px);
@@ -477,25 +551,26 @@
   <!-- LAYERS PANEL -->
   <div id="layersPanel">
     <div class="lp-title"><i data-lucide="map" width="11" height="11" style="vertical-align:middle;margin-right:4px"></i>Mappa base</div>
-    <label><input type="radio" name="basemap" id="bm-osm" checked> 🗺️ OpenStreetMap</label>
-    <label><input type="radio" name="basemap" id="bm-sat"> 🛰️ Satellite (Esri)</label>
+    <label><input type="radio" name="basemap" id="bm-osm" checked> <i data-lucide="map" width="14" height="14" style="color:#475569"></i> OpenStreetMap</label>
+    <label><input type="radio" name="basemap" id="bm-sat"> <i data-lucide="satellite" width="14" height="14" style="color:#475569"></i> Satellite (Esri)</label>
     <div id="layersPanelSep" style="height:1px;background:rgba(0,0,0,.07);margin:6px 10px"></div>
     <div class="lp-title" style="margin-top:2px"><i data-lucide="layers" width="11" height="11" style="vertical-align:middle;margin-right:4px"></i>Layer visibili</div>
-    <label><input type="checkbox" id="lyr-proposed"> <span style="color:#f97316">🔶</span> Strade proposte</label>
-    <label><input type="checkbox" id="lyr-cycleway"> <span style="color:#06b6d4">🚲</span> Ciclabili</label>
-    <label><input type="checkbox" id="lyr-pedestrian"> <span style="color:#22c55e">🚶</span> Pedonali</label>
-    <label><input type="checkbox" id="lyr-crossing"> <span style="color:#8b5cf6">🔀</span> Attraversamenti</label>
-    <label><input type="checkbox" id="lyr-construction"> <span style="color:#f59e0b">🚧</span> In costruzione</label>
-    <label><input type="checkbox" id="lyr-maxspeed"> <span style="color:#ef4444">⚡</span> Limiti di velocità</label>
-    <label><input type="checkbox" id="lyr-hgv"> <span style="color:#0f766e">🚛</span> Mezzi pesanti</label>
-    <label><input type="checkbox" id="lyr-strade_ref"> <span style="color:#dc2626">🛣️</span> Proprietà (SS/SR/SP/SC)</label>
+    <label><input type="checkbox" id="lyr-proposed"> <i data-lucide="route" width="14" height="14" style="color:#f97316"></i> Strade proposte</label>
+    <label><input type="checkbox" id="lyr-cycleway"> <i data-lucide="bike" width="14" height="14" style="color:#06b6d4"></i> Ciclabili</label>
+    <label><input type="checkbox" id="lyr-pedestrian"> <i data-lucide="footprints" width="14" height="14" style="color:#22c55e"></i> Pedonali</label>
+    <label><input type="checkbox" id="lyr-crossing"> <i data-lucide="move-horizontal" width="14" height="14" style="color:#8b5cf6"></i> Attraversamenti</label>
+    <label><input type="checkbox" id="lyr-construction"> <i data-lucide="cone" width="14" height="14" style="color:#f59e0b"></i> In costruzione</label>
+    <label><input type="checkbox" id="lyr-maxspeed"> <i data-lucide="gauge" width="14" height="14" style="color:#ef4444"></i> Limiti di velocità</label>
+    <label><input type="checkbox" id="lyr-hgv"> <i data-lucide="truck" width="14" height="14" style="color:#0f766e"></i> Mezzi pesanti</label>
+    <label><input type="checkbox" id="lyr-strade_ref"> <i data-lucide="signpost" width="14" height="14" style="color:#dc2626"></i> Proprietà (SS/SR/SP/SC)</label>
     <div id="layersPanelSep2" style="height:1px;background:rgba(0,0,0,.07);margin:6px 10px"></div>
     <div class="lp-title" style="margin-top:2px"><i data-lucide="map-pin" width="11" height="11" style="vertical-align:middle;margin-right:4px"></i>Arredo urbano</div>
-    <label><input type="checkbox" id="lyr-signs"> <span style="color:#eab308">🪧</span> Segnali stradali</label>
-    <label><input type="checkbox" id="lyr-lamps"> <span style="color:#facc15">💡</span> Lampioni</label>
-    <label><input type="checkbox" id="lyr-busstops"> <span style="color:#2563eb">🚌</span> Fermate bus</label>
-    <label><input type="checkbox" id="lyr-bins"> <span style="color:#16a34a">🗑️</span> Cestini</label>
-    <label><input type="checkbox" id="lyr-parking"> <span style="color:#0ea5e9">🅿️</span> Parcheggi e stalli</label>
+    <label><input type="checkbox" id="lyr-signs"> <i data-lucide="octagon-alert" width="14" height="14" style="color:#eab308"></i> Segnali stradali</label>
+    <label><input type="checkbox" id="lyr-lamps"> <i data-lucide="lightbulb" width="14" height="14" style="color:#facc15"></i> Lampioni</label>
+    <label><input type="checkbox" id="lyr-busstops"> <i data-lucide="bus" width="14" height="14" style="color:#2563eb"></i> Fermate bus</label>
+    <label><input type="checkbox" id="lyr-bins"> <i data-lucide="trash-2" width="14" height="14" style="color:#16a34a"></i> Cestini</label>
+    <label><input type="checkbox" id="lyr-parking"> <i data-lucide="square-parking" width="14" height="14" style="color:#0ea5e9"></i> Aree e stalli parcheggio</label>
+    <label><input type="checkbox" id="lyr-parkometers"> <i data-lucide="ticket" width="14" height="14" style="color:#ea580c"></i> Parcometri</label>
   </div>
 
   <div id="map"></div>
@@ -544,7 +619,7 @@
     </div>
   </div>
 
-  <!-- ✅ legend-content racchiude TUTTO: descrizione + legende -->
+  <!-- legend-content racchiude descrizione + legende -->
   <div class="legend-content">
 
     <!-- Sezione descrizione app -->
@@ -560,29 +635,29 @@
       </p>
       <p style="font-size:12px;color:var(--text-light);line-height:1.55;margin:0 0 10px">
         I dati vengono scaricati in tempo reale da <strong>Overpass API</strong> ogni volta che
-        premi il pulsante di aggiornamento 🔄. Clicca su qualsiasi segmento sulla mappa per
+        premi il pulsante di aggiornamento. Clicca su qualsiasi segmento sulla mappa per
         vedere i dettagli del tratto selezionato.
       </p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
         <div style="background:#f8fafc;border-radius:10px;padding:10px;font-size:11px">
-          <div style="font-weight:700;color:var(--text-main);margin-bottom:4px">🗺️ Layer disponibili</div>
+          <div style="font-weight:700;color:var(--text-main);margin-bottom:4px;display:flex;align-items:center;gap:5px"><i data-lucide="layers" width="12" height="12"></i>Layer disponibili</div>
           <div style="color:var(--text-light);line-height:1.6">
             Strade proposte<br>Piste ciclabili<br>Percorsi pedonali<br>
             Attraversamenti<br>In costruzione<br>Limiti di velocità<br>Mezzi pesanti<br>
-            Segnali stradali<br>Lampioni<br>Fermate bus<br>Cestini<br>Parcheggi e stalli
+            Segnali stradali<br>Lampioni<br>Fermate bus<br>Cestini<br>Parcheggi, stalli e parcometri
           </div>
         </div>
         <div style="background:#f8fafc;border-radius:10px;padding:10px;font-size:11px">
-          <div style="font-weight:700;color:var(--text-main);margin-bottom:4px">ℹ️ Come usare</div>
+          <div style="font-weight:700;color:var(--text-main);margin-bottom:4px;display:flex;align-items:center;gap:5px"><i data-lucide="circle-help" width="12" height="12"></i>Come usare</div>
           <div style="color:var(--text-light);line-height:1.6">
-            Attiva i layer dal controllo in basso a sinistra<br><br>
+            Attiva i layer dal controllo in alto<br><br>
             Clicca un segmento per i dettagli<br><br>
-            🔄 per aggiornare i dati
+            Aggiorna per ricaricare i dati
           </div>
         </div>
       </div>
-      <div style="margin-top:10px;padding:8px 10px;background:#eff6ff;border-radius:8px;font-size:11px;color:#1d4ed8">
-        📡 Fonte: <strong>OpenStreetMap</strong> — dati aperti © contributori OSM
+      <div style="margin-top:10px;padding:8px 10px;background:#eff6ff;border-radius:8px;font-size:11px;color:#1d4ed8;display:flex;align-items:center;gap:6px">
+        <i data-lucide="satellite-dish" width="13" height="13"></i>Fonte: <strong>OpenStreetMap</strong> — dati aperti © contributori OSM
       </div>
     </div>
 
@@ -620,7 +695,7 @@
 
     <!-- Legenda Strade per proprietà -->
     <div class="legend-section">
-      <div class="legend-section-title">🛣️ Strade per proprietà</div>
+      <div class="legend-section-title">Strade per proprietà</div>
       <div class="legend-list">
         <div class="legend-item"><span class="legend-line" style="border-color:#dc2626"></span><span><strong>SS</strong> – Strada Statale</span></div>
         <div class="legend-item"><span class="legend-line" style="border-color:#7c3aed"></span><span><strong>SR</strong> – Strada Regionale</span></div>
@@ -629,6 +704,26 @@
       </div>
       <div class="legend-note">
         Colorazione basata sul tag <code>ref</code> (es. <code>SP68</code>, <code>SS53</code>). Le strade senza ref non vengono mostrate.
+      </div>
+    </div>
+
+    <!-- Legenda Parcheggi -->
+    <div class="legend-section">
+      <div class="legend-section-title">Parcheggi</div>
+      <div class="legend-list">
+        <div class="legend-item"><span class="legend-line" style="border-color:#15803d"></span><span>Gratuito</span></div>
+        <div class="legend-item"><span class="legend-line" style="border-color:#1d4ed8"></span><span>A pagamento</span></div>
+        <div class="legend-item"><span class="legend-line" style="border-color:#7c3aed"></span><span>Disco orario / tempo limitato</span></div>
+        <div class="legend-item"><span class="legend-line" style="border-color:#ea580c"></span><span>Privato / clienti / permesso</span></div>
+        <div class="legend-item"><span class="legend-line" style="border-color:#64748b"></span><span>Non specificato</span></div>
+        <div class="legend-item"><span class="legend-line" style="border-color:#eab308"></span><span>Stallo disabili</span></div>
+        <div class="legend-item"><span class="legend-line" style="border-color:#0284c7"></span><span>Stallo ricarica elettrica</span></div>
+        <div class="legend-item"><span class="legend-line" style="border-color:#d97706"></span><span>Stallo carico/scarico o mezzi pesanti</span></div>
+        <div class="legend-item"><span class="legend-line" style="border-color:#db2777"></span><span>Stallo famiglie / donne</span></div>
+        <div class="legend-item"><span class="legend-line" style="border-color:#ea580c"></span><span>Parcometro</span></div>
+      </div>
+      <div class="legend-note">
+        Tocca un'area, uno stallo o un parcometro sulla mappa per vedere accesso, costo e limitazioni.
       </div>
     </div>
 
@@ -739,8 +834,8 @@
 
     // Controllo per switchare tra basemap
     const baseMaps = {
-      '🗺️ OpenStreetMap': osmLayer,
-      '🛰️ Satellite (Esri)': satelliteLayer
+      'OpenStreetMap': osmLayer,
+      'Satellite (Esri)': satelliteLayer
     };
 
     // basemap control handled by custom panel
@@ -770,7 +865,8 @@
       lamps:        L.layerGroup(),
       busstops:     L.layerGroup(),
       bins:         L.layerGroup(),
-      parking:      L.layerGroup()
+      parking:      L.layerGroup(),
+      parkometers:  L.layerGroup()
     };
 
     // ─── Custom layer toggle panel ───
@@ -787,7 +883,8 @@
       'lyr-lamps':        layers.lamps,
       'lyr-busstops':     layers.busstops,
       'lyr-bins':         layers.bins,
-      'lyr-parking':      layers.parking
+      'lyr-parking':      layers.parking,
+      'lyr-parkometers':  layers.parkometers
     };
     Object.entries(layerCheckboxMap).forEach(([id, layerGroup]) => {
       const cb = document.getElementById(id);
@@ -907,11 +1004,475 @@
       return null;
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // Parcheggi — logiche, colori e popup (portati da ParkMap)
+    // ─────────────────────────────────────────────────────────────
+    function buildGMapsUrl(lat, lon) {
+      return 'https://www.google.com/maps?q=' + encodeURIComponent(lat + ',' + lon);
+    }
+
+    function buildIdUrl(osmType, osmId, lat, lon) {
+      const zoom = map.getZoom() || 18;
+      const base = 'https://www.openstreetmap.org/edit?editor=id';
+      const center = '#map=' + zoom + '/' + lat + '/' + lon;
+      const sel = (osmType && osmId) ? '&' + osmType + '=' + osmId : '';
+      return base + sel + center;
+    }
+
+    function getOsmMeta(feature) {
+      const idStr = feature.id || (feature.properties && feature.properties['@id']) || '';
+      const parts = String(idStr).split('/');
+      if (parts.length === 2) return { type: parts[0], id: parts[1] };
+      const geomType = feature.geometry && feature.geometry.type;
+      return { type: geomType === 'Point' ? 'node' : 'way', id: '' };
+    }
+
+    // Come str.split(';'), ma ignora i ';' dentro le parentesi
+    function splitOsmRules(str) {
+      const parts = [];
+      let depth = 0, current = '';
+      for (const ch of String(str || '')) {
+        if (ch === '(') depth++;
+        if (ch === ')') depth--;
+        if (ch === ';' && depth <= 0) { parts.push(current); current = ''; }
+        else current += ch;
+      }
+      if (current.trim()) parts.push(current);
+      return parts.map(p => p.trim()).filter(Boolean);
+    }
+
+    function translateOsmTime(str) {
+      if (!str) return '';
+      return str
+        .replace(/Mo/g, 'Lun').replace(/Tu/g, 'Mar').replace(/We/g, 'Mer')
+        .replace(/Th/g, 'Gio').replace(/Fr/g, 'Ven')
+        .replace(/Sa/g, 'Sab')
+        .replace(/Su/g, 'Dom').replace(/PH/g, 'Festivi')
+        .replace(/off/g, 'chiuso').replace(/24\/7/g, 'sempre aperto');
+    }
+
+    function maxstayValueToItalian(v) {
+      const raw = String(v || '').trim();
+      const s = raw.toLowerCase();
+      if (!raw) return '';
+      if (['no', 'none', 'unlimited'].includes(s)) return 'senza limite';
+
+      const m = s.match(/^(\d+(?:[.,]\d+)?)\s*(hour|hours|minute|minutes|day|days|week|weeks|month|months|year|years)$/);
+      if (!m) return raw;
+
+      const numStr = m[1];
+      const num = parseFloat(numStr.replace(',', '.'));
+      const one = Math.abs(num - 1) < 1e-9;
+      const unit = m[2];
+
+      if (unit === 'hour' || unit === 'hours') return one ? '1 ora' : `${numStr} ore`;
+      if (unit === 'minute' || unit === 'minutes') return one ? '1 minuto' : `${numStr} minuti`;
+      if (unit === 'day' || unit === 'days') return one ? '1 giorno' : `${numStr} giorni`;
+      if (unit === 'week' || unit === 'weeks') return one ? '1 settimana' : `${numStr} settimane`;
+      if (unit === 'month' || unit === 'months') return one ? '1 mese' : `${numStr} mesi`;
+      if (unit === 'year' || unit === 'years') return one ? '1 anno' : `${numStr} anni`;
+      return raw;
+    }
+
+    function parseConditionalRule(rule) {
+      let m = rule.match(/^(.+?)\s*@\s*\((.+)\)\s*$/);
+      if (!m) m = rule.match(/^(.+?)\s*@\s*(.+?)\s*$/);
+      if (!m) return null;
+      return { value: m[1].trim(), condition: translateOsmTime(m[2]).trim() };
+    }
+
+    function formatMaxstayConditionalItalian(str) {
+      return splitOsmRules(str).map(rule => {
+        const parsed = parseConditionalRule(rule);
+        if (!parsed) return 'Tempo massimo (cond): ' + translateOsmTime(rule);
+        return `Tempo massimo: ${maxstayValueToItalian(parsed.value)} nei giorni/orari: ${parsed.condition}`;
+      });
+    }
+
+    function formatYesNoConditional(str, yesLabel, noLabel) {
+      return splitOsmRules(str).map(rule => {
+        const parsed = parseConditionalRule(rule);
+        if (!parsed) return { text: translateOsmTime(rule), danger: false };
+        const value = parsed.value.toLowerCase();
+        if (value === 'yes') return { text: `${yesLabel} nei giorni/orari: ${parsed.condition}`, danger: false };
+        if (value === 'no') return { text: `${noLabel} nei giorni/orari: ${parsed.condition}`, danger: true };
+        return { text: `${parsed.value} nei giorni/orari: ${parsed.condition}`, danger: false };
+      });
+    }
+
+    function parseTimeRangesToMinutes(timeStr) {
+      return timeStr.split(',').map(s => s.trim()).filter(Boolean).map(r => {
+        const m = r.match(/^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})$/);
+        if (!m) return null;
+        return { start: (+m[1]) * 60 + (+m[2]), end: (+m[3]) * 60 + (+m[4]) };
+      }).filter(Boolean);
+    }
+
+    function mergeAndComplementRanges(ranges) {
+      const expanded = [];
+      ranges.forEach(r => {
+        if (r.end <= r.start) { expanded.push({ start: r.start, end: 1440 }); expanded.push({ start: 0, end: r.end }); }
+        else expanded.push(r);
+      });
+      expanded.sort((a, b) => a.start - b.start);
+
+      const merged = [];
+      expanded.forEach(r => {
+        const last = merged[merged.length - 1];
+        if (last && r.start <= last.end) last.end = Math.max(last.end, r.end);
+        else merged.push({ start: r.start, end: r.end });
+      });
+
+      const complement = [];
+      let cursor = 0;
+      merged.forEach(r => {
+        if (r.start > cursor) complement.push({ start: cursor, end: r.start });
+        cursor = Math.max(cursor, r.end);
+      });
+      if (cursor < 1440) complement.push({ start: cursor, end: 1440 });
+      return complement;
+    }
+
+    function minutesToHHMM(m) {
+      const h = Math.floor(m / 60), mm = m % 60;
+      return String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+    }
+
+    function rangesToTimeString(ranges) {
+      return ranges.map(r => minutesToHHMM(r.start) + '-' + (r.end === 1440 ? '24:00' : minutesToHHMM(r.end))).join(',');
+    }
+
+    function invertConditionToPaidSchedule(rawCondition) {
+      const groups = rawCondition.split(';').map(s => s.trim()).filter(Boolean);
+      const entries = [];
+      groups.forEach(group => {
+        const m = group.match(/^([A-Za-z]{2}(?:-[A-Za-z]{2})?(?:,\s*[A-Za-z]{2}(?:-[A-Za-z]{2})?)*)\s*(.*)$/);
+        if (!m) return;
+        const days = m[1];
+        const timePart = m[2].trim();
+        if (!timePart) return;
+        const ranges = parseTimeRangesToMinutes(timePart);
+        if (!ranges.length) return;
+        const paidRanges = mergeAndComplementRanges(ranges);
+        if (!paidRanges.length) return;
+        entries.push(`${translateOsmTime(days)} ${rangesToTimeString(paidRanges)}`);
+      });
+      return entries.join('; ');
+    }
+
+    function formatFeeConditional(str) {
+      return splitOsmRules(str).map(rule => {
+        const m = rule.match(/^(.+?)\s*@\s*\((.+)\)\s*$/) || rule.match(/^(.+?)\s*@\s*(.+?)\s*$/);
+        if (!m) return { text: translateOsmTime(rule), danger: false };
+        const value = m[1].trim().toLowerCase();
+        const rawCondition = m[2].trim();
+        if (value === 'yes') return { text: `A pagamento nei giorni/orari: ${translateOsmTime(rawCondition)}`, danger: false };
+        if (value === 'no') {
+          const paidSchedule = invertConditionToPaidSchedule(rawCondition);
+          return paidSchedule
+            ? { text: `A pagamento nei giorni/orari: ${paidSchedule}`, danger: false }
+            : { text: `Gratuito nei giorni/orari: ${translateOsmTime(rawCondition)}`, danger: false };
+        }
+        return { text: `${value} nei giorni/orari: ${translateOsmTime(rawCondition)}`, danger: false };
+      });
+    }
+
+    function getSpecialStallName(ps) {
+      const names = {
+        disabled: 'Disabili', charging: 'Ricarica EV', loading: 'Carico/Scarico',
+        delivery: 'Carico/Scarico', hgv: 'Mezzi pesanti', parent: 'Famiglie',
+        women: 'Donne', emergency: 'Emergenza', police: 'Polizia',
+        motorcycle: 'Moto', bus: 'Bus'
+      };
+      return names[ps] || '';
+    }
+
+    function getParkingAreaColors(tags) {
+      const fee = tags.fee || '', cond = tags['parking:condition'] || '';
+      const accessVal = tags.access || '', vehicleVal = tags.vehicle || '';
+      const maxstay = (tags.maxstay || '').toString().trim().toLowerCase();
+      const hasMaxstay = !!maxstay && !['no', 'none', 'unlimited', '0'].includes(maxstay);
+      const hasDisc = (cond || '').toLowerCase().includes('disc') || hasMaxstay || !!tags['maxstay:conditional'];
+
+      if (['private', 'customers', 'destination', 'permit'].includes(accessVal) || vehicleVal === 'permit') {
+        return { color: '#ea580c', fill: '#fb923c', icon: 'square-parking' };
+      }
+      if (fee === 'yes' || fee === 'conditional' || tags['fee:conditional']) {
+        return { color: '#1d4ed8', fill: '#60a5fa', icon: 'square-parking' };
+      }
+      if (hasDisc) return { color: '#7c3aed', fill: '#a78bfa', icon: 'square-parking' };
+      if (fee === 'no') return { color: '#15803d', fill: '#4ade80', icon: 'square-parking' };
+      return { color: '#64748b', fill: '#94a3b8', icon: 'square-parking' };
+    }
+
+    function getSpecialSpaceColors(ps) {
+      if (ps === 'disabled') return { color: '#eab308', fill: '#fde047', icon: 'accessibility' };
+      if (ps === 'charging') return { color: '#0284c7', fill: '#7dd3fc', icon: 'zap' };
+      if (['emergency', 'police'].includes(ps)) return { color: '#1e40af', fill: '#60a5fa', icon: 'shield' };
+      if (ps === 'motorcycle') return { color: '#dc2626', fill: '#fca5a5', icon: 'bike' };
+      if (['delivery', 'loading', 'hgv'].includes(ps)) return { color: '#d97706', fill: '#fed7aa', icon: 'truck' };
+      if (['parent', 'women'].includes(ps)) return { color: '#db2777', fill: '#fbcfe8', icon: 'baby' };
+      if (ps === 'bus') return { color: '#0e7490', fill: '#67e8f9', icon: 'bus' };
+      return { color: '#374151', fill: '#9ca3af', icon: 'square-parking' };
+    }
+
+    function buildParkingPopup(tags, lat, lon, osmMeta) {
+      const isSpecialSpace = tags.amenity === 'parking_space' && tags.parking_space && tags.parking_space !== 'normal';
+      const theme = isSpecialSpace ? getSpecialSpaceColors(tags.parking_space) : getParkingAreaColors(tags);
+
+      const name = tags.name || tags.ref ||
+        (isSpecialSpace ? (getSpecialStallName(tags.parking_space) || 'Stallo speciale') : 'Area di sosta');
+      const operator = tags.operator || '';
+
+      const accessRaw = tags.access || '';
+      const accessConditional = tags['access:conditional'] || '';
+      const vehicleAccess = tags.vehicle || '';
+      let access = 'Pubblico';
+      if (accessRaw === 'private') access = 'Privato';
+      else if (accessRaw === 'customers') access = 'Solo clienti';
+      else if (accessRaw === 'permissive') access = 'Autorizzato';
+      else if (accessRaw === 'destination') access = 'Solo residenti';
+      else if (accessRaw === 'permit' || vehicleAccess === 'permit') access = 'Solo con permesso';
+      else if (accessRaw === 'no') access = 'Vietato';
+
+      let accessNoteHtml = '';
+      if (accessConditional) {
+        accessNoteHtml = formatYesNoConditional(accessConditional, 'Aperto', 'Vietato')
+          .map(r => `<div class="badge-note ${r.danger ? 'danger' : ''}">${escapeHtml(r.text)}</div>`)
+          .join('');
+      }
+
+      const feeRaw = tags.fee || '';
+      const feeConditional = tags['fee:conditional'] || '';
+      let fee = 'Non specificato';
+      let feeNoteHtml = '';
+
+      if (feeRaw === 'no') fee = 'Gratuito';
+      else if (feeRaw === 'yes') fee = 'A pagamento';
+      else if (feeRaw === 'conditional') fee = 'Condizionato:';
+
+      if (feeConditional) {
+        fee = (fee === 'Non specificato') ? 'Condizionato:' : fee;
+        feeNoteHtml = formatFeeConditional(feeConditional)
+          .map(r => `<div class="badge-note ${r.danger ? 'danger' : ''}">${escapeHtml(r.text)}</div>`)
+          .join('');
+      }
+
+      const notesBadges = [];
+      const notes = [];
+      const cond = tags['parking:condition'] || '';
+      const interval = tags['parking:condition:time_interval'] || '';
+      const maxstay = tags.maxstay || '';
+      const maxstayConditional = tags['maxstay:conditional'] || '';
+
+      if ((cond || '').toLowerCase().includes('disc')) notesBadges.push(`<div class="badge-note time">Disco orario</div>`);
+      if (interval) notesBadges.push(`<div class="badge-note time">${escapeHtml('Validità: ' + translateOsmTime(interval))}</div>`);
+      if (maxstay) {
+        const ms = String(maxstay).toLowerCase().trim();
+        if (!['no', 'none', 'unlimited', '0'].includes(ms)) {
+          notesBadges.push(`<div class="badge-note time">${escapeHtml('Tempo massimo: ' + maxstayValueToItalian(maxstay))}</div>`);
+        }
+      }
+      if (maxstayConditional) {
+        formatMaxstayConditionalItalian(maxstayConditional).forEach(line => {
+          notesBadges.push(`<div class="badge-note time">${escapeHtml(line)}</div>`);
+        });
+      }
+      if ((cond || '').toLowerCase().includes('ticket')) notes.push('Sosta a ticket');
+      if ((cond || '').toLowerCase().includes('resident')) notes.push('Riservato residenti');
+
+      const notesParts = [];
+      if (notesBadges.length) notesParts.push(notesBadges.join(''));
+      if (notes.length) notesParts.push(notes.map(x => escapeHtml(x)).join('<br>'));
+      const notesHtml = notesParts.join('<br>');
+
+      const typeLabel = getSpecialStallName(tags.parking_space || '') || tags.parking_space || '';
+
+      const chargeRaw = tags.charge || '';
+      const chargeConditional = tags['charge:conditional'] || '';
+      let chargeHtml = '';
+      if (chargeRaw) chargeHtml += `<div class="badge-note">${escapeHtml(chargeRaw)}</div>`;
+      if (chargeConditional) {
+        chargeHtml += splitOsmRules(chargeConditional).map(p => `<div class="badge-note">${escapeHtml(translateOsmTime(p.trim()))}</div>`).join('');
+      }
+
+      function paymentLabel(method) {
+        const m = (method || '').toLowerCase();
+        const labels = {
+          cash: 'Contanti', coins: 'Monete', notes: 'Banconote',
+          credit_cards: 'Carte di credito', debit_cards: 'Bancomat / carte di debito',
+          cards: 'Carte', contactless: 'Contactless', visa: 'Visa',
+          mastercard: 'Mastercard', maestro: 'Maestro', apple_pay: 'Apple Pay',
+          google_pay: 'Google Pay', sms: 'SMS', phone: 'Telefono'
+        };
+        return labels[m] || (method || '').replace(/_/g, ' ');
+      }
+
+      const paymentMethods = Object.keys(tags)
+        .filter(k => k.startsWith('payment:'))
+        .map(k => ({ method: k.slice('payment:'.length), val: String(tags[k] || '').toLowerCase() }))
+        .filter(x => x.val === 'yes' || x.val === 'only')
+        .map(x => paymentLabel(x.method) + (x.val === 'only' ? ' (solo)' : ''));
+
+      const paymentHtml = paymentMethods.length
+        ? `<div class="badge-note">${escapeHtml(paymentMethods.join(', '))}</div>`
+        : '';
+
+      return `
+        <div class="popup-header-container" style="background:linear-gradient(135deg, ${theme.fill}, ${theme.color})">
+          <div class="popup-icon-box"><i data-lucide="${theme.icon}"></i></div>
+          <div class="popup-title">${escapeHtml(name)}</div>
+        </div>
+
+        ${operator ? `
+        <div class="popup-section">
+          <span class="label">Gestore</span>
+          <span class="val">${escapeHtml(operator)}</span>
+        </div>` : ''}
+
+        <div class="popup-section">
+          <span class="label">Accesso</span>
+          <span class="val">${escapeHtml(access)} ${accessNoteHtml}</span>
+        </div>
+
+        <div class="popup-section">
+          <span class="label">Costo</span>
+          <span class="val">${escapeHtml(fee)} ${feeNoteHtml}</span>
+        </div>
+
+        ${chargeHtml ? `
+        <div class="popup-section">
+          <span class="label">Tariffa</span>
+          <span class="val">${chargeHtml}</span>
+        </div>` : ''}
+
+        ${paymentHtml ? `
+        <div class="popup-section">
+          <span class="label">Metodi di pagamento</span>
+          <span class="val">${paymentHtml}</span>
+        </div>` : ''}
+
+        ${notesHtml ? `
+        <div class="popup-section">
+          <span class="label">Limitazioni</span>
+          <span class="val">${notesHtml}</span>
+        </div>` : ''}
+
+        ${tags.capacity || typeLabel ? `
+        <div class="popup-section" style="flex-direction: row; gap: 20px;">
+          ${tags.capacity ? `<div><span class="label">Posti </span><span class="val">${escapeHtml(tags.capacity)}</span></div>` : ''}
+          ${typeLabel ? `<div><span class="label">Tipo </span><span class="val">${escapeHtml(typeLabel)}</span></div>` : ''}
+        </div>` : ''}
+
+        ${tags.note ? `
+        <div class="popup-section">
+          <span class="label">Note</span>
+          <span class="val">${escapeHtml(tags.note)}</span>
+        </div>` : ''}
+
+        <div class="popup-links">
+          <a href="${buildGMapsUrl(lat, lon)}" target="_blank" rel="noopener">Vai a</a>
+          <a href="${buildIdUrl(osmMeta.type, osmMeta.id, lat, lon)}" target="_blank" rel="noopener">Modifica</a>
+        </div>
+      `;
+    }
+
+    function buildParkometerPopup(tags, lat, lon, osmMeta) {
+      const name = tags.name || tags.ref || 'Parcometro';
+      const operator = tags.operator || '';
+      const paymentMethods = Object.keys(tags)
+        .filter(k => k.startsWith('payment:'))
+        .map(k => ({ method: k.slice('payment:'.length), val: String(tags[k] || '').toLowerCase() }))
+        .filter(x => x.val === 'yes' || x.val === 'only')
+        .map(x => x.method.replace(/_/g, ' ') + (x.val === 'only' ? ' (solo)' : ''));
+
+      return `
+        <div class="popup-header-container" style="background:linear-gradient(135deg, #fdba74, #ea580c)">
+          <div class="popup-icon-box"><i data-lucide="ticket"></i></div>
+          <div class="popup-title">${escapeHtml(name)}</div>
+        </div>
+
+        ${operator ? `
+        <div class="popup-section">
+          <span class="label">Gestore</span>
+          <span class="val">${escapeHtml(operator)}</span>
+        </div>` : ''}
+
+        ${paymentMethods.length ? `
+        <div class="popup-section">
+          <span class="label">Metodi di pagamento</span>
+          <span class="val">${escapeHtml(paymentMethods.join(', '))}</span>
+        </div>` : ''}
+
+        ${tags.note ? `
+        <div class="popup-section">
+          <span class="label">Note</span>
+          <span class="val">${escapeHtml(tags.note)}</span>
+        </div>` : ''}
+
+        <div class="popup-links">
+          <a href="${buildGMapsUrl(lat, lon)}" target="_blank" rel="noopener">Vai a</a>
+          <a href="${buildIdUrl(osmMeta.type, osmMeta.id, lat, lon)}" target="_blank" rel="noopener">Modifica</a>
+        </div>
+      `;
+    }
+
+    // Disegna un elemento parcheggio (area, stallo speciale o parcometro) con popup dedicato
+    function renderParkingFeature(feature) {
+      const tags = feature.properties || {};
+      if (tags.amenity === 'parking_space' && tags.parking_space === 'normal') return;
+
+      const osmMeta = getOsmMeta(feature);
+      const geomType = feature.geometry.type;
+      const isParkometer = tags.amenity === 'vending_machine' && tags.vending === 'parking_tickets';
+      const isSpecialSpace = tags.amenity === 'parking_space' && tags.parking_space && tags.parking_space !== 'normal';
+
+      if (geomType === 'Point') {
+        const [lng, lat] = feature.geometry.coordinates;
+
+        if (isParkometer) {
+          const marker = L.circleMarker([lat, lng], { radius: 6, color: '#7c2d12', weight: 2, fillColor: '#ea580c', fillOpacity: .95, className: 'parking-marker' })
+            .bindPopup(buildParkometerPopup(tags, lat, lng, osmMeta));
+          marker.on('click', e => L.DomEvent.stopPropagation(e));
+          layers.parkometers.addLayer(marker);
+          return;
+        }
+
+        const theme = isSpecialSpace ? getSpecialSpaceColors(tags.parking_space) : getParkingAreaColors(tags);
+        const marker = L.circleMarker([lat, lng], {
+          radius: isSpecialSpace ? 8 : 7,
+          color: theme.color, weight: 2,
+          fillColor: theme.fill, fillOpacity: isSpecialSpace ? .9 : .75,
+          className: 'parking-marker'
+        }).bindPopup(buildParkingPopup(tags, lat, lng, osmMeta));
+        marker.on('click', e => L.DomEvent.stopPropagation(e));
+        layers.parking.addLayer(marker);
+        return;
+      }
+
+      // Polygon / LineString (aree e stalli disegnati come poligono)
+      const theme = isSpecialSpace ? getSpecialSpaceColors(tags.parking_space) : getParkingAreaColors(tags);
+      const shape = L.geoJSON(feature, {
+        style: () => ({
+          color: theme.color, weight: 2,
+          fillColor: theme.fill, fillOpacity: isSpecialSpace ? .8 : .4
+        })
+      });
+      const center = shape.getBounds().isValid() ? shape.getBounds().getCenter() : null;
+      if (!center) return;
+      shape.bindPopup(buildParkingPopup(tags, center.lat, center.lng, osmMeta));
+      forEachSubLayer(shape, sub => {
+        sub.on('click', e => L.DomEvent.stopPropagation(e));
+        layers.parking.addLayer(sub);
+      });
+    }
+
     function getType(tags) {
       if (tags.traffic_sign !== undefined) return 'signs';
       if (tags.highway === 'street_lamp') return 'lamps';
       if (tags.highway === 'bus_stop' || (tags.public_transport === 'platform' && tags.bus === 'yes')) return 'busstops';
       if (tags.amenity === 'waste_basket') return 'bins';
+      if (tags.amenity === 'vending_machine' && tags.vending === 'parking_tickets') return 'parkometers';
       if (tags.amenity === 'parking' || tags.amenity === 'parking_space') return 'parking';
 
       if (tags.highway === 'proposed') return 'proposed';
@@ -947,6 +1508,7 @@
       busstops:     { label: 'Fermata bus',       bg: '#2563eb' },
       bins:         { label: 'Cestino',           bg: '#16a34a' },
       parking:      { label: 'Parcheggio / stallo', bg: '#0ea5e9' },
+      parkometers:  { label: 'Parcometro',        bg: '#ea580c' },
       default:      { label: 'Via',               bg: '#1e293b' }
     };
 
@@ -1309,20 +1871,19 @@
     // Marker punti (arredo urbano)
     // ─────────────────────────────────────────────────────────────
     const POINT_ICONS = {
-      signs:    { emoji: '🪧', bg: '#eab308' },
-      lamps:    { emoji: '💡', bg: '#facc15' },
-      busstops: { emoji: '🚌', bg: '#2563eb' },
-      bins:     { emoji: '🗑️', bg: '#16a34a' },
-      parking:  { emoji: '🅿️', bg: '#0ea5e9' }
+      signs:    { icon: 'octagon-alert', bg: '#eab308' },
+      lamps:    { icon: 'lightbulb', bg: '#facc15' },
+      busstops: { icon: 'bus', bg: '#2563eb' },
+      bins:     { icon: 'trash-2', bg: '#16a34a' }
     };
 
     function makePointIcon(type) {
       const meta = POINT_ICONS[type];
       return L.divIcon({
-        className: 'point-marker',
-        html: `<div style="background:${meta.bg};width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 2px 6px rgba(0,0,0,.35);border:2px solid white">${meta.emoji}</div>`,
-        iconSize: [24, 24],
-        iconAnchor: [12, 12]
+        className: 'point-marker parking-marker',
+        html: `<div style="background:${meta.bg};width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.35);border:2px solid white"><i data-lucide="${meta.icon}" width="13" height="13" style="color:white"></i></div>`,
+        iconSize: [26, 26],
+        iconAnchor: [13, 13]
       });
     }
 
@@ -1439,8 +2000,11 @@
           node["public_transport"="platform"]["bus"="yes"](area.a);
           node["amenity"="waste_basket"](area.a);
           way["amenity"="parking"](area.a);
+          node["amenity"="parking"](area.a);
           node["amenity"="parking_space"](area.a);
           way["amenity"="parking_space"](area.a);
+          node["amenity"="vending_machine"]["vending"="parking_tickets"](area.a);
+          way["amenity"="vending_machine"]["vending"="parking_tickets"](area.a);
         );
         out body; >; out skel qt;`;
 
@@ -1479,6 +2043,11 @@
             const tags = feature.properties || {};
             const type = getType(tags);
             const name = tags.name || tags['name:it'] || '';
+
+            if (type === 'parking' || type === 'parkometers') {
+              renderParkingFeature(feature);
+              return;
+            }
 
             if (type !== 'default') {
               const base = { ...(STYLES[type] || STYLES.default) };
@@ -1541,12 +2110,17 @@
           }
         });
 
-        // ─── Punti (segnali, lampioni, fermate bus, cestini, stalli) ───
-        const POINT_TYPES = ['signs', 'lamps', 'busstops', 'bins', 'parking'];
+        // ─── Punti (segnali, lampioni, fermate bus, cestini) ───
+        const POINT_TYPES = ['signs', 'lamps', 'busstops', 'bins'];
         geojson.features.forEach(feature => {
           if (!feature.geometry || feature.geometry.type !== 'Point') return;
           const tags = feature.properties || {};
           const type = getType(tags);
+
+          if (type === 'parking' || type === 'parkometers') {
+            renderParkingFeature(feature);
+            return;
+          }
           if (!POINT_TYPES.includes(type)) return;
 
           const name = tags.name || tags['name:it'] || '';
@@ -1556,6 +2130,7 @@
           layers[type].addLayer(marker);
         });
 
+        lucide.createIcons();
         setStatus(`${geojson.features.length} elementi caricati`, 'success', 3000);
       } catch (err) {
         console.error(err);
@@ -1587,6 +2162,7 @@ setTimeout(() => {
     });
 
     map.on('click', () => closePanel('infoPanel'));
+    map.on('popupopen', e => lucide.createIcons({ root: e.popup.getElement() }));
 
     // Tooltip style
     const tooltipStyle = document.createElement('style');
