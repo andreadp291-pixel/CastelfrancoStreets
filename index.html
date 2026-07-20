@@ -417,6 +417,36 @@
   transition: filter .15s, transform .15s;
 }
 .user-row button:hover { filter: brightness(0.95); transform: translateY(-1px); }
+
+/* ─── Restyle dettaglio segnalazione ─── */
+.detail-select {
+  display: block; width: 100%; margin-top: 6px; padding: 10px 12px;
+  border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 13px; box-sizing: border-box;
+  font-family: inherit; color: var(--text-main); background: #f8fafc; cursor: pointer;
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat; background-position: right 12px center; padding-right: 34px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.detail-select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); background-color: #fff; }
+.detail-textarea {
+  display: block; width: 100%; margin-top: 6px; padding: 10px 12px; box-sizing: border-box;
+  border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 13px; font-family: inherit;
+  color: var(--text-main); background: #f8fafc; resize: vertical; transition: border-color .15s, box-shadow .15s;
+}
+.detail-textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); background: #fff; }
+.detail-btn-save, .detail-btn-delete {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: auto; padding: 9px 16px !important; border-radius: 10px !important;
+  transition: filter .15s, transform .15s;
+}
+.detail-btn-save { background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important; box-shadow: 0 6px 16px -6px rgba(79,70,229,.55); }
+.detail-btn-delete { background: linear-gradient(135deg, #ef4444, var(--danger)) !important; box-shadow: 0 6px 16px -6px rgba(220,38,38,.5); }
+.detail-btn-save:hover, .detail-btn-delete:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.detail-history {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.detail-history .popup-section { margin: 0; padding: 8px 10px; border: 1px solid #f1f5f9; border-radius: 10px; background: #f8fafc; }
 .map-pin-mode { cursor: crosshair !important; }
 
 /* Badge tipo (es. "Pista ciclabile") */
@@ -3331,6 +3361,7 @@ setTimeout(() => {
       document.getElementById('infoRoadName').style.display = 'none';
       document.getElementById('infoTitle').textContent = report.title;
       document.getElementById('infoBadge').textContent = REPORT_CATEGORY_LABEL[report.category] || report.category;
+      document.getElementById('infoHeader').style.background = REPORT_CATEGORY_COLOR[report.category] || '#64748b';
 
       const canWrite = currentUser && (currentUser.role === 'superadmin' || currentUser.role === 'moderator' || currentUser.user_id === report.author_id);
       const canModerate = currentUser && (currentUser.role === 'superadmin' || currentUser.role === 'moderator');
@@ -3349,7 +3380,7 @@ setTimeout(() => {
         let what = ev.type;
         if (ev.type === 'status_change' && ev.payload) what = `stato: ${ev.payload.from} → ${ev.payload.to}`;
         else if (ev.type === 'edit') what = 'modifica campi';
-        return `<div class="popup-section" style="padding-bottom:6px;margin-bottom:6px"><div class="val" style="font-size:12px">${escapeHtml(ev.actor_display_name)} — ${escapeHtml(what)} <span style="color:#94a3b8">(${escapeHtml(when)})</span></div></div>`;
+        return `<div class="popup-section"><div class="val" style="font-size:12px">${escapeHtml(ev.actor_display_name)} — ${escapeHtml(what)} <span style="color:#94a3b8">(${escapeHtml(when)})</span></div></div>`;
       }).join('');
 
       document.getElementById('infoSections').innerHTML = `
@@ -3369,20 +3400,21 @@ setTimeout(() => {
         ${canModerate ? `
         <div class="popup-section">
           <div class="label">Cambia stato</div>
-          <select id="detailStatusSelect" style="margin-top:4px;padding:8px;border-radius:8px;border:1px solid #e2e8f0;width:100%">${statusOptions}</select>
+          <select id="detailStatusSelect" class="detail-select">${statusOptions}</select>
         </div>` : ''}
+        ${(canWrite || canDelete) ? `
         <div class="popup-section" style="flex-direction:row;gap:8px;border-bottom:none">
-          ${canWrite ? `<button id="detailSaveBtn" class="auth-submit" style="width:auto;padding:8px 14px">Salva</button>` : ''}
-          ${canDelete ? `<button id="detailDeleteBtn" class="auth-submit" style="width:auto;padding:8px 14px;background:#dc2626">Elimina</button>` : ''}
-        </div>
+          ${canWrite ? `<button id="detailSaveBtn" class="auth-submit detail-btn-save"><i data-lucide="check" width="14" height="14"></i>Salva</button>` : ''}
+          ${canDelete ? `<button id="detailDeleteBtn" class="auth-submit detail-btn-delete"><i data-lucide="trash-2" width="14" height="14"></i>Elimina</button>` : ''}
+        </div>` : ''}
         ${canWrite ? `
         <div class="popup-section">
           <div class="label">Modifica descrizione</div>
-          <textarea id="detailDescEdit" rows="3" style="width:100%;margin-top:4px;padding:8px;border-radius:8px;border:1px solid #e2e8f0;box-sizing:border-box;font-family:inherit">${escapeHtml(report.description)}</textarea>
+          <textarea id="detailDescEdit" rows="3" class="detail-textarea">${escapeHtml(report.description)}</textarea>
         </div>` : ''}
         <div class="popup-section" style="border-bottom:none">
           <div class="label">Storico</div>
-          ${eventsHtml || '<div class="val" style="font-size:12px;color:#94a3b8">Nessun evento</div>'}
+          <div class="detail-history">${eventsHtml || '<div class="val" style="font-size:12px;color:#94a3b8">Nessun evento</div>'}</div>
         </div>
       `;
 
