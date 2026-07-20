@@ -2870,9 +2870,29 @@
     }
 
     // ─────────────────────────────────────────────────────────────
+    // Cache locale dati OSM (Overpass): evita di rifare la query pesante
+    // a ogni apertura/refresh della pagina finché la cache è fresca.
+    // ─────────────────────────────────────────────────────────────
+    const OSM_CACHE_KEY = 'osmDataCache_v1';
+    const OSM_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 ore
+    function readOsmCache() {
+      try {
+        const raw = localStorage.getItem(OSM_CACHE_KEY);
+        if (!raw) return null;
+        const { ts, data } = JSON.parse(raw);
+        if (Date.now() - ts > OSM_CACHE_TTL_MS) return null;
+        return data;
+      } catch (err) { return null; }
+    }
+    function writeOsmCache(data) {
+      try { localStorage.setItem(OSM_CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); }
+      catch (err) { /* quota piena o storage non disponibile, non bloccante */ }
+    }
+
+    // ─────────────────────────────────────────────────────────────
     // Load data
     // ─────────────────────────────────────────────────────────────
-    async function loadData() {
+    async function loadData(force = false) {
       document.getElementById('refreshBtn').classList.add('spinning');
       setStatus('Caricamento dati…', 'loading');
 
@@ -2957,11 +2977,16 @@
         out skel qt;`;
 
       try {
-        const res = await fetch('https://overpass-api.de/api/interpreter', {
-          method: 'POST',
-          body: 'data=' + encodeURIComponent(query)
-        });
-        const data = await res.json();
+        let data = force ? null : readOsmCache();
+        const fromCache = !!data;
+        if (!data) {
+          const res = await fetch('https://overpass-api.de/api/interpreter', {
+            method: 'POST',
+            body: 'data=' + encodeURIComponent(query)
+          });
+          data = await res.json();
+          writeOsmCache(data);
+        }
         const geojson = osmtogeojson(data);
         const wayBearingIndex = buildWayBearingIndex(data);
 
@@ -3091,7 +3116,7 @@
         });
 
         lucide.createIcons();
-        setStatus(`${geojson.features.length} elementi caricati`, 'success', 3000);
+        setStatus(`${geojson.features.length} elementi caricati${fromCache ? ' (cache)' : ''}`, 'success', 3000);
       } catch (err) {
         console.error(err);
         setStatus('Errore caricamento dati', 'error', 4500);
@@ -3108,7 +3133,7 @@ setTimeout(() => {
     // ─────────────────────────────────────────────────────────────
     // Eventi UI
     // ─────────────────────────────────────────────────────────────
-    document.getElementById('refreshBtn').addEventListener('click', loadData);
+    document.getElementById('refreshBtn').addEventListener('click', () => loadData(true));
     document.getElementById('closeInfo').addEventListener('click', () => closePanel('infoPanel'));
     document.getElementById('legendBtn').addEventListener('click', () => togglePanel('legendPanel'));
     document.getElementById('closeLegend').addEventListener('click', () => closePanel('legendPanel'));
@@ -3236,9 +3261,7 @@ setTimeout(() => {
       const authenticated = !!currentUser;
       document.getElementById('newReportBtn').style.display = authenticated ? 'flex' : 'none';
       document.getElementById('categoryFilterBtn').style.display = authenticated ? 'flex' : 'none';
-      // La riga resta sempre visibile: se non sei loggato, cliccarla apre il
-      // login invece di attivare il layer (vedi handler del checkbox sotto).
-      document.getElementById('lyr-segnalazioni-row').style.display = 'flex';
+      document.getElementById('lyr-segnalazioni-row').style.display = authenticated ? 'flex' : 'none';
       const authBtn = document.getElementById('authBtn');
       authBtn.innerHTML = authenticated
         ? '<i data-lucide="user-check" width="15" height="15"></i>'
