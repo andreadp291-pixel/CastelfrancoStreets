@@ -174,6 +174,33 @@
     #categoryFilterPanel input[type=checkbox] { accent-color: var(--text-main); width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; }
     .cat-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
 
+    #profileMenu {
+      position: absolute; top: 44px; right: 0; width: 210px;
+      background: var(--bg-card); backdrop-filter: blur(14px);
+      border: var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
+      z-index: 1200; padding: 8px; display: none; flex-direction: column; gap: 2px;
+    }
+    #profileMenu.open { display: flex; animation: fadeSlideUp .22s var(--ease); }
+    #profileMenuHeader { display: flex; align-items: center; gap: 10px; padding: 6px 8px 10px; }
+    .pm-avatar {
+      width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+      background: var(--primary-light); color: var(--primary-dark);
+      display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12.5px;
+    }
+    .pm-header-text { min-width: 0; }
+    .pm-name { font-size: 13px; font-weight: 700; color: var(--text-main); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pm-role { font-size: 11px; color: var(--text-light); text-transform: capitalize; }
+    #profileMenuSep { height: 1px; background: rgba(0,0,0,.07); margin: 0 4px 6px; }
+    .pm-item {
+      display: flex; align-items: center; gap: 9px; width: 100%; box-sizing: border-box;
+      padding: 8px 10px; font-size: 12.5px; font-weight: 600; color: var(--text-main);
+      background: none; border: none; border-radius: 8px; cursor: pointer; text-align: left;
+      transition: background .12s;
+    }
+    .pm-item:hover { background: rgba(79,70,229,.08); }
+    .pm-item-danger { color: var(--danger); }
+    .pm-item-danger:hover { background: rgba(220,38,38,.08); }
+
     /* ─── PANNELLI LATERALI ─── */
 #infoPanel,
 #legendPanel {
@@ -804,19 +831,27 @@
   <button id="categoryFilterBtn" class="ctrl-btn" title="Filtra categorie" style="display:none">
     <i data-lucide="filter" width="15" height="15"></i>
   </button>
-  <button id="adminBtn" class="ctrl-btn" title="Amministrazione" style="display:none">
-    <i data-lucide="shield" width="15" height="15"></i>
-  </button>
-  <button id="changePwdBtn" class="ctrl-btn" title="Cambia password" style="display:none">
-    <i data-lucide="key-round" width="15" height="15"></i>
-  </button>
   </div>
 
-  <!-- Bottone login/logout: sempre visibile, ancorato in alto a destra, indipendente dal topbar principale -->
+  <!-- Bottone profilo: sempre visibile, ancorato in alto a destra, indipendente dal topbar principale -->
   <div id="authTopbar" style="position:fixed;top:12px;right:14px;z-index:1200">
-    <button id="authBtn" class="ctrl-btn" title="Accedi">
+    <button id="authBtn" class="ctrl-btn" title="Profilo">
       <i data-lucide="user" width="15" height="15"></i>
     </button>
+    <div id="profileMenu">
+      <div id="profileMenuHeader" style="display:none">
+        <div class="pm-avatar" id="profileMenuAvatar"></div>
+        <div class="pm-header-text">
+          <div class="pm-name" id="profileMenuName"></div>
+          <div class="pm-role" id="profileMenuRole"></div>
+        </div>
+      </div>
+      <div id="profileMenuSep" style="display:none"></div>
+      <button type="button" class="pm-item" id="pmLogin"><i data-lucide="log-in" width="15" height="15"></i>Accedi</button>
+      <button type="button" class="pm-item" id="pmChangePwd" style="display:none"><i data-lucide="key-round" width="15" height="15"></i>Cambia password</button>
+      <button type="button" class="pm-item" id="pmAdmin" style="display:none"><i data-lucide="shield" width="15" height="15"></i>Amministrazione</button>
+      <button type="button" class="pm-item pm-item-danger" id="pmLogout" style="display:none"><i data-lucide="log-out" width="15" height="15"></i>Esci</button>
+    </div>
   </div>
 
   <!-- LAYERS PANEL -->
@@ -3134,8 +3169,6 @@ setTimeout(() => {
     function applyAuthUI() {
       const authenticated = !!currentUser;
       document.getElementById('newReportBtn').style.display = authenticated ? 'flex' : 'none';
-      document.getElementById('adminBtn').style.display = (authenticated && currentUser.role === 'superadmin') ? 'flex' : 'none';
-      document.getElementById('changePwdBtn').style.display = authenticated ? 'flex' : 'none';
       document.getElementById('categoryFilterBtn').style.display = authenticated ? 'flex' : 'none';
       // La riga resta sempre visibile: se non sei loggato, cliccarla apre il
       // login invece di attivare il layer (vedi handler del checkbox sotto).
@@ -3144,7 +3177,19 @@ setTimeout(() => {
       authBtn.innerHTML = authenticated
         ? '<i data-lucide="user-check" width="15" height="15"></i>'
         : '<i data-lucide="user" width="15" height="15"></i>';
-      authBtn.title = authenticated ? `Esci (${currentUser.display_name})` : 'Accedi';
+      authBtn.title = authenticated ? currentUser.display_name : 'Profilo';
+
+      document.getElementById('profileMenuHeader').style.display = authenticated ? 'flex' : 'none';
+      document.getElementById('profileMenuSep').style.display = authenticated ? 'block' : 'none';
+      document.getElementById('pmLogin').style.display = authenticated ? 'none' : 'flex';
+      document.getElementById('pmChangePwd').style.display = authenticated ? 'flex' : 'none';
+      document.getElementById('pmAdmin').style.display = (authenticated && currentUser.role === 'superadmin') ? 'flex' : 'none';
+      document.getElementById('pmLogout').style.display = authenticated ? 'flex' : 'none';
+      if (authenticated) {
+        document.getElementById('profileMenuAvatar').textContent = currentUser.display_name.trim().slice(0, 2).toUpperCase();
+        document.getElementById('profileMenuName').textContent = currentUser.display_name;
+        document.getElementById('profileMenuRole').textContent = currentUser.role;
+      }
       lucide.createIcons();
 
       if (authenticated) {
@@ -3231,23 +3276,43 @@ setTimeout(() => {
       } catch (err) { /* gestito da apiFetch */ }
     });
 
-    document.getElementById('changePwdBtn').addEventListener('click', () => {
-      openPwdOverlay(false);
-    });
     document.getElementById('closePwdOverlay').addEventListener('click', () => {
       document.getElementById('pwdOverlay').classList.remove('active');
     });
 
-    document.getElementById('authBtn').addEventListener('click', async () => {
-      if (currentUser) {
-        try { await apiFetch('/api/logout', { method: 'POST' }); } catch (err) { /* ignora */ }
-        setAuthToken(null);
-        currentUser = null;
-        applyAuthUI();
-        setStatus('Disconnesso', '', 2000);
-      } else {
-        showLoginOverlay();
+    const authBtn = document.getElementById('authBtn');
+    const profileMenu = document.getElementById('profileMenu');
+    authBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      profileMenu.classList.toggle('open');
+    });
+    document.addEventListener('click', (e) => {
+      if (!profileMenu.contains(e.target) && e.target !== authBtn) {
+        profileMenu.classList.remove('open');
       }
+    });
+
+    document.getElementById('pmLogin').addEventListener('click', () => {
+      profileMenu.classList.remove('open');
+      showLoginOverlay();
+    });
+    document.getElementById('pmChangePwd').addEventListener('click', () => {
+      profileMenu.classList.remove('open');
+      openPwdOverlay(false);
+    });
+    document.getElementById('pmAdmin').addEventListener('click', () => {
+      profileMenu.classList.remove('open');
+      closePanel('infoPanel'); closePanel('legendPanel'); closePanel('reportPanel');
+      document.getElementById('adminPanel').classList.add('active');
+      loadUsers();
+    });
+    document.getElementById('pmLogout').addEventListener('click', async () => {
+      profileMenu.classList.remove('open');
+      try { await apiFetch('/api/logout', { method: 'POST' }); } catch (err) { /* ignora */ }
+      setAuthToken(null);
+      currentUser = null;
+      applyAuthUI();
+      setStatus('Disconnesso', '', 2000);
     });
 
     // ─── Pin-drop: nuova proposta ───
@@ -3481,12 +3546,7 @@ setTimeout(() => {
       togglePanel('infoPanel');
     }
 
-    // ─── Admin utenti ───
-    document.getElementById('adminBtn').addEventListener('click', () => {
-      closePanel('infoPanel'); closePanel('legendPanel'); closePanel('reportPanel');
-      document.getElementById('adminPanel').classList.add('active');
-      loadUsers();
-    });
+    // ─── Admin utenti (apertura da pmAdmin nel menu profilo) ───
     document.getElementById('closeAdmin').addEventListener('click', () => closePanel('adminPanel'));
 
     async function loadUsers() {
