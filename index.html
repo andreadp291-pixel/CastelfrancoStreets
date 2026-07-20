@@ -372,6 +372,15 @@
   font-family: inherit;
 }
 .auth-error { color: #dc2626; font-size: 12px; min-height: 16px; margin-bottom: 8px; }
+.pwd-requirements { margin: -6px 0 8px; font-size: 11px; color: var(--text-light); line-height: 1.4; }
+.pwd-strength-track {
+  width: 100%; height: 6px; border-radius: 999px; background: #e2e8f0; overflow: hidden; margin-bottom: 4px;
+}
+.pwd-strength-bar {
+  height: 100%; width: 0%; border-radius: 999px; background: #dc2626;
+  transition: width .25s var(--ease), background-color .25s var(--ease);
+}
+.pwd-strength-label { font-size: 11px; font-weight: 700; margin-bottom: 10px; color: var(--text-light); }
 .auth-submit {
   width: 100%; padding: 10px; border: none; border-radius: 10px;
   background: var(--bg-dark); color: #fff; font-weight: 700; font-size: 13.5px; cursor: pointer;
@@ -1217,7 +1226,14 @@
       <span id="closePwdOverlay" class="panel-close" style="display:none;background:#e2e8f0"><i data-lucide="x" width="16" height="16"></i></span>
     </h2>
     <p class="auth-sub" id="pwdSub">Password temporanea: da cambiare al primo accesso.</p>
-    <label>Nuova password (min 10 caratteri)<input type="password" id="pwdNew" minlength="10" required></label>
+    <label>Nuova password
+      <input type="password" id="pwdNew" minlength="10" required
+        pattern="(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).{10,}"
+        title="Almeno 10 caratteri, con una maiuscola, un numero e un carattere speciale">
+    </label>
+    <p class="pwd-requirements">Min. 10 caratteri, con almeno una maiuscola, un numero e un carattere speciale.</p>
+    <div class="pwd-strength-track"><div class="pwd-strength-bar" id="pwdStrengthBar"></div></div>
+    <div class="pwd-strength-label" id="pwdStrengthLabel"></div>
     <div id="pwdError" class="auth-error"></div>
     <button type="submit" class="auth-submit">Conferma</button>
   </form>
@@ -3339,6 +3355,8 @@ setTimeout(() => {
         : 'Scegli una nuova password per il tuo account.';
       document.getElementById('closePwdOverlay').style.display = mandatory ? 'none' : 'flex';
       document.getElementById('pwdError').textContent = '';
+      document.getElementById('pwdNew').value = '';
+      updatePwdStrengthUI('');
       document.getElementById('pwdOverlay').classList.add('active');
     }
 
@@ -3448,11 +3466,44 @@ setTimeout(() => {
       hideProposalsHelp();
     });
 
+    const PWD_REQUIREMENTS = [
+      { test: pw => pw.length >= 10, label: 'lunghezza' },
+      { test: pw => /[A-Z]/.test(pw), label: 'maiuscola' },
+      { test: pw => /[0-9]/.test(pw), label: 'numero' },
+      { test: pw => /[^A-Za-z0-9]/.test(pw), label: 'carattere speciale' }
+    ];
+    function passwordStrength(pw) {
+      if (!pw) return 0;
+      let score = PWD_REQUIREMENTS.filter(r => r.test(pw)).length;
+      if (pw.length >= 14) score++; // bonus lunghezza extra
+      return Math.min(score, 5);
+    }
+    function updatePwdStrengthUI(pw) {
+      const score = passwordStrength(pw);
+      const bar = document.getElementById('pwdStrengthBar');
+      const label = document.getElementById('pwdStrengthLabel');
+      const pct = (score / 5) * 100;
+      bar.style.width = pct + '%';
+      let color, text;
+      if (score <= 2) { color = '#dc2626'; text = 'Debole'; }
+      else if (score <= 4) { color = '#f59e0b'; text = 'Media'; }
+      else { color = '#16a34a'; text = 'Forte'; }
+      bar.style.background = color;
+      label.textContent = pw ? text : '';
+      label.style.color = color;
+    }
+    document.getElementById('pwdNew').addEventListener('input', (e) => updatePwdStrengthUI(e.target.value));
+
     document.getElementById('pwdForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const newPassword = document.getElementById('pwdNew').value;
       const errEl = document.getElementById('pwdError');
       errEl.textContent = '';
+      const failed = PWD_REQUIREMENTS.filter(r => !r.test(newPassword));
+      if (failed.length) {
+        errEl.textContent = 'La password deve avere almeno 10 caratteri, una maiuscola, un numero e un carattere speciale.';
+        return;
+      }
       try {
         const res = await apiFetch('/api/me/password', {
           method: 'POST',
@@ -3465,6 +3516,7 @@ setTimeout(() => {
           return;
         }
         document.getElementById('pwdNew').value = '';
+        updatePwdStrengthUI('');
         const wasMandatory = pwdOverlayMandatory;
         await refreshMe();
         setStatus('Password aggiornata', 'success', 2500);
