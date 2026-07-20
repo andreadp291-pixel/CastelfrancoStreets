@@ -1026,6 +1026,10 @@
     <label><input type="checkbox" class="cat-filter-cb" value="rifiuti" checked> <span class="cat-dot" style="background:#78716c"></span> Rifiuti e pulizia</label>
     <label><input type="checkbox" class="cat-filter-cb" value="mobilita" checked> <span class="cat-dot" style="background:#7c3aed"></span> Mobilità e trasporti</label>
     <label><input type="checkbox" class="cat-filter-cb" value="arredo_urbano" checked> <span class="cat-dot" style="background:#db2777"></span> Arredo urbano</label>
+    <label><input type="checkbox" class="cat-filter-cb" value="sport" checked> <span class="cat-dot" style="background:#0d9488"></span> Sport</label>
+    <label><input type="checkbox" class="cat-filter-cb" value="cultura" checked> <span class="cat-dot" style="background:#4f46e5"></span> Cultura</label>
+    <label><input type="checkbox" class="cat-filter-cb" value="istruzione" checked> <span class="cat-dot" style="background:#2563eb"></span> Istruzione</label>
+    <label><input type="checkbox" class="cat-filter-cb" value="edilizia" checked> <span class="cat-dot" style="background:#92400e"></span> Edilizia e urbanistica</label>
     <label><input type="checkbox" class="cat-filter-cb" value="altro" checked> <span class="cat-dot" style="background:#64748b"></span> Altro</label>
   </div>
 
@@ -1281,6 +1285,10 @@
           <option value="rifiuti">Rifiuti e pulizia</option>
           <option value="mobilita">Mobilità e trasporti</option>
           <option value="arredo_urbano">Arredo urbano</option>
+          <option value="sport">Sport</option>
+          <option value="cultura">Cultura</option>
+          <option value="istruzione">Istruzione</option>
+          <option value="edilizia">Edilizia e urbanistica</option>
           <option value="altro">Altro</option>
         </select>
       </label>
@@ -3340,12 +3348,14 @@ setTimeout(() => {
     const REPORT_CATEGORY_LABEL = {
       strade: 'Strade', verde: 'Verde', servizi: 'Servizi', sicurezza: 'Sicurezza',
       illuminazione: 'Illuminazione', rifiuti: 'Rifiuti e pulizia', mobilita: 'Mobilità e trasporti',
-      arredo_urbano: 'Arredo urbano', altro: 'Altro'
+      arredo_urbano: 'Arredo urbano', sport: 'Sport', cultura: 'Cultura', istruzione: 'Istruzione',
+      edilizia: 'Edilizia e urbanistica', altro: 'Altro'
     };
     const REPORT_CATEGORY_COLOR = {
       strade: '#f97316', verde: '#16a34a', servizi: '#0ea5e9', sicurezza: '#dc2626',
       illuminazione: '#eab308', rifiuti: '#78716c', mobilita: '#7c3aed',
-      arredo_urbano: '#db2777', altro: '#64748b'
+      arredo_urbano: '#db2777', sport: '#0d9488', cultura: '#4f46e5', istruzione: '#2563eb',
+      edilizia: '#92400e', altro: '#64748b'
     };
     let activeCategoryFilters = new Set(Object.keys(REPORT_CATEGORY_LABEL));
 
