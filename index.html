@@ -143,6 +143,35 @@
     #layersPanel input[type=checkbox] { accent-color: var(--text-main); width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; }
     #layersPanelSep { height: 1px; background: rgba(0,0,0,.07); margin: 6px 10px; }
 
+    #categoryFilterPanel {
+      position: fixed;
+      top: 62px;
+      left: 12px;
+      width: 200px;
+      background: var(--bg-card);
+      backdrop-filter: blur(14px);
+      border: var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      z-index: 1000;
+      padding: 10px 4px 8px 4px;
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+    }
+    #categoryFilterPanel.open { display: flex; animation: fadeSlideUp .22s var(--ease); }
+    #categoryFilterPanel .lp-title {
+      font-size: 11px; font-weight: 700; color: var(--text-light); text-transform: uppercase;
+      letter-spacing: .06em; padding: 0 10px 6px 10px; border-bottom: 1px solid rgba(0,0,0,.07); margin-bottom: 4px;
+    }
+    #categoryFilterPanel label {
+      display: flex; align-items: center; gap: 8px; padding: 5px 10px; font-size: 12px;
+      font-weight: 600; color: var(--text-main); cursor: pointer; border-radius: 8px; transition: background .12s;
+    }
+    #categoryFilterPanel label:hover { background: rgba(79,70,229,.08); }
+    #categoryFilterPanel input[type=checkbox] { accent-color: var(--text-main); width: 15px; height: 15px; cursor: pointer; flex-shrink: 0; }
+    .cat-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+
     /* ─── PANNELLI LATERALI ─── */
 #infoPanel,
 #legendPanel {
@@ -616,6 +645,9 @@
   <button id="newReportBtn" class="ctrl-btn" title="Nuova proposta" style="display:none">
     <i data-lucide="map-pin-plus" width="15" height="15"></i>
   </button>
+  <button id="categoryFilterBtn" class="ctrl-btn" title="Filtra categorie" style="display:none">
+    <i data-lucide="filter" width="15" height="15"></i>
+  </button>
   <button id="adminBtn" class="ctrl-btn" title="Amministrazione" style="display:none">
     <i data-lucide="shield" width="15" height="15"></i>
   </button>
@@ -673,6 +705,16 @@
     <div class="lp-title" style="margin-top:2px"><i data-lucide="trees" width="11" height="11" style="vertical-align:middle;margin-right:4px"></i>Natura</div>
     <label><input type="checkbox" id="lyr-trees"> <i data-lucide="trees" width="14" height="14" style="color:#15803d"></i> Alberi</label>
     <label><input type="checkbox" id="lyr-waterway"> <i data-lucide="waves" width="14" height="14" style="color:#0284c7"></i> Corsi d'acqua</label>
+  </div>
+
+  <!-- FILTRI CATEGORIE PROPOSTE (separato dal pannello Layer, solo post-login) -->
+  <div id="categoryFilterPanel">
+    <div class="lp-title"><i data-lucide="filter" width="11" height="11" style="vertical-align:middle;margin-right:4px"></i>Filtra per categoria</div>
+    <label><input type="checkbox" class="cat-filter-cb" value="strade" checked> <span class="cat-dot" style="background:#f97316"></span> Strade</label>
+    <label><input type="checkbox" class="cat-filter-cb" value="verde" checked> <span class="cat-dot" style="background:#16a34a"></span> Verde</label>
+    <label><input type="checkbox" class="cat-filter-cb" value="servizi" checked> <span class="cat-dot" style="background:#0ea5e9"></span> Servizi</label>
+    <label><input type="checkbox" class="cat-filter-cb" value="sicurezza" checked> <span class="cat-dot" style="background:#dc2626"></span> Sicurezza</label>
+    <label><input type="checkbox" class="cat-filter-cb" value="altro" checked> <span class="cat-dot" style="background:#64748b"></span> Altro</label>
   </div>
 
   <div id="map"></div>
@@ -902,14 +944,6 @@
         </select>
       </label>
       <label class="rp-label">Descrizione<textarea id="rpDescription" rows="4" maxlength="5000" required></textarea></label>
-      <label class="rp-label">Priorità (opzionale)
-        <select id="rpPriority">
-          <option value="">—</option>
-          <option value="bassa">Bassa</option>
-          <option value="media">Media</option>
-          <option value="alta">Alta</option>
-        </select>
-      </label>
       <label class="rp-label">Foto (opzionale)<input type="file" id="rpPhoto" accept="image/jpeg,image/png,image/webp"></label>
       <div id="reportFormError" class="auth-error"></div>
       <button type="submit" class="auth-submit">Invia proposta</button>
@@ -1150,9 +1184,28 @@
       e.stopPropagation();
       layersPanel.classList.toggle('open');
     });
+
+    // Toggle pannello filtri categoria (proposte)
+    const categoryFilterBtn   = document.getElementById('categoryFilterBtn');
+    const categoryFilterPanel = document.getElementById('categoryFilterPanel');
+    categoryFilterBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      categoryFilterPanel.classList.toggle('open');
+    });
+    document.querySelectorAll('.cat-filter-cb').forEach(cb => {
+      cb.addEventListener('change', () => {
+        if (cb.checked) activeCategoryFilters.add(cb.value);
+        else activeCategoryFilters.delete(cb.value);
+        renderReportMarkers();
+      });
+    });
+
     document.addEventListener('click', (e) => {
       if (!layersPanel.contains(e.target) && e.target !== layersBtn) {
         layersPanel.classList.remove('open');
+      }
+      if (!categoryFilterPanel.contains(e.target) && e.target !== categoryFilterBtn) {
+        categoryFilterPanel.classList.remove('open');
       }
     });
 
@@ -2833,15 +2886,16 @@ setTimeout(() => {
     const REPORT_STATUS_LABEL = {
       aperto: 'Aperto', in_lavorazione: 'In lavorazione', risolto: 'Risolto', rifiutato: 'Rifiutato'
     };
-    const REPORT_STATUS_COLOR = {
-      aperto: '#e11d48', in_lavorazione: '#f59e0b', risolto: '#16a34a', rifiutato: '#64748b'
-    };
     const REPORT_CATEGORY_LABEL = {
       strade: 'Strade', verde: 'Verde', servizi: 'Servizi', sicurezza: 'Sicurezza', altro: 'Altro'
     };
+    const REPORT_CATEGORY_COLOR = {
+      strade: '#f97316', verde: '#16a34a', servizi: '#0ea5e9', sicurezza: '#dc2626', altro: '#64748b'
+    };
+    let activeCategoryFilters = new Set(Object.keys(REPORT_CATEGORY_LABEL));
 
-    function reportMarkerIcon(status) {
-      const color = REPORT_STATUS_COLOR[status] || '#e11d48';
+    function reportMarkerIcon(category) {
+      const color = REPORT_CATEGORY_COLOR[category] || '#64748b';
       return L.divIcon({
         className: '',
         html: `<div style="width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${color};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)"></div>`,
@@ -2912,6 +2966,7 @@ setTimeout(() => {
       document.getElementById('newReportBtn').style.display = authenticated ? 'flex' : 'none';
       document.getElementById('adminBtn').style.display = (authenticated && currentUser.role === 'superadmin') ? 'flex' : 'none';
       document.getElementById('changePwdBtn').style.display = authenticated ? 'flex' : 'none';
+      document.getElementById('categoryFilterBtn').style.display = authenticated ? 'flex' : 'none';
       // La riga resta sempre visibile: se non sei loggato, cliccarla apre il
       // login invece di attivare il layer (vedi handler del checkbox sotto).
       document.getElementById('lyr-segnalazioni-row').style.display = 'flex';
@@ -2932,6 +2987,7 @@ setTimeout(() => {
         }
       } else {
         document.getElementById('pwdOverlay').classList.remove('active');
+        document.getElementById('categoryFilterPanel').classList.remove('open');
         map.removeLayer(layers.segnalazioni);
         layers.segnalazioni.clearLayers();
         document.getElementById('lyr-segnalazioni').checked = false;
@@ -3064,8 +3120,6 @@ setTimeout(() => {
       fd.append('description', document.getElementById('rpDescription').value);
       fd.append('lat', pendingPinLatLng.lat);
       fd.append('lng', pendingPinLatLng.lng);
-      const priority = document.getElementById('rpPriority').value;
-      if (priority) fd.append('priority', priority);
       const photoFile = document.getElementById('rpPhoto').files[0];
       if (photoFile) fd.append('photo', photoFile);
 
@@ -3082,18 +3136,26 @@ setTimeout(() => {
       } catch (err) { /* gestito da apiFetch */ }
     });
 
-    // ─── Caricamento e rendering segnalazioni ───
+    // ─── Caricamento e rendering proposte ───
+    let allReportsCache = [];
+
+    function renderReportMarkers() {
+      layers.segnalazioni.clearLayers();
+      allReportsCache
+        .filter(r => activeCategoryFilters.has(r.category))
+        .forEach(r => {
+          const marker = L.marker([r.lat, r.lng], { icon: reportMarkerIcon(r.category) });
+          marker.on('click', () => openReportDetail(r.id));
+          layers.segnalazioni.addLayer(marker);
+        });
+    }
+
     async function loadReports() {
       try {
         const res = await apiFetch('/api/reports');
         if (!res.ok) return;
-        const reports = await res.json();
-        layers.segnalazioni.clearLayers();
-        reports.forEach(r => {
-          const marker = L.marker([r.lat, r.lng], { icon: reportMarkerIcon(r.status) });
-          marker.on('click', () => openReportDetail(r.id));
-          layers.segnalazioni.addLayer(marker);
-        });
+        allReportsCache = await res.json();
+        renderReportMarkers();
       } catch (err) { /* gestito da apiFetch */ }
     }
 
@@ -3122,12 +3184,11 @@ setTimeout(() => {
       ).join('');
 
       const eventsHtml = report.events.map(ev => {
-        const who = ev.actor_id === 0 ? 'Superadmin' : `Utente #${ev.actor_id}`;
         const when = new Date(ev.created_at).toLocaleString('it-IT');
         let what = ev.type;
         if (ev.type === 'status_change' && ev.payload) what = `stato: ${ev.payload.from} → ${ev.payload.to}`;
         else if (ev.type === 'edit') what = 'modifica campi';
-        return `<div class="popup-section" style="padding-bottom:6px;margin-bottom:6px"><div class="val" style="font-size:12px">${escapeHtml(who)} — ${escapeHtml(what)} <span style="color:#94a3b8">(${escapeHtml(when)})</span></div></div>`;
+        return `<div class="popup-section" style="padding-bottom:6px;margin-bottom:6px"><div class="val" style="font-size:12px">${escapeHtml(ev.actor_display_name)} — ${escapeHtml(what)} <span style="color:#94a3b8">(${escapeHtml(when)})</span></div></div>`;
       }).join('');
 
       document.getElementById('infoSections').innerHTML = `
@@ -3137,8 +3198,8 @@ setTimeout(() => {
           ${photoHtml}
         </div>
         <div class="popup-section" style="flex-direction:row;gap:20px">
+          <div><div class="label">Autore</div><div class="val">${escapeHtml(report.author_display_name)}</div></div>
           <div><div class="label">Stato</div><div class="val">${escapeHtml(REPORT_STATUS_LABEL[report.status] || report.status)}</div></div>
-          <div><div class="label">Priorità</div><div class="val">${escapeHtml(report.priority || '—')}</div></div>
         </div>
         <div class="popup-section">
           <div class="label">Proposto il</div>
@@ -3214,8 +3275,6 @@ setTimeout(() => {
         });
       }
 
-      document.getElementById('rawTags').style.display = '';
-      document.getElementById('rawToggle').style.display = '';
       lucide.createIcons();
       togglePanel('infoPanel');
     }
