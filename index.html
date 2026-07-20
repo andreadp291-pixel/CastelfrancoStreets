@@ -622,43 +622,57 @@
   <button id="changePwdBtn" class="ctrl-btn" title="Cambia password" style="display:none">
     <i data-lucide="key-round" width="15" height="15"></i>
   </button>
-  <button id="authBtn" class="ctrl-btn" title="Accedi">
-    <i data-lucide="log-in" width="15" height="15"></i>
-  </button>
+  </div>
+
+  <!-- Bottone login/logout: sempre visibile, ancorato in alto a destra, indipendente dal topbar principale -->
+  <div id="authTopbar" style="position:fixed;top:12px;right:14px;z-index:1200">
+    <button id="authBtn" class="ctrl-btn" title="Accedi">
+      <i data-lucide="log-in" width="15" height="15"></i>
+    </button>
   </div>
 
   <!-- LAYERS PANEL -->
   <div id="layersPanel">
+    <div class="lp-title"><i data-lucide="megaphone" width="11" height="11" style="vertical-align:middle;margin-right:4px"></i>Segnalazioni</div>
+    <label id="lyr-segnalazioni-row"><input type="checkbox" id="lyr-segnalazioni"> <i data-lucide="megaphone" width="14" height="14" style="color:#e11d48"></i> Segnalazioni civiche</label>
+
+    <div style="height:1px;background:rgba(0,0,0,.07);margin:6px 10px"></div>
     <div class="lp-title"><i data-lucide="map" width="11" height="11" style="vertical-align:middle;margin-right:4px"></i>Mappa base</div>
     <label><input type="radio" name="basemap" id="bm-osm" checked> <i data-lucide="map" width="14" height="14" style="color:#475569"></i> OpenStreetMap</label>
     <label><input type="radio" name="basemap" id="bm-sat"> <i data-lucide="satellite" width="14" height="14" style="color:#475569"></i> Satellite (Esri)</label>
-    <div id="layersPanelSep" style="height:1px;background:rgba(0,0,0,.07);margin:6px 10px"></div>
-    <div class="lp-title" style="margin-top:2px"><i data-lucide="layers" width="11" height="11" style="vertical-align:middle;margin-right:4px"></i>Layer visibili</div>
+
+    <div style="height:1px;background:rgba(0,0,0,.07);margin:6px 10px"></div>
+    <div class="lp-title" style="margin-top:2px"><i data-lucide="route" width="11" height="11" style="vertical-align:middle;margin-right:4px"></i>Viabilità</div>
     <label><input type="checkbox" id="lyr-proposed"> <i data-lucide="route" width="14" height="14" style="color:#f97316"></i> Strade proposte</label>
+    <label><input type="checkbox" id="lyr-construction"> <i data-lucide="cone" width="14" height="14" style="color:#f59e0b"></i> In costruzione</label>
     <label><input type="checkbox" id="lyr-cycleway"> <i data-lucide="bike" width="14" height="14" style="color:#06b6d4"></i> Ciclabili</label>
     <label><input type="checkbox" id="lyr-pedestrian"> <i data-lucide="footprints" width="14" height="14" style="color:#22c55e"></i> Pedonali</label>
     <label><input type="checkbox" id="lyr-crossing"> <i data-lucide="move-horizontal" width="14" height="14" style="color:#8b5cf6"></i> Attraversamenti</label>
-    <label><input type="checkbox" id="lyr-construction"> <i data-lucide="cone" width="14" height="14" style="color:#f59e0b"></i> In costruzione</label>
+    <label><input type="checkbox" id="lyr-trafficsignals"> <i data-lucide="traffic-cone" width="14" height="14" style="color:#dc2626"></i> Semafori</label>
     <label><input type="checkbox" id="lyr-maxspeed"> <i data-lucide="gauge" width="14" height="14" style="color:#ef4444"></i> Limiti di velocità</label>
     <label><input type="checkbox" id="lyr-hgv"> <i data-lucide="truck" width="14" height="14" style="color:#0f766e"></i> Mezzi pesanti</label>
     <label><input type="checkbox" id="lyr-strade_ref"> <i data-lucide="signpost" width="14" height="14" style="color:#dc2626"></i> Proprietà (SS/SR/SP/SC)</label>
-    <label><input type="checkbox" id="lyr-waterway"> <i data-lucide="waves" width="14" height="14" style="color:#0284c7"></i> Corsi d'acqua</label>
-    <label><input type="checkbox" id="lyr-fontane"> <i data-lucide="droplet" width="14" height="14" style="color:#0891b2"></i> Fontanelle d'acqua</label>
-    <label><input type="checkbox" id="lyr-benches"> <i data-lucide="armchair" width="14" height="14" style="color:#92400e"></i> Panchine</label>
-    <label><input type="checkbox" id="lyr-trees"> <i data-lucide="trees" width="14" height="14" style="color:#15803d"></i> Alberi</label>
-    <div id="layersPanelSep2" style="height:1px;background:rgba(0,0,0,.07);margin:6px 10px"></div>
-    <div class="lp-title" style="margin-top:2px"><i data-lucide="map-pin" width="11" height="11" style="vertical-align:middle;margin-right:4px"></i>Arredo urbano</div>
     <label><input type="checkbox" id="lyr-signs"> <i data-lucide="octagon-alert" width="14" height="14" style="color:#eab308"></i> Segnali stradali</label>
-    <label><input type="checkbox" id="lyr-lamps"> <i data-lucide="lightbulb" width="14" height="14" style="color:#facc15"></i> Lampioni</label>
-    <label><input type="checkbox" id="lyr-trafficsignals"> <i data-lucide="traffic-cone" width="14" height="14" style="color:#dc2626"></i> Semafori</label>
-    <label><input type="checkbox" id="lyr-busstops"> <i data-lucide="bus" width="14" height="14" style="color:#2563eb"></i> Fermate bus</label>
-    <label><input type="checkbox" id="lyr-bins"> <i data-lucide="trash-2" width="14" height="14" style="color:#16a34a"></i> Cestini</label>
-    <label><input type="checkbox" id="lyr-manholes"> <i data-lucide="circle-dot" width="14" height="14" style="color:#475569"></i> Tombini</label>
+
+    <div style="height:1px;background:rgba(0,0,0,.07);margin:6px 10px"></div>
+    <div class="lp-title" style="margin-top:2px"><i data-lucide="square-parking" width="11" height="11" style="vertical-align:middle;margin-right:4px"></i>Sosta e parcheggi</div>
     <label><input type="checkbox" id="lyr-parking"> <i data-lucide="square-parking" width="14" height="14" style="color:#0ea5e9"></i> Aree e stalli parcheggio</label>
     <label><input type="checkbox" id="lyr-parkometers"> <i data-lucide="ticket" width="14" height="14" style="color:#ea580c"></i> Parcometri</label>
     <label><input type="checkbox" id="lyr-bicycleparking"> <i data-lucide="bike" width="14" height="14" style="color:#65a30d"></i> Parcheggi bici</label>
-    <div id="layersPanelSep3" style="height:1px;background:rgba(0,0,0,.07);margin:6px 10px;display:none"></div>
-    <label id="lyr-segnalazioni-row" style="display:none"><input type="checkbox" id="lyr-segnalazioni" checked> <i data-lucide="megaphone" width="14" height="14" style="color:#e11d48"></i> Segnalazioni</label>
+    <label><input type="checkbox" id="lyr-busstops"> <i data-lucide="bus" width="14" height="14" style="color:#2563eb"></i> Fermate bus</label>
+
+    <div style="height:1px;background:rgba(0,0,0,.07);margin:6px 10px"></div>
+    <div class="lp-title" style="margin-top:2px"><i data-lucide="map-pin" width="11" height="11" style="vertical-align:middle;margin-right:4px"></i>Arredo urbano e servizi</div>
+    <label><input type="checkbox" id="lyr-lamps"> <i data-lucide="lightbulb" width="14" height="14" style="color:#facc15"></i> Lampioni</label>
+    <label><input type="checkbox" id="lyr-benches"> <i data-lucide="armchair" width="14" height="14" style="color:#92400e"></i> Panchine</label>
+    <label><input type="checkbox" id="lyr-bins"> <i data-lucide="trash-2" width="14" height="14" style="color:#16a34a"></i> Cestini</label>
+    <label><input type="checkbox" id="lyr-manholes"> <i data-lucide="circle-dot" width="14" height="14" style="color:#475569"></i> Tombini</label>
+    <label><input type="checkbox" id="lyr-fontane"> <i data-lucide="droplet" width="14" height="14" style="color:#0891b2"></i> Fontanelle d'acqua</label>
+
+    <div style="height:1px;background:rgba(0,0,0,.07);margin:6px 10px"></div>
+    <div class="lp-title" style="margin-top:2px"><i data-lucide="trees" width="11" height="11" style="vertical-align:middle;margin-right:4px"></i>Natura</div>
+    <label><input type="checkbox" id="lyr-trees"> <i data-lucide="trees" width="14" height="14" style="color:#15803d"></i> Alberi</label>
+    <label><input type="checkbox" id="lyr-waterway"> <i data-lucide="waves" width="14" height="14" style="color:#0284c7"></i> Corsi d'acqua</label>
   </div>
 
   <div id="map"></div>
@@ -836,12 +850,18 @@
 <!-- LOGIN OVERLAY -->
 <div id="loginOverlay" class="auth-overlay">
   <form id="loginForm" class="auth-box">
-    <h2><i data-lucide="shield-check" width="18" height="18" style="vertical-align:middle;margin-right:6px"></i>Accesso riservato</h2>
+    <h2 style="display:flex;align-items:center;justify-content:space-between">
+      <span><i data-lucide="shield-check" width="18" height="18" style="vertical-align:middle;margin-right:6px"></i>Accesso riservato</span>
+      <span id="closeLoginOverlay" class="panel-close" style="background:#e2e8f0"><i data-lucide="x" width="16" height="16"></i></span>
+    </h2>
     <p class="auth-sub">Segnalazioni civiche — solo membri del gruppo.</p>
     <label>Username<input type="text" id="loginUsername" autocomplete="username" required></label>
     <label>Password<input type="password" id="loginPassword" autocomplete="current-password" required></label>
     <div id="loginError" class="auth-error"></div>
-    <button type="submit" class="auth-submit">Accedi</button>
+    <div style="display:flex;gap:8px">
+      <button type="submit" class="auth-submit">Accedi</button>
+      <button type="button" id="cancelLoginBtn" class="auth-submit" style="background:#e2e8f0;color:#334155">Annulla</button>
+    </div>
   </form>
 </div>
 
@@ -1043,7 +1063,7 @@
     // basemap control handled by custom panel
 
     // blocca la propagazione click/scroll sui pannelli
-    ['topbar', 'infoPanel', 'legendPanel'].forEach(id => {
+    ['topbar', 'authTopbar', 'infoPanel', 'legendPanel'].forEach(id => {
       const el = document.getElementById(id);
       if (el) {
         L.DomEvent.disableClickPropagation(el);
@@ -2876,6 +2896,8 @@ setTimeout(() => {
     function hideLoginOverlay() {
       document.getElementById('loginOverlay').classList.remove('active');
     }
+    document.getElementById('closeLoginOverlay').addEventListener('click', hideLoginOverlay);
+    document.getElementById('cancelLoginBtn').addEventListener('click', hideLoginOverlay);
 
     function openPwdOverlay(mandatory) {
       document.getElementById('pwdTitle').textContent = mandatory
