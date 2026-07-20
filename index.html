@@ -916,6 +916,9 @@
     <button id="refreshBtn" class="ctrl-btn" title="Aggiorna">
       <i data-lucide="refresh-cw" width="15" height="15"></i>
     </button>
+  <button id="gpsBtn" class="ctrl-btn" title="La mia posizione">
+    <i data-lucide="locate-fixed" width="15" height="15"></i>
+  </button>
   <button id="layersBtn" class="ctrl-btn" title="Layer" style="gap:4px;padding:0 10px;font-size:11px;font-weight:700;color:var(--text-main)">
     <i data-lucide="layers" width="15" height="15"></i>
     <span>Layer</span>
@@ -1013,7 +1016,7 @@
   <!-- MODIFICA OPENSTREETMAP -->
   <div id="editPanel">
     <div class="lp-title"><i data-lucide="pencil" width="11" height="11" style="vertical-align:middle;margin-right:4px"></i>Modifiche complesse</div>
-    <a class="ep-btn ep-btn-primary" href="https://www.openstreetmap.org/#map=16/45.6710/11.9153" target="_blank" rel="noopener">
+    <a class="ep-btn ep-btn-primary" href="https://www.openstreetmap.org/#map=13/45.66109/11.95227" target="_blank" rel="noopener">
       <i data-lucide="external-link" width="14" height="14"></i>Apri OpenStreetMap.org
     </a>
     <p class="ep-note">
@@ -3235,6 +3238,39 @@ setTimeout(() => {
     // Eventi UI
     // ─────────────────────────────────────────────────────────────
     document.getElementById('refreshBtn').addEventListener('click', () => loadData(true));
+
+    // ─── Geolocalizzazione ───
+    let gpsMarker = null, gpsAccuracyCircle = null;
+    document.getElementById('gpsBtn').addEventListener('click', () => {
+      if (!navigator.geolocation) {
+        setStatus('Geolocalizzazione non supportata dal browser', 'error', 3500);
+        return;
+      }
+      const btn = document.getElementById('gpsBtn');
+      btn.classList.add('spinning');
+      setStatus('Ricerca posizione…', 'loading');
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          btn.classList.remove('spinning');
+          document.getElementById('status').classList.remove('show');
+          const { latitude, longitude, accuracy } = pos.coords;
+          map.setView([latitude, longitude], 17);
+          if (gpsMarker) map.removeLayer(gpsMarker);
+          if (gpsAccuracyCircle) map.removeLayer(gpsAccuracyCircle);
+          gpsAccuracyCircle = L.circle([latitude, longitude], {
+            radius: accuracy, color: '#4f46e5', weight: 1, fillColor: '#4f46e5', fillOpacity: .12
+          }).addTo(map);
+          gpsMarker = L.circleMarker([latitude, longitude], {
+            radius: 8, color: '#fff', weight: 3, fillColor: '#4f46e5', fillOpacity: 1
+          }).addTo(map);
+        },
+        () => {
+          btn.classList.remove('spinning');
+          setStatus('Impossibile ottenere la posizione', 'error', 3500);
+        },
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    });
     document.getElementById('closeInfo').addEventListener('click', () => closePanel('infoPanel'));
     document.getElementById('legendBtn').addEventListener('click', () => togglePanel('legendPanel'));
     document.getElementById('closeLegend').addEventListener('click', () => closePanel('legendPanel'));
