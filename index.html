@@ -553,17 +553,12 @@
 }
 
 .legend-section {
-  padding: 14px;
-  margin-bottom: 12px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  padding: 0 0 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #eef2f7;
 }
-.legend-section:last-child { margin-bottom: 0; }
-.legend-section.legend-intro {
-  border-left: 3px solid var(--primary);
-  background: linear-gradient(180deg, var(--primary-light), #f8fafc 70%);
-}
+.legend-section:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+.legend-section.legend-intro { padding-left: 12px; border-left: 3px solid var(--primary); }
 
 .legend-section-title {
   font-size: 10.5px;
@@ -982,28 +977,26 @@
         premi il pulsante di aggiornamento. Clicca su qualsiasi segmento sulla mappa per
         vedere i dettagli del tratto selezionato.
       </p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
-        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px;font-size:11px">
-          <div style="font-weight:700;color:var(--text-main);margin-bottom:4px;display:flex;align-items:center;gap:5px"><i data-lucide="layers" width="12" height="12"></i>Layer disponibili</div>
-          <div style="color:var(--text-light);line-height:1.6">
-            Strade proposte<br>Piste ciclabili<br>Percorsi pedonali<br>
-            Attraversamenti<br>In costruzione<br>Limiti di velocità<br>Mezzi pesanti<br>
-            Segnali stradali<br>Lampioni<br>Semafori<br>Fermate bus<br>Cestini<br>Tombini<br>
-            Corsi d'acqua<br>Parcheggi, stalli e parcometri<br>Parcheggi bici<br>
-            Fontanelle d'acqua<br>Panchine<br>Alberi e filari
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px">
+        <div>
+          <div style="font-weight:700;color:var(--text-main);margin-bottom:5px;display:flex;align-items:center;gap:5px;font-size:11.5px"><i data-lucide="layers" width="12" height="12"></i>Layer disponibili</div>
+          <div style="color:var(--text-light);font-size:11px;line-height:1.7">
+            Strade proposte, piste ciclabili, percorsi pedonali, attraversamenti,
+            in costruzione, limiti di velocità, mezzi pesanti, segnali stradali,
+            lampioni, semafori, fermate bus, cestini, tombini, corsi d'acqua,
+            parcheggi/stalli/parcometri, parcheggi bici, fontanelle, panchine, alberi.
           </div>
         </div>
-        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px;font-size:11px">
-          <div style="font-weight:700;color:var(--text-main);margin-bottom:4px;display:flex;align-items:center;gap:5px"><i data-lucide="circle-help" width="12" height="12"></i>Come usare</div>
-          <div style="color:var(--text-light);line-height:1.6">
-            Attiva i layer dal controllo in alto<br><br>
-            Clicca un segmento per i dettagli<br><br>
-            Aggiorna per ricaricare i dati
+        <div style="border-left:1px solid #eef2f7;padding-left:16px">
+          <div style="font-weight:700;color:var(--text-main);margin-bottom:5px;display:flex;align-items:center;gap:5px;font-size:11.5px"><i data-lucide="circle-help" width="12" height="12"></i>Come usare</div>
+          <div style="color:var(--text-light);font-size:11px;line-height:1.7">
+            Attiva i layer dal controllo in alto. Clicca un segmento per i dettagli.
+            Aggiorna per ricaricare i dati.
           </div>
         </div>
       </div>
-      <div style="margin-top:10px;padding:8px 10px;background:#eff6ff;border:1px solid #dbeafe;border-radius:8px;font-size:11px;color:#1d4ed8;display:flex;align-items:center;gap:6px">
-        <i data-lucide="satellite-dish" width="13" height="13"></i>Fonte: <strong>OpenStreetMap</strong> — dati aperti © contributori OSM
+      <div style="margin-top:12px;font-size:11px;color:var(--text-light);display:flex;align-items:center;gap:6px">
+        <i data-lucide="satellite-dish" width="13" height="13" style="color:var(--primary);flex-shrink:0"></i>Fonte: <strong style="color:var(--text-main)">OpenStreetMap</strong> — dati aperti © contributori OSM
       </div>
     </div>
 
