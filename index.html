@@ -353,6 +353,70 @@
 .user-row .u-name { font-weight: 700; color: var(--text-main); }
 .user-row .u-meta { color: #64748b; font-size: 11px; }
 .user-row button { border: none; border-radius: 6px; padding: 5px 8px; font-size: 11px; cursor: pointer; font-weight: 700; }
+
+/* ─── Restyle "Amministrazione utenti" ─── */
+#adminPanel .info-content { padding: 18px 18px 20px; }
+.au-form-card {
+  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px;
+  padding: 14px; margin: 0 0 18px;
+}
+.au-form-title {
+  font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px;
+  color: var(--text-light); margin: 0 0 10px; display: flex; align-items: center; gap: 6px;
+}
+.au-field-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.au-field-row:last-of-type { margin-bottom: 0; }
+#newUserForm input, #newUserForm select {
+  flex: 1 1 0; min-width: 0; padding: 10px 12px; border: 1.5px solid #e2e8f0; border-radius: 10px;
+  font-size: 13px; color: var(--text-main); background: #fff; font-family: inherit;
+  transition: border-color .15s, box-shadow .15s;
+}
+#newUserForm input:focus, #newUserForm select:focus {
+  outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light);
+}
+#newUserForm select { flex: 0 1 120px; cursor: pointer; }
+.au-create-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; margin-top: 10px !important; padding: 10px !important; border-radius: 10px !important;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark)) !important;
+  box-shadow: 0 6px 16px -6px rgba(79,70,229,.55);
+  transition: filter .15s, transform .15s;
+}
+.au-create-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.temp-pwd-box {
+  display: none; background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px;
+  padding: 12px 14px; font-size: 12.5px; margin-bottom: 16px; word-break: break-all;
+  color: #14532d; line-height: 1.6;
+}
+.temp-pwd-box code {
+  background: #dcfce7; border-radius: 6px; padding: 2px 6px; font-weight: 700; color: #166534;
+}
+.au-users-title {
+  font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px;
+  color: var(--text-light); margin: 0 0 8px;
+}
+.user-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 12px; border: 1px solid #eef2f7; border-radius: 12px; margin-bottom: 8px;
+  background: #fff; transition: box-shadow .15s, border-color .15s;
+}
+.user-row:hover { box-shadow: 0 4px 14px rgba(15,23,42,.06); border-color: #e2e8f0; }
+.user-row .u-avatar {
+  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+  background: var(--primary-light); color: var(--primary-dark);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 12.5px;
+}
+.user-row .u-info { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.user-row .u-text { min-width: 0; }
+.user-row .u-name { font-weight: 700; color: var(--text-main); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-row .u-meta { color: var(--text-light); font-size: 11px; margin-top: 1px; }
+.user-row .u-actions { display: flex; gap: 5px; flex-shrink: 0; }
+.user-row button {
+  border: none; border-radius: 8px; padding: 6px 9px; font-size: 11px; cursor: pointer; font-weight: 700;
+  transition: filter .15s, transform .15s;
+}
+.user-row button:hover { filter: brightness(0.95); transform: translateY(-1px); }
 .map-pin-mode { cursor: crosshair !important; }
 
 /* Badge tipo (es. "Pista ciclabile") */
@@ -1020,14 +1084,22 @@
     <div id="closeAdmin" class="panel-close"><i data-lucide="x" width="16" height="16"></i></div>
   </div>
   <div class="info-content">
-    <form id="newUserForm" class="rp-inline-form">
-      <input type="text" id="nuUsername" placeholder="username" required>
-      <input type="text" id="nuDisplayName" placeholder="nome visualizzato" required>
-      <input type="email" id="nuEmail" placeholder="email" required>
-      <select id="nuRole"><option value="user">user</option><option value="moderator">moderator</option></select>
-      <button type="submit" class="auth-submit" style="margin:0;width:auto;padding:8px 14px">Crea</button>
-    </form>
+    <div class="au-form-card">
+      <p class="au-form-title"><i data-lucide="user-plus" width="13" height="13"></i>Nuovo utente</p>
+      <form id="newUserForm">
+        <div class="au-field-row">
+          <input type="text" id="nuUsername" placeholder="username" required>
+          <input type="text" id="nuDisplayName" placeholder="nome visualizzato" required>
+        </div>
+        <div class="au-field-row">
+          <input type="email" id="nuEmail" placeholder="email" required>
+          <select id="nuRole"><option value="user">user</option><option value="moderator">moderator</option></select>
+        </div>
+        <button type="submit" class="auth-submit au-create-btn"><i data-lucide="user-plus" width="14" height="14"></i>Crea</button>
+      </form>
+    </div>
     <div id="tempPasswordBox" class="temp-pwd-box"></div>
+    <p class="au-users-title">Utenti</p>
     <div id="usersList"></div>
   </div>
 </div>
@@ -3384,11 +3456,14 @@ setTimeout(() => {
         const listEl = document.getElementById('usersList');
         listEl.innerHTML = users.map(u => `
           <div class="user-row">
-            <div>
-              <div class="u-name">${escapeHtml(u.display_name)} <span style="color:#94a3b8;font-weight:400">(${escapeHtml(u.username)})</span></div>
-              <div class="u-meta">${escapeHtml(u.role)} · ${u.active ? 'attivo' : 'disattivato'}${u.must_change_password ? ' · pwd temp' : ''}</div>
+            <div class="u-info">
+              <div class="u-avatar">${escapeHtml(u.display_name.trim().slice(0, 2).toUpperCase())}</div>
+              <div class="u-text">
+                <div class="u-name">${escapeHtml(u.display_name)} <span style="color:#94a3b8;font-weight:400">(${escapeHtml(u.username)})</span></div>
+                <div class="u-meta">${escapeHtml(u.role)} · ${u.active ? 'attivo' : 'disattivato'}${u.must_change_password ? ' · pwd temp' : ''}</div>
+              </div>
             </div>
-            <div style="display:flex;gap:5px">
+            <div class="u-actions">
               <button data-act="toggle" data-id="${u.id}" data-active="${u.active}" style="background:${u.active ? '#fee2e2' : '#dcfce7'};color:${u.active ? '#dc2626' : '#16a34a'}">${u.active ? 'Revoca' : 'Riattiva'}</button>
               <button data-act="reset" data-id="${u.id}" style="background:#f1f5f9;color:#334155">Reset pwd</button>
               <button data-act="delete" data-id="${u.id}" data-name="${escapeHtml(u.display_name)}" style="background:#fee2e2;color:#dc2626">Elimina</button>
@@ -3440,7 +3515,7 @@ setTimeout(() => {
         ? '✓ Inviata via email.'
         : '⚠ Invio email fallito o non configurato — consegnala tu manualmente.';
       box.innerHTML = `Password temporanea per <strong>${escapeHtml(username)}</strong>: <code>${escapeHtml(tempPassword)}</code> — non riapparirà. ${statusLine}
-        <button id="copyTempPwd" style="margin-left:8px;border:none;background:#16a34a;color:#fff;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px">Copia</button>`;
+        <button id="copyTempPwd" style="margin-left:8px;border:none;background:#16a34a;color:#fff;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:700">Copia</button>`;
       document.getElementById('copyTempPwd').addEventListener('click', () => navigator.clipboard.writeText(tempPassword));
     }
 
