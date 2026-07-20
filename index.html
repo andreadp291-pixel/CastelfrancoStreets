@@ -570,6 +570,9 @@
     <label><input type="checkbox" id="lyr-hgv"> <i data-lucide="truck" width="14" height="14" style="color:#0f766e"></i> Mezzi pesanti</label>
     <label><input type="checkbox" id="lyr-strade_ref"> <i data-lucide="signpost" width="14" height="14" style="color:#dc2626"></i> Proprietà (SS/SR/SP/SC)</label>
     <label><input type="checkbox" id="lyr-waterway"> <i data-lucide="waves" width="14" height="14" style="color:#0284c7"></i> Corsi d'acqua</label>
+    <label><input type="checkbox" id="lyr-fontane"> <i data-lucide="droplet" width="14" height="14" style="color:#0891b2"></i> Fontanelle d'acqua</label>
+    <label><input type="checkbox" id="lyr-benches"> <i data-lucide="armchair" width="14" height="14" style="color:#92400e"></i> Panchine</label>
+    <label><input type="checkbox" id="lyr-trees"> <i data-lucide="trees" width="14" height="14" style="color:#15803d"></i> Alberi</label>
     <div id="layersPanelSep2" style="height:1px;background:rgba(0,0,0,.07);margin:6px 10px"></div>
     <div class="lp-title" style="margin-top:2px"><i data-lucide="map-pin" width="11" height="11" style="vertical-align:middle;margin-right:4px"></i>Arredo urbano</div>
     <label><input type="checkbox" id="lyr-signs"> <i data-lucide="octagon-alert" width="14" height="14" style="color:#eab308"></i> Segnali stradali</label>
@@ -655,7 +658,8 @@
             Strade proposte<br>Piste ciclabili<br>Percorsi pedonali<br>
             Attraversamenti<br>In costruzione<br>Limiti di velocità<br>Mezzi pesanti<br>
             Segnali stradali<br>Lampioni<br>Semafori<br>Fermate bus<br>Cestini<br>Tombini<br>
-            Corsi d'acqua<br>Parcheggi, stalli e parcometri<br>Parcheggi bici
+            Corsi d'acqua<br>Parcheggi, stalli e parcometri<br>Parcheggi bici<br>
+            Fontanelle d'acqua<br>Panchine<br>Alberi e filari
           </div>
         </div>
         <div style="background:#f8fafc;border-radius:10px;padding:10px;font-size:11px">
@@ -715,6 +719,19 @@
       </div>
       <div class="legend-note">
         Colorazione basata sul tag <code>ref</code> (es. <code>SP68</code>, <code>SS53</code>). Le strade senza ref non vengono mostrate.
+      </div>
+    </div>
+
+    <!-- Legenda Fontanelle -->
+    <div class="legend-section">
+      <div class="legend-section-title">Fontanelle d'acqua</div>
+      <div class="legend-list">
+        <div class="legend-item"><span class="legend-line" style="border-color:#16a34a"></span><span>Aperta / funzionante</span></div>
+        <div class="legend-item"><span class="legend-line" style="border-color:#dc2626"></span><span>Chiusa / non funzionante</span></div>
+        <div class="legend-item"><span class="legend-line" style="border-color:#0891b2"></span><span>Stato non specificato</span></div>
+      </div>
+      <div class="legend-note">
+        Colorazione basata sui tag <code>operational_status</code>, <code>drinking_water</code> e <code>access</code>.
       </div>
     </div>
 
@@ -891,7 +908,10 @@
       waterway:     L.layerGroup(),
       trafficsignals: L.layerGroup(),
       manholes:     L.layerGroup(),
-      bicycleparking: L.layerGroup()
+      bicycleparking: L.layerGroup(),
+      fontane:      L.layerGroup(),
+      benches:      L.layerGroup(),
+      trees:        L.layerGroup()
     };
 
     // ─── Custom layer toggle panel ───
@@ -913,7 +933,10 @@
       'lyr-waterway':     layers.waterway,
       'lyr-trafficsignals': layers.trafficsignals,
       'lyr-manholes':     layers.manholes,
-      'lyr-bicycleparking': layers.bicycleparking
+      'lyr-bicycleparking': layers.bicycleparking,
+      'lyr-fontane':      layers.fontane,
+      'lyr-benches':      layers.benches,
+      'lyr-trees':        layers.trees
     };
     Object.entries(layerCheckboxMap).forEach(([id, layerGroup]) => {
       const cb = document.getElementById(id);
@@ -970,6 +993,7 @@
       construction: { color: '#f59e0b', weight: 5, dashArray: '6 4', lineCap: 'round', opacity: .92 },
       parking:      { color: '#0ea5e9', weight: 2, fillColor: '#38bdf8', fillOpacity: .35, opacity: .85 },
       waterway:     { color: '#0284c7', weight: 3, lineCap: 'round', opacity: .8 },
+      trees:        { color: '#15803d', weight: 4, lineCap: 'round', opacity: .85, dashArray: '1 6' },
       default:      { color: '#94a3b8', weight: 2, opacity: .6 }
     };
 
@@ -1521,6 +1545,9 @@
       if (tags.amenity === 'bicycle_parking') return 'bicycleparking';
       if (tags.man_made === 'manhole' || tags.manhole !== undefined) return 'manholes';
       if (tags.amenity === 'parking' || tags.amenity === 'parking_space') return 'parking';
+      if (tags.amenity === 'drinking_water' || tags.man_made === 'water_tap') return 'fontane';
+      if (tags.amenity === 'bench') return 'benches';
+      if (tags.natural === 'tree' || tags.natural === 'tree_row') return 'trees';
       if (tags.waterway) return 'waterway';
 
       if (tags.highway === 'proposed') return 'proposed';
@@ -1561,6 +1588,9 @@
       trafficsignals: { label: 'Semaforo',         bg: '#dc2626' },
       manholes:     { label: 'Tombino',            bg: '#475569' },
       bicycleparking: { label: 'Parcheggio bici',  bg: '#65a30d' },
+      fontane:      { label: 'Fontanella d\'acqua', bg: '#0891b2' },
+      benches:      { label: 'Panchina',           bg: '#92400e' },
+      trees:        { label: 'Albero',             bg: '#15803d' },
       default:      { label: 'Via',               bg: '#1e293b' }
     };
 
@@ -1637,6 +1667,23 @@
       'capacity':                 { it: 'Capienza', icon: 'hash' },
       'parking':                  { it: 'Tipo parcheggio', icon: 'square-parking' },
       'fee':                      { it: 'A pagamento', icon: 'euro' },
+
+      'drinking_water':           { it: 'Acqua potabile', icon: 'droplet' },
+      'drinking_water:legal':     { it: 'Potabilità certificata', icon: 'droplet' },
+      'operational_status':       { it: 'Stato di funzionamento', icon: 'gauge' },
+      'seasonal':                 { it: 'Stagionale', icon: 'calendar' },
+      'bottle':                   { it: 'Riempimento borracce', icon: 'droplet' },
+      'opening_hours':            { it: 'Orari', icon: 'clock' },
+
+      'species':                  { it: 'Specie', icon: 'trees' },
+      'species:it':               { it: 'Specie (IT)', icon: 'trees' },
+      'genus':                    { it: 'Genere', icon: 'trees' },
+      'leaf_type':                { it: 'Tipo di foglia', icon: 'leaf' },
+      'leaf_cycle':                { it: 'Ciclo fogliare', icon: 'leaf' },
+      'height':                   { it: 'Altezza', icon: 'ruler' },
+      'circumference':            { it: 'Circonferenza tronco', icon: 'ruler' },
+      'diameter_crown':           { it: 'Diametro chioma', icon: 'ruler' },
+      'denotation':               { it: 'Rilevanza', icon: 'tag' },
 
       'website':                  { it: 'Sito web', icon: 'globe' },
       'url':                      { it: 'Link', icon: 'link' },
@@ -1728,6 +1775,14 @@
       {
         title: 'Accesso',
         keys: ['access','bicycle','foot','motor_vehicle','oneway','oneway:bicycle']
+      },
+      {
+        title: 'Fontanella d\'acqua',
+        keys: ['drinking_water','drinking_water:legal','operational_status','seasonal','bottle','opening_hours']
+      },
+      {
+        title: 'Albero',
+        keys: ['species','species:it','genus','leaf_type','leaf_cycle','height','circumference','diameter_crown','denotation']
       },
       {
         title: 'Stato & progetto',
@@ -1996,14 +2051,42 @@
       busstops:       { icon: 'bus', bg: '#2563eb' },
       bins:           { icon: 'trash-2', bg: '#16a34a' },
       manholes:       { icon: 'circle-dot', bg: '#475569' },
-      bicycleparking: { icon: 'bike', bg: '#65a30d' }
+      bicycleparking: { icon: 'bike', bg: '#65a30d' },
+      fontane:        { icon: 'droplet', bg: '#0891b2' },
+      benches:        { icon: 'armchair', bg: '#92400e' },
+      trees:          { icon: 'trees', bg: '#15803d' }
     };
 
-    function makePointIcon(type) {
+    // Stato della fontanella: aperta/funzionante (verde), chiusa/non
+    // funzionante (rossa) o non specificato (colore di default), ricavato
+    // dai tag OSM drinking_water / operational_status / access.
+    function classifyFontanaStatus(tags) {
+      const status = String(tags.operational_status || '').toLowerCase();
+      if (['broken', 'closed', 'disused', 'not_working'].includes(status)) {
+        return { color: '#dc2626', label: 'Chiusa / non funzionante' };
+      }
+      if (['operational', 'working'].includes(status)) {
+        return { color: '#16a34a', label: 'Aperta / funzionante' };
+      }
+      if (tags.drinking_water === 'no' || tags.access === 'no') {
+        return { color: '#dc2626', label: 'Chiusa / non funzionante' };
+      }
+      if (tags.drinking_water === 'yes') {
+        return { color: '#16a34a', label: 'Aperta / funzionante' };
+      }
+      return null;
+    }
+
+    function makePointIcon(type, tags) {
       const meta = POINT_ICONS[type];
+      let bg = meta.bg;
+      if (type === 'fontane' && tags) {
+        const status = classifyFontanaStatus(tags);
+        if (status) bg = status.color;
+      }
       return L.divIcon({
         className: 'point-marker',
-        html: `<div class="marker-pop-inner" style="background:${meta.bg};width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.35);border:2px solid white"><i data-lucide="${meta.icon}" width="13" height="13" style="color:white"></i></div>`,
+        html: `<div class="marker-pop-inner" style="background:${bg};width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.35);border:2px solid white"><i data-lucide="${meta.icon}" width="13" height="13" style="color:white"></i></div>`,
         iconSize: [26, 26],
         iconAnchor: [13, 13]
       });
@@ -2345,6 +2428,11 @@
           node["man_made"="manhole"](area.a);
           node["manhole"](area.a);
           way["waterway"~"^(river|stream|canal|drain|ditch)$"](area.a);
+          node["amenity"="drinking_water"](area.a);
+          node["man_made"="water_tap"]["drinking_water"](area.a);
+          node["amenity"="bench"](area.a);
+          node["natural"="tree"](area.a);
+          way["natural"="tree_row"](area.a);
         )->.base;
         (
           node["traffic_sign"](area.a);
@@ -2462,7 +2550,7 @@
         });
 
         // ─── Punti (segnali, lampioni, fermate bus, cestini) ───
-        const POINT_TYPES = ['signs', 'lamps', 'busstops', 'bins', 'trafficsignals', 'manholes', 'bicycleparking'];
+        const POINT_TYPES = ['signs', 'lamps', 'busstops', 'bins', 'trafficsignals', 'manholes', 'bicycleparking', 'fontane', 'benches', 'trees'];
         geojson.features.forEach(feature => {
           if (!feature.geometry || feature.geometry.type !== 'Point') return;
           const tags = feature.properties || {};
@@ -2484,7 +2572,7 @@
           } else if (type === 'signs') {
             icon = makeDirectionalDivIcon(buildSignVisual(tags), directionDeg);
           } else {
-            icon = makePointIcon(type);
+            icon = makePointIcon(type, tags);
           }
 
           const marker = L.marker([lat, lng], { icon });
