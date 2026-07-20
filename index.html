@@ -3557,6 +3557,10 @@ setTimeout(() => {
           errEl.textContent = err.detail || 'Errore';
           return;
         }
+        const data = await res.json();
+        // Il cambio password invalida ogni token emesso prima (anche il
+        // nostro): il backend ne riemette uno nuovo per non disconnetterci.
+        if (data.token) setAuthToken(data.token);
         document.getElementById('pwdNew').value = '';
         updatePwdStrengthUI('');
         const wasMandatory = pwdOverlayMandatory;
