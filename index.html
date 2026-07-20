@@ -93,6 +93,8 @@
     .ctrl-btn:active { transform: translateY(0) scale(.96); }
     .ctrl-btn.spinning svg { animation: spin .9s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
+    .ctrl-btn.gps-loading svg { animation: gpsPulse 1.1s ease-in-out infinite; color: var(--primary); }
+    @keyframes gpsPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.8); } }
 
     /* ─── CONTROLLI LEAFLET ─── */
     /* ─── LAYERS PANEL ─── */
@@ -916,9 +918,6 @@
     <button id="refreshBtn" class="ctrl-btn" title="Aggiorna">
       <i data-lucide="refresh-cw" width="15" height="15"></i>
     </button>
-  <button id="gpsBtn" class="ctrl-btn" title="La mia posizione">
-    <i data-lucide="locate-fixed" width="15" height="15"></i>
-  </button>
   <button id="layersBtn" class="ctrl-btn" title="Layer" style="gap:4px;padding:0 10px;font-size:11px;font-weight:700;color:var(--text-main)">
     <i data-lucide="layers" width="15" height="15"></i>
     <span>Layer</span>
@@ -957,6 +956,13 @@
       <button type="button" class="pm-item" id="pmAdmin" style="display:none"><i data-lucide="shield" width="15" height="15"></i>Amministrazione</button>
       <button type="button" class="pm-item pm-item-danger" id="pmLogout" style="display:none"><i data-lucide="log-out" width="15" height="15"></i>Esci</button>
     </div>
+  </div>
+
+  <!-- Bottone GPS: ancorato sotto il pulsante profilo -->
+  <div id="gpsBtnWrap" style="position:fixed;top:58px;right:14px;z-index:1000">
+    <button id="gpsBtn" class="ctrl-btn" title="La mia posizione">
+      <i data-lucide="locate-fixed" width="15" height="15"></i>
+    </button>
   </div>
 
   <!-- LAYERS PANEL -->
@@ -3247,11 +3253,11 @@ setTimeout(() => {
         return;
       }
       const btn = document.getElementById('gpsBtn');
-      btn.classList.add('spinning');
+      btn.classList.add('gps-loading');
       setStatus('Ricerca posizione…', 'loading');
       navigator.geolocation.getCurrentPosition(
         pos => {
-          btn.classList.remove('spinning');
+          btn.classList.remove('gps-loading');
           document.getElementById('status').classList.remove('show');
           const { latitude, longitude, accuracy } = pos.coords;
           map.setView([latitude, longitude], 17);
@@ -3265,7 +3271,7 @@ setTimeout(() => {
           }).addTo(map);
         },
         () => {
-          btn.classList.remove('spinning');
+          btn.classList.remove('gps-loading');
           setStatus('Impossibile ottenere la posizione', 'error', 3500);
         },
         { enableHighAccuracy: true, timeout: 10000 }
