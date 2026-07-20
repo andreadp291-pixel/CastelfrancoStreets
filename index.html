@@ -45,17 +45,24 @@
     @keyframes fadeSlideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes popIn { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
     @keyframes markerDrop { from { opacity: 0; transform: scale(0) translateY(-8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-    @keyframes pinPulse { 0% { transform: scale(1); opacity: .55; } 100% { transform: scale(2.6); opacity: 0; } }
-    .pending-pin-marker { position: relative; width: 22px; height: 22px; }
-    .pending-pin-dot {
-      position: absolute; top: 50%; left: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px;
-      background: var(--primary); border: 2px solid #fff; border-radius: 50%;
-      box-shadow: 0 2px 8px rgba(79,70,229,.6); animation: markerDrop .35s var(--ease) both; z-index: 2;
+    @keyframes pinDrop { 0% { opacity: 0; transform: translateY(-18px) scale(.5); } 60% { opacity: 1; transform: translateY(2px) scale(1.05); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+    .pending-pin-marker { position: relative; width: 30px; height: 42px; }
+    .pending-pin-shape {
+      position: absolute; left: 50%; top: 0; width: 30px; height: 30px; margin-left: -15px;
+      background: var(--primary); border: 2.5px solid #fff;
+      border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+      box-shadow: 0 3px 10px rgba(15,23,42,.4);
+      transform-origin: center;
+      animation: pinDrop .45s var(--ease) both;
     }
-    .pending-pin-pulse {
-      position: absolute; top: 50%; left: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px;
-      background: var(--primary); border-radius: 50%;
-      animation: pinPulse 1.4s ease-out infinite;
+    .pending-pin-shape::after {
+      content: ''; position: absolute; top: 50%; left: 50%; width: 10px; height: 10px;
+      margin: -5px 0 0 -5px; background: #fff; border-radius: 50%;
+    }
+    .pending-pin-shadow {
+      position: absolute; bottom: 2px; left: 50%; width: 12px; height: 5px; margin-left: -6px;
+      background: rgba(15,23,42,.35); border-radius: 50%; filter: blur(1px);
+      animation: popIn .3s .15s var(--ease) both;
     }
     @keyframes rowFade { from { opacity: 0; transform: translateX(6px); } to { opacity: 1; transform: translateX(0); } }
 
@@ -3174,8 +3181,8 @@ setTimeout(() => {
       pendingPinMarker = L.marker(latlng, {
         icon: L.divIcon({
           className: 'pending-pin-marker',
-          html: `<div class="pending-pin-dot"></div><div class="pending-pin-pulse"></div>`,
-          iconSize: [22, 22], iconAnchor: [11, 11]
+          html: `<div class="pending-pin-shape"></div><div class="pending-pin-shadow"></div>`,
+          iconSize: [30, 42], iconAnchor: [15, 40]
         }),
         interactive: false, zIndexOffset: 1000
       }).addTo(map);
