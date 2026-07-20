@@ -1018,18 +1018,13 @@
   <!-- FILTRI CATEGORIE PROPOSTE (separato dal pannello Layer, solo post-login) -->
   <div id="categoryFilterPanel">
     <div class="lp-title"><i data-lucide="filter" width="11" height="11" style="vertical-align:middle;margin-right:4px"></i>Filtra per categoria</div>
-    <label><input type="checkbox" class="cat-filter-cb" value="strade" checked> <span class="cat-dot" style="background:#f97316"></span> Strade</label>
-    <label><input type="checkbox" class="cat-filter-cb" value="verde" checked> <span class="cat-dot" style="background:#16a34a"></span> Verde</label>
-    <label><input type="checkbox" class="cat-filter-cb" value="servizi" checked> <span class="cat-dot" style="background:#0ea5e9"></span> Servizi</label>
-    <label><input type="checkbox" class="cat-filter-cb" value="sicurezza" checked> <span class="cat-dot" style="background:#dc2626"></span> Sicurezza</label>
-    <label><input type="checkbox" class="cat-filter-cb" value="illuminazione" checked> <span class="cat-dot" style="background:#eab308"></span> Illuminazione</label>
-    <label><input type="checkbox" class="cat-filter-cb" value="rifiuti" checked> <span class="cat-dot" style="background:#78716c"></span> Rifiuti e pulizia</label>
-    <label><input type="checkbox" class="cat-filter-cb" value="mobilita" checked> <span class="cat-dot" style="background:#7c3aed"></span> Mobilità e trasporti</label>
-    <label><input type="checkbox" class="cat-filter-cb" value="arredo_urbano" checked> <span class="cat-dot" style="background:#db2777"></span> Arredo urbano</label>
-    <label><input type="checkbox" class="cat-filter-cb" value="sport" checked> <span class="cat-dot" style="background:#0d9488"></span> Sport</label>
-    <label><input type="checkbox" class="cat-filter-cb" value="cultura" checked> <span class="cat-dot" style="background:#4f46e5"></span> Cultura</label>
-    <label><input type="checkbox" class="cat-filter-cb" value="istruzione" checked> <span class="cat-dot" style="background:#2563eb"></span> Istruzione</label>
-    <label><input type="checkbox" class="cat-filter-cb" value="edilizia" checked> <span class="cat-dot" style="background:#92400e"></span> Edilizia e urbanistica</label>
+    <label><input type="checkbox" class="cat-filter-cb" value="bilancio_patrimonio" checked> <span class="cat-dot" style="background:#0891b2"></span> Bilancio e patrimonio</label>
+    <label><input type="checkbox" class="cat-filter-cb" value="urbanistica_mobilita_ambiente" checked> <span class="cat-dot" style="background:#16a34a"></span> Urbanistica, mobilità e ambiente</label>
+    <label><input type="checkbox" class="cat-filter-cb" value="scuola_politiche_sociali" checked> <span class="cat-dot" style="background:#2563eb"></span> Scuola e politiche educative</label>
+    <label><input type="checkbox" class="cat-filter-cb" value="sociale_sanita" checked> <span class="cat-dot" style="background:#dc2626"></span> Sociale e sanità</label>
+    <label><input type="checkbox" class="cat-filter-cb" value="cultura_turismo" checked> <span class="cat-dot" style="background:#7c3aed"></span> Cultura e turismo</label>
+    <label><input type="checkbox" class="cat-filter-cb" value="sport_commercio" checked> <span class="cat-dot" style="background:#f97316"></span> Sport e commercio</label>
+    <label><input type="checkbox" class="cat-filter-cb" value="lavori_pubblici_decoro" checked> <span class="cat-dot" style="background:#d97706"></span> Lavori pubblici e decoro urbano</label>
     <label><input type="checkbox" class="cat-filter-cb" value="altro" checked> <span class="cat-dot" style="background:#64748b"></span> Altro</label>
   </div>
 
@@ -1277,18 +1272,13 @@
       <label class="rp-label">Titolo<input type="text" id="rpTitle" maxlength="200" required></label>
       <label class="rp-label">Categoria
         <select id="rpCategory" required>
-          <option value="strade">Strade</option>
-          <option value="verde">Verde</option>
-          <option value="servizi">Servizi</option>
-          <option value="sicurezza">Sicurezza</option>
-          <option value="illuminazione">Illuminazione</option>
-          <option value="rifiuti">Rifiuti e pulizia</option>
-          <option value="mobilita">Mobilità e trasporti</option>
-          <option value="arredo_urbano">Arredo urbano</option>
-          <option value="sport">Sport</option>
-          <option value="cultura">Cultura</option>
-          <option value="istruzione">Istruzione</option>
-          <option value="edilizia">Edilizia e urbanistica</option>
+          <option value="bilancio_patrimonio">Bilancio e patrimonio</option>
+          <option value="urbanistica_mobilita_ambiente">Urbanistica, mobilità e ambiente</option>
+          <option value="scuola_politiche_sociali">Scuola e politiche educative</option>
+          <option value="sociale_sanita">Sociale e sanità</option>
+          <option value="cultura_turismo">Cultura e turismo</option>
+          <option value="sport_commercio">Sport e commercio</option>
+          <option value="lavori_pubblici_decoro">Lavori pubblici e decoro urbano</option>
           <option value="altro">Altro</option>
         </select>
       </label>
@@ -3345,17 +3335,27 @@ setTimeout(() => {
     const REPORT_STATUS_LABEL = {
       aperto: 'Aperto', in_lavorazione: 'In lavorazione', risolto: 'Risolto', rifiutato: 'Rifiutato'
     };
+    // Categorie allineate alle deleghe della Giunta comunale di Castelfranco
+    // Veneto (una per assessorato, deleghe affini accorpate in un unico tema).
     const REPORT_CATEGORY_LABEL = {
-      strade: 'Strade', verde: 'Verde', servizi: 'Servizi', sicurezza: 'Sicurezza',
-      illuminazione: 'Illuminazione', rifiuti: 'Rifiuti e pulizia', mobilita: 'Mobilità e trasporti',
-      arredo_urbano: 'Arredo urbano', sport: 'Sport', cultura: 'Cultura', istruzione: 'Istruzione',
-      edilizia: 'Edilizia e urbanistica', altro: 'Altro'
+      bilancio_patrimonio: 'Bilancio e patrimonio',
+      urbanistica_mobilita_ambiente: 'Urbanistica, mobilità e ambiente',
+      scuola_politiche_sociali: 'Scuola e politiche educative',
+      sociale_sanita: 'Sociale e sanità',
+      cultura_turismo: 'Cultura e turismo',
+      sport_commercio: 'Sport e commercio',
+      lavori_pubblici_decoro: 'Lavori pubblici e decoro urbano',
+      altro: 'Altro'
     };
     const REPORT_CATEGORY_COLOR = {
-      strade: '#f97316', verde: '#16a34a', servizi: '#0ea5e9', sicurezza: '#dc2626',
-      illuminazione: '#eab308', rifiuti: '#78716c', mobilita: '#7c3aed',
-      arredo_urbano: '#db2777', sport: '#0d9488', cultura: '#4f46e5', istruzione: '#2563eb',
-      edilizia: '#92400e', altro: '#64748b'
+      bilancio_patrimonio: '#0891b2',
+      urbanistica_mobilita_ambiente: '#16a34a',
+      scuola_politiche_sociali: '#2563eb',
+      sociale_sanita: '#dc2626',
+      cultura_turismo: '#7c3aed',
+      sport_commercio: '#f97316',
+      lavori_pubblici_decoro: '#d97706',
+      altro: '#64748b'
     };
     let activeCategoryFilters = new Set(Object.keys(REPORT_CATEGORY_LABEL));
 
