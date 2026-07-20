@@ -1108,6 +1108,11 @@
       const cb = document.getElementById(id);
       if (!cb) return;
       cb.addEventListener('change', () => {
+        if (id === 'lyr-segnalazioni' && cb.checked && !currentUser) {
+          cb.checked = false;
+          showLoginOverlay();
+          return;
+        }
         if (cb.checked) {
           layerGroup.addTo(map);
           // I marker dei divIcon vengono creati nel DOM solo ora che il layer
@@ -2889,7 +2894,9 @@ setTimeout(() => {
       document.getElementById('newReportBtn').style.display = authenticated ? 'flex' : 'none';
       document.getElementById('adminBtn').style.display = (authenticated && currentUser.role === 'superadmin') ? 'flex' : 'none';
       document.getElementById('changePwdBtn').style.display = authenticated ? 'flex' : 'none';
-      document.getElementById('lyr-segnalazioni-row').style.display = authenticated ? 'flex' : 'none';
+      // La riga resta sempre visibile: se non sei loggato, cliccarla apre il
+      // login invece di attivare il layer (vedi handler del checkbox sotto).
+      document.getElementById('lyr-segnalazioni-row').style.display = 'flex';
       const authBtn = document.getElementById('authBtn');
       authBtn.innerHTML = authenticated
         ? '<i data-lucide="log-out" width="15" height="15"></i>'
@@ -2903,17 +2910,16 @@ setTimeout(() => {
           openPwdOverlay(true);
         } else {
           document.getElementById('pwdOverlay').classList.remove('active');
-          if (!map.hasLayer(layers.segnalazioni)) {
-            layers.segnalazioni.addTo(map);
-            document.getElementById('lyr-segnalazioni').checked = true;
-          }
           loadReports();
         }
       } else {
         document.getElementById('pwdOverlay').classList.remove('active');
         map.removeLayer(layers.segnalazioni);
         layers.segnalazioni.clearLayers();
-        showLoginOverlay();
+        document.getElementById('lyr-segnalazioni').checked = false;
+        // Nessun gate automatico: la mappa base resta liberamente accessibile,
+        // il login viene richiesto solo quando si prova a usare le
+        // funzionalità di segnalazione (layer, nuova segnalazione, admin).
       }
     }
 
