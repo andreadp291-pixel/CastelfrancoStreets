@@ -45,6 +45,18 @@
     @keyframes fadeSlideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes popIn { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
     @keyframes markerDrop { from { opacity: 0; transform: scale(0) translateY(-8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+    @keyframes pinPulse { 0% { transform: scale(1); opacity: .55; } 100% { transform: scale(2.6); opacity: 0; } }
+    .pending-pin-marker { position: relative; width: 22px; height: 22px; }
+    .pending-pin-dot {
+      position: absolute; top: 50%; left: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px;
+      background: var(--primary); border: 2px solid #fff; border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(79,70,229,.6); animation: markerDrop .35s var(--ease) both; z-index: 2;
+    }
+    .pending-pin-pulse {
+      position: absolute; top: 50%; left: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px;
+      background: var(--primary); border-radius: 50%;
+      animation: pinPulse 1.4s ease-out infinite;
+    }
     @keyframes rowFade { from { opacity: 0; transform: translateX(6px); } to { opacity: 1; transform: translateX(0); } }
 
     #topbar { animation: fadeSlideDown .5s var(--ease); }
@@ -288,6 +300,57 @@
 .rp-inline-form input, .rp-inline-form select {
   padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 12.5px; flex: 1 1 100px;
 }
+
+/* ─── Restyle "Nuova proposta" ─── */
+#reportPanel .info-content { padding: 18px 18px 20px; }
+.rp-coords-chip {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--primary-light); color: var(--primary-dark);
+  border: 1px solid #e0e7ff; border-radius: 999px;
+  padding: 7px 14px; font-size: 12px; font-weight: 700;
+  margin: 0 0 18px; width: fit-content;
+}
+.rp-coords-chip i { flex-shrink: 0; }
+#reportForm .rp-label { margin-bottom: 16px; }
+#reportForm .rp-label > span,
+#reportForm .rp-label { font-size: 11.5px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-light); font-weight: 800; }
+#reportForm .rp-label input,
+#reportForm .rp-label select,
+#reportForm .rp-label textarea {
+  margin-top: 7px; padding: 11px 13px; border: 1.5px solid #e2e8f0; border-radius: 12px;
+  font-size: 13.5px; color: var(--text-main); transition: border-color .15s, box-shadow .15s;
+  background: #f8fafc;
+}
+#reportForm .rp-label input:focus,
+#reportForm .rp-label select:focus,
+#reportForm .rp-label textarea:focus {
+  outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); background: #fff;
+}
+#reportForm .rp-label textarea { resize: vertical; min-height: 80px; }
+#reportForm .rp-label select {
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat; background-position: right 12px center; padding-right: 34px;
+}
+.rp-photo-field {
+  display: flex; align-items: center; gap: 10px;
+  border: 1.5px dashed #cbd5e1; border-radius: 12px; background: #f8fafc;
+  padding: 10px 13px; margin-top: 7px; cursor: pointer; transition: border-color .15s, background .15s;
+}
+.rp-photo-field:hover { border-color: var(--primary); background: var(--primary-light); }
+.rp-photo-field i { color: var(--text-light); flex-shrink: 0; }
+.rp-photo-field span { font-size: 12.5px; color: var(--text-light); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-photo-field input[type=file] { display: none; }
+#reportForm .rp-submit {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 12px; border: none; border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #fff; font-weight: 700; font-size: 13.5px; cursor: pointer; margin-top: 4px;
+  box-shadow: 0 8px 20px -6px rgba(79,70,229,.55);
+  transition: filter .15s, transform .15s;
+}
+#reportForm .rp-submit:hover { filter: brightness(1.08); transform: translateY(-1px); }
+#reportForm .rp-submit:active { transform: translateY(0); }
 .temp-pwd-box {
   display: none; background: #f0fdf4; border: 1px solid #86efac; border-radius: 10px;
   padding: 10px 12px; font-size: 12.5px; margin-bottom: 14px; word-break: break-all;
@@ -932,7 +995,7 @@
   </div>
   <div class="info-content">
     <form id="reportForm">
-      <div id="reportCoords" class="auth-sub" style="margin:0 0 10px"></div>
+      <div class="rp-coords-chip"><i data-lucide="map-pin" width="14" height="14"></i><span id="reportCoords"></span></div>
       <label class="rp-label">Titolo<input type="text" id="rpTitle" maxlength="200" required></label>
       <label class="rp-label">Categoria
         <select id="rpCategory" required>
@@ -944,9 +1007,15 @@
         </select>
       </label>
       <label class="rp-label">Descrizione<textarea id="rpDescription" rows="4" maxlength="5000" required></textarea></label>
-      <label class="rp-label">Foto (opzionale)<input type="file" id="rpPhoto" accept="image/jpeg,image/png,image/webp"></label>
+      <div class="rp-label">Foto (opzionale)
+        <label class="rp-photo-field" for="rpPhoto">
+          <i data-lucide="image-plus" width="16" height="16"></i>
+          <span id="rpPhotoLabel">Scegli un'immagine&hellip;</span>
+        </label>
+        <input type="file" id="rpPhoto" accept="image/jpeg,image/png,image/webp">
+      </div>
       <div id="reportFormError" class="auth-error"></div>
-      <button type="submit" class="auth-submit">Invia proposta</button>
+      <button type="submit" class="rp-submit"><i data-lucide="send" width="15" height="15"></i>Invia proposta</button>
     </form>
   </div>
 </div>
@@ -3095,18 +3164,40 @@ setTimeout(() => {
       document.getElementById('map').classList.remove('map-pin-mode');
       document.getElementById('status').classList.remove('show');
       pendingPinLatLng = e.latlng;
+      showPendingPinMarker(pendingPinLatLng);
       openReportForm();
     });
 
+    let pendingPinMarker = null;
+    function showPendingPinMarker(latlng) {
+      if (pendingPinMarker) map.removeLayer(pendingPinMarker);
+      pendingPinMarker = L.marker(latlng, {
+        icon: L.divIcon({
+          className: 'pending-pin-marker',
+          html: `<div class="pending-pin-dot"></div><div class="pending-pin-pulse"></div>`,
+          iconSize: [22, 22], iconAnchor: [11, 11]
+        }),
+        interactive: false, zIndexOffset: 1000
+      }).addTo(map);
+    }
+    function clearPendingPinMarker() {
+      if (pendingPinMarker) { map.removeLayer(pendingPinMarker); pendingPinMarker = null; }
+    }
+
     function openReportForm() {
       document.getElementById('reportForm').reset();
+      document.getElementById('rpPhotoLabel').textContent = "Scegli un'immagine…";
       document.getElementById('reportFormError').textContent = '';
       document.getElementById('reportCoords').textContent =
-        `Posizione: ${pendingPinLatLng.lat.toFixed(6)}, ${pendingPinLatLng.lng.toFixed(6)}`;
+        `${pendingPinLatLng.lat.toFixed(6)}, ${pendingPinLatLng.lng.toFixed(6)}`;
       closePanel('infoPanel'); closePanel('legendPanel'); closePanel('adminPanel');
       document.getElementById('reportPanel').classList.add('active');
     }
-    document.getElementById('closeReport').addEventListener('click', () => closePanel('reportPanel'));
+    document.getElementById('closeReport').addEventListener('click', () => { closePanel('reportPanel'); clearPendingPinMarker(); });
+    document.getElementById('rpPhoto').addEventListener('change', (e) => {
+      const f = e.target.files[0];
+      document.getElementById('rpPhotoLabel').textContent = f ? f.name : "Scegli un'immagine…";
+    });
 
     document.getElementById('reportForm').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -3131,6 +3222,7 @@ setTimeout(() => {
           return;
         }
         closePanel('reportPanel');
+        clearPendingPinMarker();
         setStatus('Proposta inviata', 'success', 2500);
         loadReports();
       } catch (err) { /* gestito da apiFetch */ }
