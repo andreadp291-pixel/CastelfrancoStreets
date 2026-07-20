@@ -212,6 +212,67 @@
   transform: scale(1.1);
 }
 
+/* ─── Auth overlay (login / cambio password) ─── */
+.auth-overlay {
+  position: fixed; inset: 0; z-index: 3000;
+  background: rgba(15,23,42,.55);
+  display: none; align-items: center; justify-content: center;
+}
+.auth-overlay.active { display: flex; }
+.auth-box {
+  background: #fff; border-radius: 20px; width: min(360px, 90vw);
+  padding: 24px; box-shadow: 0 20px 60px rgba(0,0,0,.25);
+}
+.auth-box h2 { margin: 0 0 4px; font-size: 16px; color: var(--text-main); }
+.auth-sub { margin: 0 0 16px; font-size: 12.5px; color: #64748b; }
+.auth-box label { display: block; font-size: 12px; font-weight: 700; color: var(--text-main); margin-bottom: 12px; }
+.auth-box input, .auth-box select, .auth-box textarea {
+  display: block; width: 100%; margin-top: 5px; padding: 9px 11px;
+  border: 1px solid #e2e8f0; border-radius: 10px; font-size: 13.5px; box-sizing: border-box;
+  font-family: inherit;
+}
+.auth-error { color: #dc2626; font-size: 12px; min-height: 16px; margin-bottom: 8px; }
+.auth-submit {
+  width: 100%; padding: 10px; border: none; border-radius: 10px;
+  background: var(--bg-dark); color: #fff; font-weight: 700; font-size: 13.5px; cursor: pointer;
+}
+.auth-submit:hover { filter: brightness(1.1); }
+
+/* ─── Report panel / admin panel (riusa il pattern di #infoPanel) ─── */
+#reportPanel, #adminPanel {
+  position: fixed; top: 66px; right: 14px;
+  width: var(--panel-w); max-width: calc(100% - 28px);
+  max-height: calc(100vh - 86px);
+  background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15), 0 4px 16px rgba(0,0,0,0.08);
+  z-index: 1000; opacity: 0; transform: translateX(calc(100% + 20px));
+  transition: transform .42s cubic-bezier(.16,1,.3,1), opacity .42s;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+#reportPanel.active, #adminPanel.active { opacity: 1; transform: translateX(0); }
+.rp-label { display: block; font-size: 12px; font-weight: 700; color: var(--text-main); margin-bottom: 12px; }
+.rp-label input, .rp-label select, .rp-label textarea {
+  display: block; width: 100%; margin-top: 5px; padding: 9px 11px;
+  border: 1px solid #e2e8f0; border-radius: 10px; font-size: 13.5px; box-sizing: border-box; font-family: inherit;
+}
+.rp-inline-form { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.rp-inline-form input, .rp-inline-form select {
+  padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 12.5px; flex: 1 1 100px;
+}
+.temp-pwd-box {
+  display: none; background: #f0fdf4; border: 1px solid #86efac; border-radius: 10px;
+  padding: 10px 12px; font-size: 12.5px; margin-bottom: 14px; word-break: break-all;
+}
+.temp-pwd-box.show { display: block; }
+.user-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 12.5px;
+}
+.user-row .u-name { font-weight: 700; color: var(--text-main); }
+.user-row .u-meta { color: #64748b; font-size: 11px; }
+.user-row button { border: none; border-radius: 6px; padding: 5px 8px; font-size: 11px; cursor: pointer; font-weight: 700; }
+.map-pin-mode { cursor: crosshair !important; }
+
 /* Badge tipo (es. "Pista ciclabile") */
 .info-type-badge {
   font-size: 10px;
@@ -552,6 +613,15 @@
     <i data-lucide="layers" width="15" height="15"></i>
     <span>Layer</span>
   </button>
+  <button id="newReportBtn" class="ctrl-btn" title="Nuova segnalazione" style="display:none">
+    <i data-lucide="map-pin-plus" width="15" height="15"></i>
+  </button>
+  <button id="adminBtn" class="ctrl-btn" title="Amministrazione" style="display:none">
+    <i data-lucide="shield" width="15" height="15"></i>
+  </button>
+  <button id="authBtn" class="ctrl-btn" title="Accedi">
+    <i data-lucide="log-in" width="15" height="15"></i>
+  </button>
   </div>
 
   <!-- LAYERS PANEL -->
@@ -584,6 +654,8 @@
     <label><input type="checkbox" id="lyr-parking"> <i data-lucide="square-parking" width="14" height="14" style="color:#0ea5e9"></i> Aree e stalli parcheggio</label>
     <label><input type="checkbox" id="lyr-parkometers"> <i data-lucide="ticket" width="14" height="14" style="color:#ea580c"></i> Parcometri</label>
     <label><input type="checkbox" id="lyr-bicycleparking"> <i data-lucide="bike" width="14" height="14" style="color:#65a30d"></i> Parcheggi bici</label>
+    <div id="layersPanelSep3" style="height:1px;background:rgba(0,0,0,.07);margin:6px 10px;display:none"></div>
+    <label id="lyr-segnalazioni-row" style="display:none"><input type="checkbox" id="lyr-segnalazioni" checked> <i data-lucide="megaphone" width="14" height="14" style="color:#e11d48"></i> Segnalazioni</label>
   </div>
 
   <div id="map"></div>
@@ -758,6 +830,91 @@
   </div><!-- fine legend-content -->
 </div><!-- fine legendPanel -->
 
+<!-- LOGIN OVERLAY -->
+<div id="loginOverlay" class="auth-overlay">
+  <form id="loginForm" class="auth-box">
+    <h2><i data-lucide="shield-check" width="18" height="18" style="vertical-align:middle;margin-right:6px"></i>Accesso riservato</h2>
+    <p class="auth-sub">Segnalazioni civiche — solo membri del gruppo.</p>
+    <label>Username<input type="text" id="loginUsername" autocomplete="username" required></label>
+    <label>Password<input type="password" id="loginPassword" autocomplete="current-password" required></label>
+    <div id="loginError" class="auth-error"></div>
+    <button type="submit" class="auth-submit">Accedi</button>
+  </form>
+</div>
+
+<!-- CAMBIO PASSWORD OBBLIGATORIO -->
+<div id="pwdOverlay" class="auth-overlay">
+  <form id="pwdForm" class="auth-box">
+    <h2><i data-lucide="key-round" width="18" height="18" style="vertical-align:middle;margin-right:6px"></i>Imposta una nuova password</h2>
+    <p class="auth-sub">Password temporanea: da cambiare al primo accesso.</p>
+    <label>Nuova password (min 10 caratteri)<input type="password" id="pwdNew" minlength="10" required></label>
+    <div id="pwdError" class="auth-error"></div>
+    <button type="submit" class="auth-submit">Conferma</button>
+  </form>
+</div>
+
+<!-- NUOVA SEGNALAZIONE -->
+<div id="reportPanel">
+  <div class="panel-header">
+    <div style="display:flex;align-items:center;gap:8px">
+      <i data-lucide="map-pin-plus" width="15" height="15"></i>
+      <span>Nuova segnalazione</span>
+    </div>
+    <div id="closeReport" class="panel-close"><i data-lucide="x" width="16" height="16"></i></div>
+  </div>
+  <div class="info-content">
+    <form id="reportForm">
+      <div id="reportCoords" class="auth-sub" style="margin:0 0 10px"></div>
+      <label class="rp-label">Titolo<input type="text" id="rpTitle" maxlength="200" required></label>
+      <label class="rp-label">Categoria
+        <select id="rpCategory" required>
+          <option value="buca">Buca</option>
+          <option value="illuminazione">Illuminazione</option>
+          <option value="segnaletica">Segnaletica</option>
+          <option value="verde">Verde pubblico</option>
+          <option value="rifiuti">Rifiuti</option>
+          <option value="arredo">Arredo urbano</option>
+          <option value="allagamento">Allagamento</option>
+          <option value="altro">Altro</option>
+        </select>
+      </label>
+      <label class="rp-label">Descrizione<textarea id="rpDescription" rows="4" maxlength="5000" required></textarea></label>
+      <label class="rp-label">Priorità (opzionale)
+        <select id="rpPriority">
+          <option value="">—</option>
+          <option value="bassa">Bassa</option>
+          <option value="media">Media</option>
+          <option value="alta">Alta</option>
+        </select>
+      </label>
+      <label class="rp-label">Foto (opzionale)<input type="file" id="rpPhoto" accept="image/jpeg,image/png,image/webp"></label>
+      <div id="reportFormError" class="auth-error"></div>
+      <button type="submit" class="auth-submit">Invia segnalazione</button>
+    </form>
+  </div>
+</div>
+
+<!-- ADMIN UTENTI -->
+<div id="adminPanel">
+  <div class="panel-header">
+    <div style="display:flex;align-items:center;gap:8px">
+      <i data-lucide="shield" width="15" height="15"></i>
+      <span>Amministrazione utenti</span>
+    </div>
+    <div id="closeAdmin" class="panel-close"><i data-lucide="x" width="16" height="16"></i></div>
+  </div>
+  <div class="info-content">
+    <form id="newUserForm" class="rp-inline-form">
+      <input type="text" id="nuUsername" placeholder="username" required>
+      <input type="text" id="nuDisplayName" placeholder="nome visualizzato" required>
+      <select id="nuRole"><option value="user">user</option><option value="moderator">moderator</option></select>
+      <button type="submit" class="auth-submit" style="margin:0;width:auto;padding:8px 14px">Crea</button>
+    </form>
+    <div id="tempPasswordBox" class="temp-pwd-box"></div>
+    <div id="usersList"></div>
+  </div>
+</div>
+
   <div id="status"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -911,7 +1068,8 @@
       bicycleparking: L.layerGroup(),
       fontane:      L.layerGroup(),
       benches:      L.layerGroup(),
-      trees:        L.layerGroup()
+      trees:        L.layerGroup(),
+      segnalazioni: L.layerGroup()
     };
 
     // ─── Custom layer toggle panel ───
@@ -936,7 +1094,8 @@
       'lyr-bicycleparking': layers.bicycleparking,
       'lyr-fontane':      layers.fontane,
       'lyr-benches':      layers.benches,
-      'lyr-trees':        layers.trees
+      'lyr-trees':        layers.trees,
+      'lyr-segnalazioni': layers.segnalazioni
     };
     Object.entries(layerCheckboxMap).forEach(([id, layerGroup]) => {
       const cb = document.getElementById(id);
@@ -2633,6 +2792,412 @@ setTimeout(() => {
     document.head.appendChild(tooltipStyle);
 
     loadData();
+
+    // ─────────────────────────────────────────────────────────────
+    // Auth + Segnalazioni civiche
+    // ─────────────────────────────────────────────────────────────
+    let currentUser = null; // {user_id, display_name, role, must_change_password}
+    let pinDropMode = false;
+    let pendingPinLatLng = null;
+
+    const REPORT_STATUS_LABEL = {
+      aperto: 'Aperto', in_lavorazione: 'In lavorazione', risolto: 'Risolto', rifiutato: 'Rifiutato'
+    };
+    const REPORT_STATUS_COLOR = {
+      aperto: '#e11d48', in_lavorazione: '#f59e0b', risolto: '#16a34a', rifiutato: '#64748b'
+    };
+    const REPORT_CATEGORY_LABEL = {
+      buca: 'Buca', illuminazione: 'Illuminazione', segnaletica: 'Segnaletica', verde: 'Verde pubblico',
+      rifiuti: 'Rifiuti', arredo: 'Arredo urbano', allagamento: 'Allagamento', altro: 'Altro'
+    };
+
+    function reportMarkerIcon(status) {
+      const color = REPORT_STATUS_COLOR[status] || '#e11d48';
+      return L.divIcon({
+        className: '',
+        html: `<div style="width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${color};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)"></div>`,
+        iconSize: [22, 22],
+        iconAnchor: [11, 22]
+      });
+    }
+
+    async function apiFetch(url, options = {}) {
+      const res = await fetch(url, { ...options, credentials: 'same-origin' });
+      if (res.status === 401) {
+        currentUser = null;
+        applyAuthUI();
+        showLoginOverlay();
+        throw new Error('Non autenticato');
+      }
+      return res;
+    }
+
+    function showLoginOverlay() {
+      document.getElementById('loginOverlay').classList.add('active');
+    }
+    function hideLoginOverlay() {
+      document.getElementById('loginOverlay').classList.remove('active');
+    }
+
+    function applyAuthUI() {
+      const authenticated = !!currentUser;
+      document.getElementById('newReportBtn').style.display = authenticated ? 'flex' : 'none';
+      document.getElementById('adminBtn').style.display = (authenticated && currentUser.role === 'superadmin') ? 'flex' : 'none';
+      document.getElementById('lyr-segnalazioni-row').style.display = authenticated ? 'flex' : 'none';
+      const authBtn = document.getElementById('authBtn');
+      authBtn.innerHTML = authenticated
+        ? '<i data-lucide="log-out" width="15" height="15"></i>'
+        : '<i data-lucide="log-in" width="15" height="15"></i>';
+      authBtn.title = authenticated ? `Esci (${currentUser.display_name})` : 'Accedi';
+      lucide.createIcons();
+
+      if (authenticated) {
+        hideLoginOverlay();
+        if (currentUser.must_change_password) {
+          document.getElementById('pwdOverlay').classList.add('active');
+        } else {
+          document.getElementById('pwdOverlay').classList.remove('active');
+          if (!map.hasLayer(layers.segnalazioni)) {
+            layers.segnalazioni.addTo(map);
+            document.getElementById('lyr-segnalazioni').checked = true;
+          }
+          loadReports();
+        }
+      } else {
+        map.removeLayer(layers.segnalazioni);
+        layers.segnalazioni.clearLayers();
+        showLoginOverlay();
+      }
+    }
+
+    async function refreshMe() {
+      const res = await fetch('/api/me', { credentials: 'same-origin' });
+      const data = await res.json();
+      currentUser = data.authenticated ? data : null;
+      applyAuthUI();
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('loginUsername').value.trim();
+      const password = document.getElementById('loginPassword').value;
+      const errEl = document.getElementById('loginError');
+      errEl.textContent = '';
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ username, password })
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          errEl.textContent = err.detail || 'Credenziali non valide';
+          return;
+        }
+        document.getElementById('loginPassword').value = '';
+        await refreshMe();
+        setStatus(`Benvenuto, ${escapeHtml(currentUser.display_name)}`, 'success', 2500);
+      } catch (err) {
+        errEl.textContent = 'Errore di rete';
+      }
+    });
+
+    document.getElementById('pwdForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const newPassword = document.getElementById('pwdNew').value;
+      const errEl = document.getElementById('pwdError');
+      errEl.textContent = '';
+      try {
+        const res = await apiFetch('/api/me/password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ new_password: newPassword })
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          errEl.textContent = err.detail || 'Errore';
+          return;
+        }
+        document.getElementById('pwdNew').value = '';
+        await refreshMe();
+        setStatus('Password aggiornata', 'success', 2500);
+      } catch (err) { /* gestito da apiFetch */ }
+    });
+
+    document.getElementById('authBtn').addEventListener('click', async () => {
+      if (currentUser) {
+        await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
+        currentUser = null;
+        applyAuthUI();
+        setStatus('Disconnesso', '', 2000);
+      } else {
+        showLoginOverlay();
+      }
+    });
+
+    // ─── Pin-drop: nuova segnalazione ───
+    document.getElementById('newReportBtn').addEventListener('click', () => {
+      pinDropMode = !pinDropMode;
+      document.getElementById('newReportBtn').classList.toggle('spinning', false);
+      document.getElementById('map').classList.toggle('map-pin-mode', pinDropMode);
+      setStatus(pinDropMode ? 'Tocca la mappa per posizionare la segnalazione' : '', pinDropMode ? 'loading' : '', 0);
+      if (!pinDropMode) document.getElementById('status').classList.remove('show');
+    });
+
+    map.on('click', (e) => {
+      if (!pinDropMode) return;
+      pinDropMode = false;
+      document.getElementById('map').classList.remove('map-pin-mode');
+      document.getElementById('status').classList.remove('show');
+      pendingPinLatLng = e.latlng;
+      openReportForm();
+    });
+
+    function openReportForm() {
+      document.getElementById('reportForm').reset();
+      document.getElementById('reportFormError').textContent = '';
+      document.getElementById('reportCoords').textContent =
+        `Posizione: ${pendingPinLatLng.lat.toFixed(6)}, ${pendingPinLatLng.lng.toFixed(6)}`;
+      closePanel('infoPanel'); closePanel('legendPanel'); closePanel('adminPanel');
+      document.getElementById('reportPanel').classList.add('active');
+    }
+    document.getElementById('closeReport').addEventListener('click', () => closePanel('reportPanel'));
+
+    document.getElementById('reportForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errEl = document.getElementById('reportFormError');
+      errEl.textContent = '';
+      if (!pendingPinLatLng) { errEl.textContent = 'Posizione mancante'; return; }
+
+      const fd = new FormData();
+      fd.append('title', document.getElementById('rpTitle').value);
+      fd.append('category', document.getElementById('rpCategory').value);
+      fd.append('description', document.getElementById('rpDescription').value);
+      fd.append('lat', pendingPinLatLng.lat);
+      fd.append('lng', pendingPinLatLng.lng);
+      const priority = document.getElementById('rpPriority').value;
+      if (priority) fd.append('priority', priority);
+      const photoFile = document.getElementById('rpPhoto').files[0];
+      if (photoFile) fd.append('photo', photoFile);
+
+      try {
+        const res = await apiFetch('/api/reports', { method: 'POST', body: fd });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          errEl.textContent = err.detail || 'Errore invio';
+          return;
+        }
+        closePanel('reportPanel');
+        setStatus('Segnalazione inviata', 'success', 2500);
+        loadReports();
+      } catch (err) { /* gestito da apiFetch */ }
+    });
+
+    // ─── Caricamento e rendering segnalazioni ───
+    async function loadReports() {
+      try {
+        const res = await apiFetch('/api/reports');
+        if (!res.ok) return;
+        const reports = await res.json();
+        layers.segnalazioni.clearLayers();
+        reports.forEach(r => {
+          const marker = L.marker([r.lat, r.lng], { icon: reportMarkerIcon(r.status) });
+          marker.on('click', () => openReportDetail(r.id));
+          layers.segnalazioni.addLayer(marker);
+        });
+      } catch (err) { /* gestito da apiFetch */ }
+    }
+
+    async function openReportDetail(id) {
+      let report;
+      try {
+        const res = await apiFetch(`/api/reports/${id}`);
+        if (!res.ok) return;
+        report = await res.json();
+      } catch (err) { return; }
+
+      document.getElementById('infoRoadName').style.display = 'none';
+      document.getElementById('infoTitle').textContent = report.title;
+      document.getElementById('infoBadge').textContent = REPORT_CATEGORY_LABEL[report.category] || report.category;
+
+      const canWrite = currentUser && (currentUser.role === 'superadmin' || currentUser.role === 'moderator' || currentUser.user_id === report.author_id);
+      const canModerate = currentUser && (currentUser.role === 'superadmin' || currentUser.role === 'moderator');
+      const canDelete = currentUser && (currentUser.role === 'superadmin' || (currentUser.user_id === report.author_id && report.status === 'aperto'));
+
+      const photoHtml = report.photo_path
+        ? `<img src="${escapeHtml(report.photo_path)}" style="max-width:100%;border-radius:10px;margin-top:6px">`
+        : '';
+
+      const statusOptions = Object.keys(REPORT_STATUS_LABEL).map(s =>
+        `<option value="${s}" ${s === report.status ? 'selected' : ''}>${REPORT_STATUS_LABEL[s]}</option>`
+      ).join('');
+
+      const eventsHtml = report.events.map(ev => {
+        const who = ev.actor_id === 0 ? 'Superadmin' : `Utente #${ev.actor_id}`;
+        const when = new Date(ev.created_at).toLocaleString('it-IT');
+        let what = ev.type;
+        if (ev.type === 'status_change' && ev.payload) what = `stato: ${ev.payload.from} → ${ev.payload.to}`;
+        else if (ev.type === 'edit') what = 'modifica campi';
+        return `<div class="popup-section" style="padding-bottom:6px;margin-bottom:6px"><div class="val" style="font-size:12px">${escapeHtml(who)} — ${escapeHtml(what)} <span style="color:#94a3b8">(${escapeHtml(when)})</span></div></div>`;
+      }).join('');
+
+      document.getElementById('infoSections').innerHTML = `
+        <div class="popup-section">
+          <div class="label">Descrizione</div>
+          <div class="val">${escapeHtml(report.description)}</div>
+          ${photoHtml}
+        </div>
+        <div class="popup-section" style="flex-direction:row;gap:20px">
+          <div><div class="label">Stato</div><div class="val">${escapeHtml(REPORT_STATUS_LABEL[report.status] || report.status)}</div></div>
+          <div><div class="label">Priorità</div><div class="val">${escapeHtml(report.priority || '—')}</div></div>
+        </div>
+        <div class="popup-section">
+          <div class="label">Segnalato il</div>
+          <div class="val">${escapeHtml(new Date(report.created_at).toLocaleString('it-IT'))}</div>
+        </div>
+        ${canModerate ? `
+        <div class="popup-section">
+          <div class="label">Cambia stato</div>
+          <select id="detailStatusSelect" style="margin-top:4px;padding:8px;border-radius:8px;border:1px solid #e2e8f0;width:100%">${statusOptions}</select>
+        </div>` : ''}
+        <div class="popup-section" style="flex-direction:row;gap:8px;border-bottom:none">
+          ${canWrite ? `<button id="detailSaveBtn" class="auth-submit" style="width:auto;padding:8px 14px">Salva</button>` : ''}
+          ${canDelete ? `<button id="detailDeleteBtn" class="auth-submit" style="width:auto;padding:8px 14px;background:#dc2626">Elimina</button>` : ''}
+        </div>
+        ${canWrite ? `
+        <div class="popup-section">
+          <div class="label">Modifica descrizione</div>
+          <textarea id="detailDescEdit" rows="3" style="width:100%;margin-top:4px;padding:8px;border-radius:8px;border:1px solid #e2e8f0;box-sizing:border-box;font-family:inherit">${escapeHtml(report.description)}</textarea>
+        </div>` : ''}
+        <div class="popup-section" style="border-bottom:none">
+          <div class="label">Storico</div>
+          ${eventsHtml || '<div class="val" style="font-size:12px;color:#94a3b8">Nessun evento</div>'}
+        </div>
+      `;
+
+      document.getElementById('rawTags').style.display = 'none';
+      document.getElementById('rawToggle').style.display = 'none';
+
+      if (canModerate) {
+        document.getElementById('detailStatusSelect').addEventListener('change', async (e) => {
+          try {
+            const res = await apiFetch(`/api/reports/${id}/status`, {
+              method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ status: e.target.value })
+            });
+            if (res.ok) { setStatus('Stato aggiornato', 'success', 2000); loadReports(); openReportDetail(id); }
+          } catch (err) { /* gestito */ }
+        });
+      }
+      if (canWrite) {
+        document.getElementById('detailSaveBtn').addEventListener('click', async () => {
+          const description = document.getElementById('detailDescEdit').value;
+          try {
+            const res = await apiFetch(`/api/reports/${id}`, {
+              method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ description })
+            });
+            if (res.ok) { setStatus('Segnalazione aggiornata', 'success', 2000); openReportDetail(id); }
+          } catch (err) { /* gestito */ }
+        });
+      }
+      if (canDelete) {
+        document.getElementById('detailDeleteBtn').addEventListener('click', async () => {
+          try {
+            const res = await apiFetch(`/api/reports/${id}`, { method: 'DELETE' });
+            if (res.ok) { closePanel('infoPanel'); setStatus('Segnalazione eliminata', 'success', 2000); loadReports(); }
+          } catch (err) { /* gestito */ }
+        });
+      }
+
+      document.getElementById('rawTags').style.display = '';
+      document.getElementById('rawToggle').style.display = '';
+      lucide.createIcons();
+      togglePanel('infoPanel');
+    }
+
+    // ─── Admin utenti ───
+    document.getElementById('adminBtn').addEventListener('click', () => {
+      closePanel('infoPanel'); closePanel('legendPanel'); closePanel('reportPanel');
+      document.getElementById('adminPanel').classList.add('active');
+      loadUsers();
+    });
+    document.getElementById('closeAdmin').addEventListener('click', () => closePanel('adminPanel'));
+
+    async function loadUsers() {
+      try {
+        const res = await apiFetch('/api/admin/users');
+        if (!res.ok) return;
+        const users = await res.json();
+        const listEl = document.getElementById('usersList');
+        listEl.innerHTML = users.map(u => `
+          <div class="user-row">
+            <div>
+              <div class="u-name">${escapeHtml(u.display_name)} <span style="color:#94a3b8;font-weight:400">(${escapeHtml(u.username)})</span></div>
+              <div class="u-meta">${escapeHtml(u.role)} · ${u.active ? 'attivo' : 'disattivato'}${u.must_change_password ? ' · pwd temp' : ''}</div>
+            </div>
+            <div style="display:flex;gap:5px">
+              <button data-act="toggle" data-id="${u.id}" data-active="${u.active}" style="background:${u.active ? '#fee2e2' : '#dcfce7'};color:${u.active ? '#dc2626' : '#16a34a'}">${u.active ? 'Revoca' : 'Riattiva'}</button>
+              <button data-act="reset" data-id="${u.id}" style="background:#f1f5f9;color:#334155">Reset pwd</button>
+            </div>
+          </div>
+        `).join('') || '<div class="auth-sub">Nessun utente</div>';
+
+        listEl.querySelectorAll('button[data-act="toggle"]').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const active = btn.dataset.active === '1' ? false : true;
+            await apiFetch(`/api/admin/users/${btn.dataset.id}`, {
+              method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ active })
+            });
+            loadUsers();
+          });
+        });
+        listEl.querySelectorAll('button[data-act="reset"]').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const res = await apiFetch(`/api/admin/users/${btn.dataset.id}/reset-password`, { method: 'POST' });
+            if (res.ok) {
+              const data = await res.json();
+              showTempPassword(data.username, data.temp_password);
+            }
+          });
+        });
+      } catch (err) { /* gestito */ }
+    }
+
+    function showTempPassword(username, tempPassword) {
+      const box = document.getElementById('tempPasswordBox');
+      box.classList.add('show');
+      box.innerHTML = `Password temporanea per <strong>${escapeHtml(username)}</strong>: <code>${escapeHtml(tempPassword)}</code> — consegnare via Telegram, non riapparirà.
+        <button id="copyTempPwd" style="margin-left:8px;border:none;background:#16a34a;color:#fff;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px">Copia</button>`;
+      document.getElementById('copyTempPwd').addEventListener('click', () => navigator.clipboard.writeText(tempPassword));
+    }
+
+    document.getElementById('newUserForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = document.getElementById('nuUsername').value.trim();
+      const display_name = document.getElementById('nuDisplayName').value.trim();
+      const role = document.getElementById('nuRole').value;
+      try {
+        const res = await apiFetch('/api/admin/users', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, display_name, role })
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          setStatus(err.detail || 'Errore creazione utente', 'error', 3000);
+          return;
+        }
+        const data = await res.json();
+        document.getElementById('newUserForm').reset();
+        showTempPassword(data.username, data.temp_password);
+        loadUsers();
+      } catch (err) { /* gestito */ }
+    });
+
+    // ─── Gate iniziale ───
+    refreshMe();
   </script>
 </body>
 </html>
