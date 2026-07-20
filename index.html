@@ -2821,8 +2821,30 @@ setTimeout(() => {
       });
     }
 
-    async function apiFetch(url, options = {}) {
-      const res = await fetch(url, { ...options, credentials: 'same-origin' });
+    // Backend su Tailscale Funnel, esposto come path aggiuntivo sull'hostname
+    // condiviso con gli altri servizi del Pi (CastelSafe/CastelEventi).
+    const FUNNEL_HOST = 'https://andrea.tail04be23.ts.net';
+    const API_BASE = FUNNEL_HOST + '/segnalazioni';
+    const MUTATING_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
+
+    function getCsrfToken() {
+      const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
+      return match ? decodeURIComponent(match[1]) : null;
+    }
+
+    function absoluteApiUrl(path) {
+      return path.startsWith('http') ? path : API_BASE + path;
+    }
+
+    async function apiFetch(path, options = {}) {
+      const url = absoluteApiUrl(path);
+      const method = (options.method || 'GET').toUpperCase();
+      const headers = new Headers(options.headers || {});
+      if (MUTATING_METHODS.has(method) && !url.endsWith('/api/login')) {
+        const csrf = getCsrfToken();
+        if (csrf) headers.set('X-CSRF-Token', csrf);
+      }
+      const res = await fetch(url, { ...options, headers, credentials: 'include' });
       if (res.status === 401) {
         currentUser = null;
         applyAuthUI();
@@ -2871,7 +2893,7 @@ setTimeout(() => {
     }
 
     async function refreshMe() {
-      const res = await fetch('/api/me', { credentials: 'same-origin' });
+      const res = await fetch(API_BASE + '/api/me', { credentials: 'include' });
       const data = await res.json();
       currentUser = data.authenticated ? data : null;
       applyAuthUI();
@@ -2884,10 +2906,10 @@ setTimeout(() => {
       const errEl = document.getElementById('loginError');
       errEl.textContent = '';
       try {
-        const res = await fetch('/api/login', {
+        const res = await fetch(API_BASE + '/api/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          credentials: 'same-origin',
+          credentials: 'include',
           body: JSON.stringify({ username, password })
         });
         if (!res.ok) {
@@ -2927,7 +2949,7 @@ setTimeout(() => {
 
     document.getElementById('authBtn').addEventListener('click', async () => {
       if (currentUser) {
-        await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
+        await apiFetch('/api/logout', { method: 'POST' });
         currentUser = null;
         applyAuthUI();
         setStatus('Disconnesso', '', 2000);
@@ -3026,7 +3048,7 @@ setTimeout(() => {
       const canDelete = currentUser && (currentUser.role === 'superadmin' || (currentUser.user_id === report.author_id && report.status === 'aperto'));
 
       const photoHtml = report.photo_path
-        ? `<img src="${escapeHtml(report.photo_path)}" style="max-width:100%;border-radius:10px;margin-top:6px">`
+        ? `<img src="${escapeHtml(FUNNEL_HOST + report.photo_path)}" style="max-width:100%;border-radius:10px;margin-top:6px">`
         : '';
 
       const statusOptions = Object.keys(REPORT_STATUS_LABEL).map(s =>
