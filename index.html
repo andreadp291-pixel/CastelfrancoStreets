@@ -112,9 +112,11 @@
       flex-direction: column;
       gap: 2px;
       max-height: calc(100vh - 74px);
+      max-height: calc(100dvh - 74px);
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       overscroll-behavior: contain;
+      touch-action: pan-y;
     }
     #layersPanel.open { display: flex; animation: fadeSlideUp .22s var(--ease); }
     #layersPanel .lp-title {
