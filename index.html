@@ -201,6 +201,44 @@
     .pm-item-danger { color: var(--danger); }
     .pm-item-danger:hover { background: rgba(220,38,38,.08); }
 
+    /* ─── Guida flottante proposte ─── */
+    #proposalsHelp {
+      position: fixed; bottom: 18px; right: 14px; z-index: 1500;
+      width: min(340px, calc(100vw - 28px));
+      background: #fff; border: 1px solid #e2e8f0; border-radius: 18px;
+      box-shadow: 0 20px 50px rgba(15,23,42,.2), 0 4px 16px rgba(15,23,42,.08);
+      display: none; opacity: 0; transform: translateY(16px) scale(.97);
+      transition: opacity .3s var(--ease), transform .3s var(--ease);
+    }
+    #proposalsHelp.show { display: block; }
+    #proposalsHelp.visible { opacity: 1; transform: translateY(0) scale(1); }
+    .ph-header {
+      display: flex; align-items: center; gap: 10px; padding: 14px 14px 12px;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .ph-header-icon {
+      width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ph-header-text { flex: 1 1 auto; min-width: 0; }
+    .ph-title { font-size: 13.5px; font-weight: 800; color: var(--text-main); }
+    .ph-body { padding: 14px; }
+    .ph-body p { margin: 0 0 12px; font-size: 12.5px; line-height: 1.6; color: var(--text-main); }
+    .ph-warning {
+      display: flex; gap: 8px; align-items: flex-start;
+      background: #fff7ed; border: 1px solid #fed7aa; border-radius: 12px;
+      padding: 10px 12px; font-size: 12px; line-height: 1.55; color: #9a3412; margin-bottom: 12px;
+    }
+    .ph-warning i { flex-shrink: 0; margin-top: 1px; color: #ea580c; }
+    .ph-warning a { color: #c2410c; font-weight: 700; word-break: break-word; }
+    .ph-dismiss {
+      width: 100%; padding: 9px; border: none; border-radius: 10px;
+      background: #f1f5f9; color: var(--text-main); font-weight: 700; font-size: 12.5px; cursor: pointer;
+      transition: background .15s;
+    }
+    .ph-dismiss:hover { background: #e2e8f0; }
+
     /* ─── PANNELLI LATERALI ─── */
 #infoPanel,
 #legendPanel {
@@ -1181,6 +1219,33 @@
 </div>
 
   <div id="status"></div>
+
+  <!-- Guida flottante: proposte civiche vs segnalazioni di guasto -->
+  <div id="proposalsHelp">
+    <div class="ph-header">
+      <div class="ph-header-icon"><i data-lucide="megaphone" width="16" height="16"></i></div>
+      <div class="ph-header-text">
+        <div class="ph-title">Come funzionano le proposte</div>
+      </div>
+      <div id="closeProposalsHelp" class="panel-close"><i data-lucide="x" width="16" height="16"></i></div>
+    </div>
+    <div class="ph-body">
+      <p>
+        Con il pulsante <strong><i data-lucide="map-pin-plus" width="13" height="13" style="vertical-align:-2px"></i> Nuova proposta</strong>
+        in alto puoi segnalare <strong>idee e miglioramenti</strong> per il territorio: nuove piste ciclabili,
+        attraversamenti, aree verdi e altro. Clicca il pulsante, poi tocca un punto sulla mappa per posizionarla.
+      </p>
+      <div class="ph-warning">
+        <i data-lucide="triangle-alert" width="15" height="15"></i>
+        <div>
+          Questo <strong>non</strong> è il canale per segnalare guasti o manutenzioni urgenti
+          (buche, illuminazione, perdite, ecc.). Per quelle usa il portale ufficiale del Comune:
+          <a href="https://segnalazioni.comune.castelfrancoveneto.tv.it/" target="_blank" rel="noopener">segnalazioni.comune.castelfrancoveneto.tv.it</a>
+        </div>
+      </div>
+      <button type="button" id="dismissProposalsHelp" class="ph-dismiss">Ho capito, non mostrare più</button>
+    </div>
+  </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/osmtogeojson@3.0.0-beta.4/osmtogeojson.js"></script>
@@ -3156,7 +3221,9 @@ setTimeout(() => {
     document.getElementById('closeLoginOverlay').addEventListener('click', hideLoginOverlay);
     document.getElementById('cancelLoginBtn').addEventListener('click', hideLoginOverlay);
 
+    let pwdOverlayMandatory = false;
     function openPwdOverlay(mandatory) {
+      pwdOverlayMandatory = mandatory;
       document.getElementById('pwdTitle').textContent = mandatory
         ? 'Imposta una nuova password'
         : 'Cambia password';
@@ -3251,9 +3318,29 @@ setTimeout(() => {
         document.getElementById('loginPassword').value = '';
         await refreshMe();
         setStatus(`Benvenuto, ${escapeHtml(currentUser.display_name)}`, 'success', 2500);
+        if (!currentUser.must_change_password) maybeShowProposalsHelp();
       } catch (err) {
         errEl.textContent = 'Errore di rete';
       }
+    });
+
+    const PROPOSALS_HELP_KEY = 'proposalsHelpDismissed';
+    function maybeShowProposalsHelp() {
+      if (localStorage.getItem(PROPOSALS_HELP_KEY)) return;
+      const el = document.getElementById('proposalsHelp');
+      el.classList.add('show');
+      lucide.createIcons();
+      requestAnimationFrame(() => el.classList.add('visible'));
+    }
+    function hideProposalsHelp() {
+      const el = document.getElementById('proposalsHelp');
+      el.classList.remove('visible');
+      setTimeout(() => el.classList.remove('show'), 300);
+    }
+    document.getElementById('closeProposalsHelp').addEventListener('click', hideProposalsHelp);
+    document.getElementById('dismissProposalsHelp').addEventListener('click', () => {
+      localStorage.setItem(PROPOSALS_HELP_KEY, '1');
+      hideProposalsHelp();
     });
 
     document.getElementById('pwdForm').addEventListener('submit', async (e) => {
@@ -3273,8 +3360,10 @@ setTimeout(() => {
           return;
         }
         document.getElementById('pwdNew').value = '';
+        const wasMandatory = pwdOverlayMandatory;
         await refreshMe();
         setStatus('Password aggiornata', 'success', 2500);
+        if (wasMandatory) maybeShowProposalsHelp();
       } catch (err) { /* gestito da apiFetch */ }
     });
 
