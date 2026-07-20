@@ -423,7 +423,7 @@
 .detail-select {
   display: block; width: 100%; margin-top: 6px; padding: 10px 12px;
   border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 13px; box-sizing: border-box;
-  font-family: inherit; color: var(--text-main); background: #f8fafc; cursor: pointer;
+  font-family: inherit; color: var(--text-main); background: #fff; cursor: pointer;
   appearance: none; -webkit-appearance: none;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
   background-repeat: no-repeat; background-position: right 12px center; padding-right: 34px;
@@ -433,7 +433,7 @@
 .detail-textarea {
   display: block; width: 100%; margin-top: 6px; padding: 10px 12px; box-sizing: border-box;
   border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 13px; font-family: inherit;
-  color: var(--text-main); background: #f8fafc; resize: vertical; transition: border-color .15s, box-shadow .15s;
+  color: var(--text-main); background: #fff; resize: vertical; transition: border-color .15s, box-shadow .15s;
 }
 .detail-textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); background: #fff; }
 .detail-btn-save, .detail-btn-delete {
@@ -448,6 +448,14 @@
   display: flex; flex-direction: column; gap: 6px;
 }
 .detail-history .popup-section { margin: 0; padding: 8px 10px; border: 1px solid #f1f5f9; border-radius: 10px; background: #f8fafc; }
+.rd-card {
+  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px;
+  padding: 14px; margin-bottom: 12px;
+  display: flex; flex-direction: column;
+}
+.rd-card .label { color: var(--text-light); font-weight: 800; font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.rd-card .val { color: var(--text-main); font-weight: 600; font-size: 13.5px; line-height: 1.55; }
+#infoSections { padding: 0; }
 .map-pin-mode { cursor: crosshair !important; }
 
 /* Badge tipo (es. "Pista ciclabile") */
@@ -3385,35 +3393,35 @@ setTimeout(() => {
       }).join('');
 
       document.getElementById('infoSections').innerHTML = `
-        <div class="popup-section">
+        <div class="rd-card">
           <div class="label">Descrizione</div>
           <div class="val">${escapeHtml(report.description)}</div>
           ${photoHtml}
         </div>
-        <div class="popup-section" style="flex-direction:row;gap:20px">
+        <div class="rd-card" style="flex-direction:row;gap:20px">
           <div><div class="label">Autore</div><div class="val">${escapeHtml(report.author_display_name)}</div></div>
           <div><div class="label">Stato</div><div class="val">${escapeHtml(REPORT_STATUS_LABEL[report.status] || report.status)}</div></div>
         </div>
-        <div class="popup-section">
+        <div class="rd-card">
           <div class="label">Proposto il</div>
           <div class="val">${escapeHtml(new Date(report.created_at).toLocaleString('it-IT'))}</div>
         </div>
         ${canModerate ? `
-        <div class="popup-section">
+        <div class="rd-card">
           <div class="label">Cambia stato</div>
           <select id="detailStatusSelect" class="detail-select">${statusOptions}</select>
         </div>` : ''}
         ${(canWrite || canDelete) ? `
-        <div class="popup-section" style="flex-direction:row;gap:8px;border-bottom:none">
+        <div class="rd-card" style="flex-direction:row;gap:8px">
           ${canWrite ? `<button id="detailSaveBtn" class="auth-submit detail-btn-save"><i data-lucide="check" width="14" height="14"></i>Salva</button>` : ''}
           ${canDelete ? `<button id="detailDeleteBtn" class="auth-submit detail-btn-delete"><i data-lucide="trash-2" width="14" height="14"></i>Elimina</button>` : ''}
         </div>` : ''}
         ${canWrite ? `
-        <div class="popup-section">
+        <div class="rd-card">
           <div class="label">Modifica descrizione</div>
           <textarea id="detailDescEdit" rows="3" class="detail-textarea">${escapeHtml(report.description)}</textarea>
         </div>` : ''}
-        <div class="popup-section" style="border-bottom:none">
+        <div class="rd-card" style="margin-bottom:0">
           <div class="label">Storico</div>
           <div class="detail-history">${eventsHtml || '<div class="val" style="font-size:12px;color:#94a3b8">Nessun evento</div>'}</div>
         </div>
