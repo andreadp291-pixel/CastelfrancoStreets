@@ -2799,6 +2799,7 @@ setTimeout(() => {
     let currentUser = null; // {user_id, display_name, role, must_change_password}
     let pinDropMode = false;
     let pendingPinLatLng = null;
+    let currentPhotoObjectUrl = null;
 
     const REPORT_STATUS_LABEL = {
       aperto: 'Aperto', in_lavorazione: 'In lavorazione', risolto: 'Risolto', rifiutato: 'Rifiutato'
@@ -2825,11 +2826,17 @@ setTimeout(() => {
     // condiviso con gli altri servizi del Pi (CastelSafe/CastelEventi).
     const FUNNEL_HOST = 'https://andrea.tail04be23.ts.net';
     const API_BASE = FUNNEL_HOST + '/segnalazioni';
-    const MUTATING_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
+    const TOKEN_STORAGE_KEY = 'segnalazioni_token';
 
-    function getCsrfToken() {
-      const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
-      return match ? decodeURIComponent(match[1]) : null;
+    // Sessione via token Bearer in localStorage, non cookie: i browser
+    // moderni scartano i cookie cross-site quando frontend (GitHub Pages) e
+    // backend (Funnel) sono su domini diversi, ma non toccano header custom.
+    let authToken = localStorage.getItem(TOKEN_STORAGE_KEY) || null;
+
+    function setAuthToken(token) {
+      authToken = token;
+      if (token) localStorage.setItem(TOKEN_STORAGE_KEY, token);
+      else localStorage.removeItem(TOKEN_STORAGE_KEY);
     }
 
     function absoluteApiUrl(path) {
@@ -2838,14 +2845,11 @@ setTimeout(() => {
 
     async function apiFetch(path, options = {}) {
       const url = absoluteApiUrl(path);
-      const method = (options.method || 'GET').toUpperCase();
       const headers = new Headers(options.headers || {});
-      if (MUTATING_METHODS.has(method) && !url.endsWith('/api/login')) {
-        const csrf = getCsrfToken();
-        if (csrf) headers.set('X-CSRF-Token', csrf);
-      }
-      const res = await fetch(url, { ...options, headers, credentials: 'include' });
+      if (authToken) headers.set('Authorization', `Bearer ${authToken}`);
+      const res = await fetch(url, { ...options, headers });
       if (res.status === 401) {
+        setAuthToken(null);
         currentUser = null;
         applyAuthUI();
         showLoginOverlay();
@@ -2893,8 +2897,16 @@ setTimeout(() => {
     }
 
     async function refreshMe() {
-      const res = await fetch(API_BASE + '/api/me', { credentials: 'include' });
+      if (!authToken) {
+        currentUser = null;
+        applyAuthUI();
+        return;
+      }
+      const res = await fetch(API_BASE + '/api/me', {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
       const data = await res.json();
+      if (!data.authenticated) setAuthToken(null);
       currentUser = data.authenticated ? data : null;
       applyAuthUI();
     }
@@ -2909,7 +2921,6 @@ setTimeout(() => {
         const res = await fetch(API_BASE + '/api/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
           body: JSON.stringify({ username, password })
         });
         if (!res.ok) {
@@ -2917,6 +2928,8 @@ setTimeout(() => {
           errEl.textContent = err.detail || 'Credenziali non valide';
           return;
         }
+        const data = await res.json();
+        setAuthToken(data.token);
         document.getElementById('loginPassword').value = '';
         await refreshMe();
         setStatus(`Benvenuto, ${escapeHtml(currentUser.display_name)}`, 'success', 2500);
@@ -2949,7 +2962,8 @@ setTimeout(() => {
 
     document.getElementById('authBtn').addEventListener('click', async () => {
       if (currentUser) {
-        await apiFetch('/api/logout', { method: 'POST' });
+        try { await apiFetch('/api/logout', { method: 'POST' }); } catch (err) { /* ignora */ }
+        setAuthToken(null);
         currentUser = null;
         applyAuthUI();
         setStatus('Disconnesso', '', 2000);
@@ -3048,7 +3062,7 @@ setTimeout(() => {
       const canDelete = currentUser && (currentUser.role === 'superadmin' || (currentUser.user_id === report.author_id && report.status === 'aperto'));
 
       const photoHtml = report.photo_path
-        ? `<img src="${escapeHtml(FUNNEL_HOST + report.photo_path)}" style="max-width:100%;border-radius:10px;margin-top:6px">`
+        ? `<img id="detailPhoto" style="max-width:100%;border-radius:10px;margin-top:6px;display:none">`
         : '';
 
       const statusOptions = Object.keys(REPORT_STATUS_LABEL).map(s =>
@@ -3100,6 +3114,21 @@ setTimeout(() => {
 
       document.getElementById('rawTags').style.display = 'none';
       document.getElementById('rawToggle').style.display = 'none';
+
+      if (report.photo_path) {
+        fetch(FUNNEL_HOST + report.photo_path, { headers: { Authorization: `Bearer ${authToken}` } })
+          .then(res => (res.ok ? res.blob() : null))
+          .then(blob => {
+            if (!blob) return;
+            const img = document.getElementById('detailPhoto');
+            if (!img) return;
+            if (currentPhotoObjectUrl) URL.revokeObjectURL(currentPhotoObjectUrl);
+            currentPhotoObjectUrl = URL.createObjectURL(blob);
+            img.src = currentPhotoObjectUrl;
+            img.style.display = '';
+          })
+          .catch(() => { /* foto non caricata, non bloccante */ });
+      }
 
       if (canModerate) {
         document.getElementById('detailStatusSelect').addEventListener('change', async (e) => {
