@@ -526,6 +526,8 @@
   border-radius: 0 0 20px 20px;
   scrollbar-width: thin;
   scrollbar-color: #cbd5e1 transparent;
+  padding: 16px;
+  box-sizing: border-box;
 }
 .info-content::-webkit-scrollbar,
 .legend-content::-webkit-scrollbar { width: 4px; }
@@ -551,17 +553,24 @@
 }
 
 .legend-section {
-  padding: 14px 16px 10px;
-  border-bottom: 1px solid #f1f5f9;
+  padding: 14px;
+  margin-bottom: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
 }
-.legend-section:last-child { border-bottom: none; }
+.legend-section:last-child { margin-bottom: 0; }
+.legend-section.legend-intro {
+  border-left: 3px solid var(--primary);
+  background: linear-gradient(180deg, var(--primary-light), #f8fafc 70%);
+}
 
 .legend-section-title {
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 10.5px;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: .9px;
-  color: #94a3b8;
+  letter-spacing: .06em;
+  color: var(--text-light);
   margin-bottom: 10px;
 }
 
@@ -958,7 +967,7 @@
   <div class="legend-content">
 
     <!-- Sezione descrizione app -->
-    <div class="legend-section" style="border-bottom: 1px solid #f1f5f9;">
+    <div class="legend-section legend-intro">
       <div class="legend-section-title">OSM Castelfranco Veneto</div>
       <p style="font-size:13px;color:var(--text-main);font-weight:600;margin:0 0 6px">
         Mappa interattiva dell'infrastruttura viaria
@@ -974,7 +983,7 @@
         vedere i dettagli del tratto selezionato.
       </p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
-        <div style="background:#f8fafc;border-radius:10px;padding:10px;font-size:11px">
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px;font-size:11px">
           <div style="font-weight:700;color:var(--text-main);margin-bottom:4px;display:flex;align-items:center;gap:5px"><i data-lucide="layers" width="12" height="12"></i>Layer disponibili</div>
           <div style="color:var(--text-light);line-height:1.6">
             Strade proposte<br>Piste ciclabili<br>Percorsi pedonali<br>
@@ -984,7 +993,7 @@
             Fontanelle d'acqua<br>Panchine<br>Alberi e filari
           </div>
         </div>
-        <div style="background:#f8fafc;border-radius:10px;padding:10px;font-size:11px">
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px;font-size:11px">
           <div style="font-weight:700;color:var(--text-main);margin-bottom:4px;display:flex;align-items:center;gap:5px"><i data-lucide="circle-help" width="12" height="12"></i>Come usare</div>
           <div style="color:var(--text-light);line-height:1.6">
             Attiva i layer dal controllo in alto<br><br>
@@ -993,7 +1002,7 @@
           </div>
         </div>
       </div>
-      <div style="margin-top:10px;padding:8px 10px;background:#eff6ff;border-radius:8px;font-size:11px;color:#1d4ed8;display:flex;align-items:center;gap:6px">
+      <div style="margin-top:10px;padding:8px 10px;background:#eff6ff;border:1px solid #dbeafe;border-radius:8px;font-size:11px;color:#1d4ed8;display:flex;align-items:center;gap:6px">
         <i data-lucide="satellite-dish" width="13" height="13"></i>Fonte: <strong>OpenStreetMap</strong> — dati aperti © contributori OSM
       </div>
     </div>
