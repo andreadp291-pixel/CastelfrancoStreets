@@ -45,25 +45,8 @@
     @keyframes fadeSlideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes popIn { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
     @keyframes markerDrop { from { opacity: 0; transform: scale(0) translateY(-8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-    @keyframes pinDrop { 0% { opacity: 0; transform: translateY(-18px) scale(.5); } 60% { opacity: 1; transform: translateY(2px) scale(1.05); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
-    .pending-pin-marker { position: relative; width: 30px; height: 42px; }
-    .pending-pin-shape {
-      position: absolute; left: 50%; top: 0; width: 30px; height: 30px; margin-left: -15px;
-      background: var(--primary); border: 2.5px solid #fff;
-      border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
-      box-shadow: 0 3px 10px rgba(15,23,42,.4);
-      transform-origin: center;
-      animation: pinDrop .45s var(--ease) both;
-    }
-    .pending-pin-shape::after {
-      content: ''; position: absolute; top: 50%; left: 50%; width: 10px; height: 10px;
-      margin: -5px 0 0 -5px; background: #fff; border-radius: 50%;
-    }
-    .pending-pin-shadow {
-      position: absolute; bottom: 2px; left: 50%; width: 12px; height: 5px; margin-left: -6px;
-      background: rgba(15,23,42,.35); border-radius: 50%; filter: blur(1px);
-      animation: popIn .3s .15s var(--ease) both;
-    }
+    @keyframes pinDrop { 0% { opacity: 0; transform: rotate(-45deg) translateY(-18px) scale(.5); } 60% { opacity: 1; transform: rotate(-45deg) translateY(2px) scale(1.05); } 100% { opacity: 1; transform: rotate(-45deg) translateY(0) scale(1); } }
+    .pending-pin-shape { animation: pinDrop .45s var(--ease) both; }
     @keyframes rowFade { from { opacity: 0; transform: translateX(6px); } to { opacity: 1; transform: translateX(0); } }
 
     #topbar { animation: fadeSlideDown .5s var(--ease); }
@@ -3176,20 +3159,27 @@ setTimeout(() => {
     });
 
     let pendingPinMarker = null;
+    function pendingPinIcon(category) {
+      const color = REPORT_CATEGORY_COLOR[category] || '#64748b';
+      return L.divIcon({
+        className: '',
+        html: `<div class="pending-pin-shape" style="width:22px;height:22px;border-radius:50% 50% 50% 0;background:${color};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)"></div>`,
+        iconSize: [22, 22], iconAnchor: [11, 22]
+      });
+    }
     function showPendingPinMarker(latlng) {
       if (pendingPinMarker) map.removeLayer(pendingPinMarker);
       pendingPinMarker = L.marker(latlng, {
-        icon: L.divIcon({
-          className: 'pending-pin-marker',
-          html: `<div class="pending-pin-shape"></div><div class="pending-pin-shadow"></div>`,
-          iconSize: [30, 42], iconAnchor: [15, 40]
-        }),
+        icon: pendingPinIcon(document.getElementById('rpCategory').value),
         interactive: false, zIndexOffset: 1000
       }).addTo(map);
     }
     function clearPendingPinMarker() {
       if (pendingPinMarker) { map.removeLayer(pendingPinMarker); pendingPinMarker = null; }
     }
+    document.getElementById('rpCategory').addEventListener('change', (e) => {
+      if (pendingPinMarker) pendingPinMarker.setIcon(pendingPinIcon(e.target.value));
+    });
 
     function openReportForm() {
       document.getElementById('reportForm').reset();
