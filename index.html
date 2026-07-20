@@ -54,9 +54,9 @@
     /* ─── TOPBAR ───  */
     #topbar {
       position: fixed;
-      top: 12px;
-      left: 12px;
-      width: calc(100% - 24px);
+      top: calc(12px + env(safe-area-inset-top));
+      left: calc(12px + env(safe-area-inset-left));
+      width: calc(100% - 24px - env(safe-area-inset-left) - env(safe-area-inset-right));
       max-width: 980px;
       z-index: 1000;
       display: flex;
@@ -255,7 +255,7 @@
 
     /* ─── Guida flottante proposte ─── */
     #proposalsHelp {
-      position: fixed; bottom: 18px; right: 14px; z-index: 1500;
+      position: fixed; bottom: calc(18px + env(safe-area-inset-bottom)); right: calc(14px + env(safe-area-inset-right)); z-index: 1500;
       width: min(340px, calc(100vw - 28px));
       background: #fff; border: 1px solid #e2e8f0; border-radius: 18px;
       box-shadow: 0 20px 50px rgba(15,23,42,.2), 0 4px 16px rgba(15,23,42,.08);
@@ -311,6 +311,7 @@
 #infoPanel {
   top: 66px;
   max-height: calc(100vh - 86px);
+  max-height: calc(100dvh - 86px);
   display: flex;
   flex-direction: column;
 }
@@ -400,6 +401,7 @@
   position: fixed; top: 66px; right: 14px;
   width: var(--panel-w); max-width: calc(100% - 28px);
   max-height: calc(100vh - 86px);
+  max-height: calc(100dvh - 86px);
   background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px;
   box-shadow: 0 20px 60px rgba(0,0,0,0.15), 0 4px 16px rgba(0,0,0,0.08);
   z-index: 1000; opacity: 0; transform: translateX(calc(100% + 20px));
@@ -627,6 +629,9 @@
   scrollbar-color: #cbd5e1 transparent;
   padding: 16px;
   box-sizing: border-box;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 .info-content::-webkit-scrollbar,
 .legend-content::-webkit-scrollbar { width: 4px; }
@@ -811,7 +816,7 @@
     /* ─── STATUS ─── */
     #status {
       position: fixed;
-      bottom: 14px;
+      bottom: calc(14px + env(safe-area-inset-bottom));
       left: 50%;
       transform: translateX(-50%) translateY(6px);
       background: var(--bg-dark);
@@ -909,8 +914,9 @@
         width: calc(100% - 20px);
         right: 10px;
       }
-      #infoPanel { top: 62px; max-height: calc(100vh - 78px); }
+      #infoPanel { top: 62px; max-height: calc(100vh - 78px); max-height: calc(100dvh - 78px); }
       #legendPanel { top: 62px; }
+      #reportPanel, #adminPanel { top: 62px; }
     }
   </style>
 </head>
@@ -937,14 +943,14 @@
   </div>
 
   <!-- Bottone modifica OSM: ancorato sotto il pulsante Info, fuori dal flusso orizzontale del topbar -->
-  <div id="editBtnWrap" style="position:fixed;top:58px;left:12px;z-index:1000">
+  <div id="editBtnWrap" style="position:fixed;top:calc(58px + env(safe-area-inset-top));left:calc(12px + env(safe-area-inset-left));z-index:1000">
     <button id="editBtn" class="ctrl-btn" title="Modifica su OpenStreetMap">
       <i data-lucide="pencil" width="15" height="15"></i>
     </button>
   </div>
 
   <!-- Bottone profilo: sempre visibile, ancorato in alto a destra, indipendente dal topbar principale -->
-  <div id="authTopbar" style="position:fixed;top:12px;right:14px;z-index:1200">
+  <div id="authTopbar" style="position:fixed;top:calc(12px + env(safe-area-inset-top));right:calc(14px + env(safe-area-inset-right));z-index:1200">
     <button id="authBtn" class="ctrl-btn" title="Profilo">
       <i data-lucide="user" width="15" height="15"></i>
     </button>
@@ -965,7 +971,7 @@
   </div>
 
   <!-- Bottone GPS: ancorato sotto il pulsante profilo -->
-  <div id="gpsBtnWrap" style="position:fixed;top:58px;right:14px;z-index:1000">
+  <div id="gpsBtnWrap" style="position:fixed;top:calc(58px + env(safe-area-inset-top));right:calc(14px + env(safe-area-inset-right));z-index:1000">
     <button id="gpsBtn" class="ctrl-btn" title="La mia posizione">
       <i data-lucide="locate-fixed" width="15" height="15"></i>
     </button>
