@@ -619,6 +619,9 @@
   <button id="adminBtn" class="ctrl-btn" title="Amministrazione" style="display:none">
     <i data-lucide="shield" width="15" height="15"></i>
   </button>
+  <button id="changePwdBtn" class="ctrl-btn" title="Cambia password" style="display:none">
+    <i data-lucide="key-round" width="15" height="15"></i>
+  </button>
   <button id="authBtn" class="ctrl-btn" title="Accedi">
     <i data-lucide="log-in" width="15" height="15"></i>
   </button>
@@ -845,8 +848,11 @@
 <!-- CAMBIO PASSWORD OBBLIGATORIO -->
 <div id="pwdOverlay" class="auth-overlay">
   <form id="pwdForm" class="auth-box">
-    <h2><i data-lucide="key-round" width="18" height="18" style="vertical-align:middle;margin-right:6px"></i>Imposta una nuova password</h2>
-    <p class="auth-sub">Password temporanea: da cambiare al primo accesso.</p>
+    <h2 style="display:flex;align-items:center;justify-content:space-between">
+      <span><i data-lucide="key-round" width="18" height="18" style="vertical-align:middle;margin-right:6px"></i><span id="pwdTitle">Imposta una nuova password</span></span>
+      <span id="closePwdOverlay" class="panel-close" style="display:none;background:#e2e8f0"><i data-lucide="x" width="16" height="16"></i></span>
+    </h2>
+    <p class="auth-sub" id="pwdSub">Password temporanea: da cambiare al primo accesso.</p>
     <label>Nuova password (min 10 caratteri)<input type="password" id="pwdNew" minlength="10" required></label>
     <div id="pwdError" class="auth-error"></div>
     <button type="submit" class="auth-submit">Conferma</button>
@@ -907,6 +913,7 @@
     <form id="newUserForm" class="rp-inline-form">
       <input type="text" id="nuUsername" placeholder="username" required>
       <input type="text" id="nuDisplayName" placeholder="nome visualizzato" required>
+      <input type="email" id="nuEmail" placeholder="email" required>
       <select id="nuRole"><option value="user">user</option><option value="moderator">moderator</option></select>
       <button type="submit" class="auth-submit" style="margin:0;width:auto;padding:8px 14px">Crea</button>
     </form>
@@ -2865,10 +2872,23 @@ setTimeout(() => {
       document.getElementById('loginOverlay').classList.remove('active');
     }
 
+    function openPwdOverlay(mandatory) {
+      document.getElementById('pwdTitle').textContent = mandatory
+        ? 'Imposta una nuova password'
+        : 'Cambia password';
+      document.getElementById('pwdSub').textContent = mandatory
+        ? 'Password temporanea: da cambiare al primo accesso.'
+        : 'Scegli una nuova password per il tuo account.';
+      document.getElementById('closePwdOverlay').style.display = mandatory ? 'none' : 'flex';
+      document.getElementById('pwdError').textContent = '';
+      document.getElementById('pwdOverlay').classList.add('active');
+    }
+
     function applyAuthUI() {
       const authenticated = !!currentUser;
       document.getElementById('newReportBtn').style.display = authenticated ? 'flex' : 'none';
       document.getElementById('adminBtn').style.display = (authenticated && currentUser.role === 'superadmin') ? 'flex' : 'none';
+      document.getElementById('changePwdBtn').style.display = authenticated ? 'flex' : 'none';
       document.getElementById('lyr-segnalazioni-row').style.display = authenticated ? 'flex' : 'none';
       const authBtn = document.getElementById('authBtn');
       authBtn.innerHTML = authenticated
@@ -2880,7 +2900,7 @@ setTimeout(() => {
       if (authenticated) {
         hideLoginOverlay();
         if (currentUser.must_change_password) {
-          document.getElementById('pwdOverlay').classList.add('active');
+          openPwdOverlay(true);
         } else {
           document.getElementById('pwdOverlay').classList.remove('active');
           if (!map.hasLayer(layers.segnalazioni)) {
@@ -2890,6 +2910,7 @@ setTimeout(() => {
           loadReports();
         }
       } else {
+        document.getElementById('pwdOverlay').classList.remove('active');
         map.removeLayer(layers.segnalazioni);
         layers.segnalazioni.clearLayers();
         showLoginOverlay();
@@ -2958,6 +2979,13 @@ setTimeout(() => {
         await refreshMe();
         setStatus('Password aggiornata', 'success', 2500);
       } catch (err) { /* gestito da apiFetch */ }
+    });
+
+    document.getElementById('changePwdBtn').addEventListener('click', () => {
+      openPwdOverlay(false);
+    });
+    document.getElementById('closePwdOverlay').addEventListener('click', () => {
+      document.getElementById('pwdOverlay').classList.remove('active');
     });
 
     document.getElementById('authBtn').addEventListener('click', async () => {
@@ -3210,17 +3238,20 @@ setTimeout(() => {
             const res = await apiFetch(`/api/admin/users/${btn.dataset.id}/reset-password`, { method: 'POST' });
             if (res.ok) {
               const data = await res.json();
-              showTempPassword(data.username, data.temp_password);
+              showTempPassword(data.username, data.temp_password, data.email_sent);
             }
           });
         });
       } catch (err) { /* gestito */ }
     }
 
-    function showTempPassword(username, tempPassword) {
+    function showTempPassword(username, tempPassword, emailSent) {
       const box = document.getElementById('tempPasswordBox');
       box.classList.add('show');
-      box.innerHTML = `Password temporanea per <strong>${escapeHtml(username)}</strong>: <code>${escapeHtml(tempPassword)}</code> — consegnare via Telegram, non riapparirà.
+      const statusLine = emailSent
+        ? '✓ Inviata via email.'
+        : '⚠ Invio email fallito o non configurato — consegnala tu manualmente.';
+      box.innerHTML = `Password temporanea per <strong>${escapeHtml(username)}</strong>: <code>${escapeHtml(tempPassword)}</code> — non riapparirà. ${statusLine}
         <button id="copyTempPwd" style="margin-left:8px;border:none;background:#16a34a;color:#fff;border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px">Copia</button>`;
       document.getElementById('copyTempPwd').addEventListener('click', () => navigator.clipboard.writeText(tempPassword));
     }
@@ -3229,11 +3260,12 @@ setTimeout(() => {
       e.preventDefault();
       const username = document.getElementById('nuUsername').value.trim();
       const display_name = document.getElementById('nuDisplayName').value.trim();
+      const email = document.getElementById('nuEmail').value.trim();
       const role = document.getElementById('nuRole').value;
       try {
         const res = await apiFetch('/api/admin/users', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, display_name, role })
+          body: JSON.stringify({ username, display_name, email, role })
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
@@ -3242,7 +3274,7 @@ setTimeout(() => {
         }
         const data = await res.json();
         document.getElementById('newUserForm').reset();
-        showTempPassword(data.username, data.temp_password);
+        showTempPassword(data.username, data.temp_password, data.email_sent);
         loadUsers();
       } catch (err) { /* gestito */ }
     });
