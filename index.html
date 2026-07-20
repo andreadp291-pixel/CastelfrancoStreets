@@ -178,7 +178,7 @@
 
     #editPanel {
       position: fixed;
-      top: 62px;
+      top: 104px;
       left: 12px;
       width: 250px;
       background: var(--bg-card);
@@ -191,8 +191,8 @@
       display: none;
       flex-direction: column;
       gap: 2px;
-      max-height: calc(100vh - 74px);
-      max-height: calc(100dvh - 74px);
+      max-height: calc(100vh - 116px);
+      max-height: calc(100dvh - 116px);
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       overscroll-behavior: contain;
@@ -903,9 +903,6 @@
   <button id="legendBtn" class="ctrl-btn" title="Info app">
     <i data-lucide="info" width="15" height="15"></i>
   </button>
-  <button id="editBtn" class="ctrl-btn" title="Modifica su OpenStreetMap">
-    <i data-lucide="pencil" width="15" height="15"></i>
-  </button>
 
     <button id="refreshBtn" class="ctrl-btn" title="Aggiorna">
       <i data-lucide="refresh-cw" width="15" height="15"></i>
@@ -920,6 +917,13 @@
   <button id="categoryFilterBtn" class="ctrl-btn" title="Filtra categorie" style="display:none">
     <i data-lucide="filter" width="15" height="15"></i>
   </button>
+  </div>
+
+  <!-- Bottone modifica OSM: ancorato sotto il pulsante Info, fuori dal flusso orizzontale del topbar -->
+  <div id="editBtnWrap" style="position:fixed;top:58px;left:12px;z-index:1000">
+    <button id="editBtn" class="ctrl-btn" title="Modifica su OpenStreetMap">
+      <i data-lucide="pencil" width="15" height="15"></i>
+    </button>
   </div>
 
   <!-- Bottone profilo: sempre visibile, ancorato in alto a destra, indipendente dal topbar principale -->
@@ -1019,7 +1023,7 @@
     <a class="ep-btn" href="https://apps.apple.com/app/go-map/id592990211" target="_blank" rel="noopener">
       <i data-lucide="apple" width="14" height="14"></i>Go Map!! (iOS)
     </a>
-    <p class="ep-note">App pensate per risposte rapide sul campo: quiz semplici su elementi puntuali (fontanelle, panchine, negozi…).</p>
+    <p class="ep-note">App pensate per risposte rapide sul campo: quiz semplici su elementi puntuali (fontanelle, panchine, negozi…). Richiedono comunque un account OSM per salvare le modifiche, ma la modifica in sé è molto più veloce e guidata.</p>
   </div>
 
   <div id="map"></div>
