@@ -3056,12 +3056,12 @@
       }
     }
 
-    function readOsmCache() {
+    function readOsmCache(allowStale = false) {
       try {
         const raw = localStorage.getItem(OSM_CACHE_KEY);
         if (!raw) return null;
         const { ts, data } = JSON.parse(raw);
-        if (Date.now() - ts > OSM_CACHE_TTL_MS) return null;
+        if (!allowStale && Date.now() - ts > OSM_CACHE_TTL_MS) return null;
         return data;
       } catch (err) { return null; }
     }
@@ -3070,14 +3070,37 @@
       catch (err) { /* quota piena o storage non disponibile, non bloccante */ }
     }
 
+    // ─── Retry automatico in background se il caricamento fallisce ───
+    // Backoff esponenziale (15s, 30s, 1m, 2m... fino a un tetto di 5 min):
+    // appena un tentativo va a buon fine i dati mostrati vengono sostituiti
+    // in silenzio con quelli freschi.
+    const OSM_RETRY_INITIAL_MS = 15000;
+    const OSM_RETRY_MAX_MS = 5 * 60 * 1000;
+    let osmRetryTimer = null;
+    let osmRetryDelay = OSM_RETRY_INITIAL_MS;
+    function cancelOsmRetry() {
+      if (osmRetryTimer) { clearTimeout(osmRetryTimer); osmRetryTimer = null; }
+      osmRetryDelay = OSM_RETRY_INITIAL_MS;
+    }
+    function scheduleOsmRetry() {
+      if (osmRetryTimer) return; // già in coda un tentativo
+      osmRetryTimer = setTimeout(() => {
+        osmRetryTimer = null;
+        loadData(true, true);
+      }, osmRetryDelay);
+      osmRetryDelay = Math.min(osmRetryDelay * 2, OSM_RETRY_MAX_MS);
+    }
+
     // ─────────────────────────────────────────────────────────────
     // Load data
     // ─────────────────────────────────────────────────────────────
-    async function loadData(force = false) {
+    async function loadData(force = false, isBackgroundRetry = false) {
       document.getElementById('refreshBtn').classList.add('spinning');
-      setStatus('Caricamento dati…', 'loading');
+      if (!isBackgroundRetry) setStatus('Caricamento dati…', 'loading');
 
-      Object.values(layers).forEach(layer => layer.clearLayers());
+      // Il layer sulla mappa NON viene svuotato qui: se questo tentativo
+      // fallisce (es. retry in background) i dati già mostrati restano
+      // intatti. Si svuota solo subito prima di ridisegnare con dati validi.
 
       // Query spezzata in gruppi tematici indipendenti (invece di un'unica
       // interrogazione monolitica): ogni gruppo viene interrogato in
@@ -3176,13 +3199,14 @@
       try {
         let data = force ? null : readOsmCache();
         const fromCache = !!data;
+        let usedStaleFallback = false;
         if (!data) {
-          setStatus(`Caricamento dati… (0/${QUERY_GROUPS.length} gruppi)`, 'loading');
+          if (!isBackgroundRetry) setStatus(`Caricamento dati… (0/${QUERY_GROUPS.length} gruppi)`, 'loading');
           let done = 0;
           const results = await Promise.allSettled(QUERY_GROUPS.map(async g => {
             const elements = (await fetchOverpass(g.ql)).elements || [];
             done++;
-            setStatus(`Caricamento dati… (${done}/${QUERY_GROUPS.length} gruppi)`, 'loading');
+            if (!isBackgroundRetry) setStatus(`Caricamento dati… (${done}/${QUERY_GROUPS.length} gruppi)`, 'loading');
             return { name: g.name, elements };
           }));
 
@@ -3203,15 +3227,30 @@
           });
 
           if (mergedElements.length === 0) {
-            throw new Error('Tutti i gruppi di dati OSM hanno fallito');
-          }
-
-          data = { elements: mergedElements };
-          writeOsmCache(data);
-          if (failed.length) {
-            setStatus(`Alcuni dati non disponibili (${failed.join(', ')}), mostro il resto`, 'error', 4500);
+            // Rete/Overpass irraggiungibili: se c'è una cache anche scaduta
+            // la si usa comunque pur di non lasciare la mappa vuota, e si
+            // pianifica un nuovo tentativo automatico in background.
+            const stale = readOsmCache(true);
+            if (stale) {
+              data = stale;
+              usedStaleFallback = true;
+              setStatus('Dati non aggiornati (rete OSM non raggiungibile): mostro l\'ultima versione salvata, nuovo tentativo in corso…', 'error', 5000);
+            } else {
+              scheduleOsmRetry();
+              throw new Error('Tutti i gruppi di dati OSM hanno fallito');
+            }
+          } else {
+            data = { elements: mergedElements };
+            writeOsmCache(data);
+            cancelOsmRetry();
+            if (failed.length) {
+              setStatus(`Alcuni dati non disponibili (${failed.join(', ')}), mostro il resto`, 'error', 4500);
+            }
           }
         }
+        if (usedStaleFallback) scheduleOsmRetry();
+
+        Object.values(layers).forEach(layer => layer.clearLayers());
         const geojson = osmtogeojson(data);
         const wayBearingIndex = buildWayBearingIndex(data);
 
@@ -3341,10 +3380,15 @@
         });
 
         lucide.createIcons();
-        setStatus(`${geojson.features.length} elementi caricati${fromCache ? ' (cache)' : ''}`, 'success', 3000);
+        if (isBackgroundRetry) {
+          setStatus(`Dati aggiornati (${geojson.features.length} elementi)`, 'success', 3000);
+        } else if (!usedStaleFallback) {
+          setStatus(`${geojson.features.length} elementi caricati${fromCache ? ' (cache)' : ''}`, 'success', 3000);
+        }
       } catch (err) {
         console.error(err);
-        setStatus('Errore caricamento dati', 'error', 4500);
+        if (!isBackgroundRetry) setStatus('Errore caricamento dati', 'error', 4500);
+        scheduleOsmRetry();
       } finally {
         document.getElementById('refreshBtn').classList.remove('spinning');
       }
