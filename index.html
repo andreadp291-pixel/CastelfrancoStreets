@@ -3009,7 +3009,6 @@
     // Cache locale dati OSM (Overpass): evita di rifare la query pesante
     // a ogni apertura/refresh della pagina finché la cache è fresca.
     // ─────────────────────────────────────────────────────────────
-    const OSM_CACHE_KEY = 'osmDataCache_v1';
     const OSM_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 ore
 
     // Mirror Overpass pubblici interrogati in parallelo: si usa la prima
@@ -3056,34 +3055,36 @@
       }
     }
 
-    function readOsmCache(allowStale = false) {
-      try {
-        const raw = localStorage.getItem(OSM_CACHE_KEY);
-        if (!raw) return null;
-        const { ts, data } = JSON.parse(raw);
-        if (!allowStale && Date.now() - ts > OSM_CACHE_TTL_MS) return null;
-        return data;
-      } catch (err) { return null; }
+    // Cache PER GRUPPO (non un unico blob): se un gruppo fallisce, quelli
+    // già caricati restano disponibili e non vengono ributtati via, e un
+    // retry ritenta solo i gruppi mancanti invece di rifare tutto da capo.
+    const OSM_GROUP_CACHE_KEY = 'osmGroupCache_v1';
+    function readOsmGroupCache() {
+      try { return JSON.parse(localStorage.getItem(OSM_GROUP_CACHE_KEY)) || {}; }
+      catch (err) { return {}; }
     }
-    function writeOsmCache(data) {
-      try { localStorage.setItem(OSM_CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); }
+    function writeOsmGroupCache(cache) {
+      try { localStorage.setItem(OSM_GROUP_CACHE_KEY, JSON.stringify(cache)); }
       catch (err) { /* quota piena o storage non disponibile, non bloccante */ }
     }
 
     // ─── Retry automatico in background se il caricamento fallisce ───
     // Backoff esponenziale (15s, 30s, 1m, 2m... fino a un tetto di 5 min):
-    // appena un tentativo va a buon fine i dati mostrati vengono sostituiti
-    // in silenzio con quelli freschi.
+    // ritenta SOLO i gruppi che sono falliti l'ultima volta; appena
+    // riescono, i dati mostrati vengono sostituiti in silenzio.
     const OSM_RETRY_INITIAL_MS = 15000;
     const OSM_RETRY_MAX_MS = 5 * 60 * 1000;
     let osmRetryTimer = null;
     let osmRetryDelay = OSM_RETRY_INITIAL_MS;
+    let osmLastFailedGroups = [];
     function cancelOsmRetry() {
       if (osmRetryTimer) { clearTimeout(osmRetryTimer); osmRetryTimer = null; }
       osmRetryDelay = OSM_RETRY_INITIAL_MS;
+      osmLastFailedGroups = [];
     }
-    function scheduleOsmRetry() {
-      if (osmRetryTimer) return; // già in coda un tentativo
+    function scheduleOsmRetry(failedGroupNames) {
+      if (osmRetryTimer) return; // già in coda un tentativo: non sovrascrivere la lista
+      osmLastFailedGroups = failedGroupNames;
       osmRetryTimer = setTimeout(() => {
         osmRetryTimer = null;
         loadData(true, true);
@@ -3201,60 +3202,84 @@
       ];
 
       try {
-        let data = force ? null : readOsmCache();
-        const fromCache = !!data;
-        let usedStaleFallback = false;
-        if (!data) {
-          if (!isBackgroundRetry) setStatus(`Caricamento dati… (0/${QUERY_GROUPS.length} gruppi)`, 'loading');
-          // Gruppi interrogati IN SEQUENZA (non tutti insieme): i mirror
-          // Overpass pubblici limitano severamente le richieste concorrenti
-          // per IP, e 4 gruppi in parallelo (ognuno già in gara su 5 mirror)
-          // significavano fino a 20 connessioni simultanee agli stessi pochi
-          // server, che finivano per essere rate-limitati/rifiutati tutti
-          // insieme. Un gruppo alla volta è più lento ma molto più affidabile.
-          const failed = [];
-          const seen = new Set();
-          const mergedElements = [];
-          let done = 0;
-          for (const g of QUERY_GROUPS) {
-            try {
-              const elements = (await fetchOverpass(g.ql)).elements || [];
-              elements.forEach(el => {
-                const key = `${el.type}/${el.id}`;
-                if (seen.has(key)) return; // dedup di sicurezza tra gruppi
-                seen.add(key);
-                mergedElements.push(el);
-              });
-            } catch (err) {
-              failed.push(g.name);
-            }
-            done++;
-            if (!isBackgroundRetry) setStatus(`Caricamento dati… (${done}/${QUERY_GROUPS.length} gruppi)`, 'loading');
+        // Cache PER GRUPPO: se un gruppo fallisce, quelli già caricati (ora
+        // o in un tentativo precedente) restano visibili. Un retry mirato
+        // ritenta SOLO i gruppi falliti l'ultima volta, non tutti da capo.
+        const groupCache = readOsmGroupCache();
+        const now = Date.now();
+        const allFresh = !force && QUERY_GROUPS.every(g => {
+          const c = groupCache[g.name];
+          return c && (now - c.ts) < OSM_CACHE_TTL_MS;
+        });
+        const groupsToFetch = (isBackgroundRetry && osmLastFailedGroups.length)
+          ? QUERY_GROUPS.filter(g => osmLastFailedGroups.includes(g.name))
+          : QUERY_GROUPS;
+
+        const seen = new Set();
+        const mergedElements = [];
+        const failed = [];
+        const usedCacheFor = [];
+        function mergeElements(elements) {
+          elements.forEach(el => {
+            const key = `${el.type}/${el.id}`;
+            if (seen.has(key)) return; // dedup di sicurezza tra gruppi
+            seen.add(key);
+            mergedElements.push(el);
+          });
+        }
+
+        if (allFresh) {
+          QUERY_GROUPS.forEach(g => mergeElements(groupCache[g.name].elements));
+        } else {
+          // Retry mirato: i gruppi non ri-tentati ora mantengono i dati già
+          // in cache (non vengono ributtati via solo perché un altro gruppo
+          // è fallito).
+          if (groupsToFetch.length < QUERY_GROUPS.length) {
+            QUERY_GROUPS.forEach(g => {
+              if (!groupsToFetch.includes(g) && groupCache[g.name]) {
+                mergeElements(groupCache[g.name].elements);
+              }
+            });
           }
 
-          if (mergedElements.length === 0) {
-            // Rete/Overpass irraggiungibili: se c'è una cache anche scaduta
-            // la si usa comunque pur di non lasciare la mappa vuota, e si
-            // pianifica un nuovo tentativo automatico in background.
-            const stale = readOsmCache(true);
-            if (stale) {
-              data = stale;
-              usedStaleFallback = true;
-              setStatus('Dati non aggiornati (rete OSM non raggiungibile): mostro l\'ultima versione salvata, nuovo tentativo in corso…', 'error', 5000);
-            } else {
-              scheduleOsmRetry();
-              throw new Error('Tutti i gruppi di dati OSM hanno fallito');
+          // Gruppi interrogati IN SEQUENZA (non tutti insieme): i mirror
+          // Overpass pubblici limitano severamente le richieste concorrenti
+          // per IP, e più gruppi in parallelo (ognuno già in gara su 5
+          // mirror) significavano troppe connessioni simultanee agli stessi
+          // pochi server, rate-limitati/rifiutati tutti insieme.
+          if (!isBackgroundRetry) setStatus(`Caricamento dati… (0/${groupsToFetch.length} gruppi)`, 'loading');
+          let done = 0;
+          for (const g of groupsToFetch) {
+            try {
+              const elements = (await fetchOverpass(g.ql)).elements || [];
+              groupCache[g.name] = { ts: Date.now(), elements };
+              mergeElements(elements);
+            } catch (err) {
+              failed.push(g.name);
+              const cached = groupCache[g.name];
+              if (cached) {
+                usedCacheFor.push(g.name);
+                mergeElements(cached.elements);
+              }
             }
+            done++;
+            if (!isBackgroundRetry) setStatus(`Caricamento dati… (${done}/${groupsToFetch.length} gruppi)`, 'loading');
+          }
+          writeOsmGroupCache(groupCache);
+
+          if (failed.length) {
+            scheduleOsmRetry(failed);
+            const staleNote = usedCacheFor.length ? ` (versione salvata per: ${usedCacheFor.join(', ')})` : '';
+            setStatus(`Dati non aggiornati per: ${failed.join(', ')}${staleNote}. Nuovo tentativo in corso…`, 'error', 5000);
           } else {
-            data = { elements: mergedElements };
-            writeOsmCache(data);
             cancelOsmRetry();
-            if (failed.length) {
-              setStatus(`Alcuni dati non disponibili (${failed.join(', ')}), mostro il resto`, 'error', 4500);
-            }
           }
         }
-        if (usedStaleFallback) scheduleOsmRetry();
+
+        if (mergedElements.length === 0) {
+          throw new Error('Nessun dato OSM disponibile (rete/Overpass irraggiungibile e nessuna cache salvata)');
+        }
+        const data = { elements: mergedElements };
 
         Object.values(layers).forEach(layer => layer.clearLayers());
         const geojson = osmtogeojson(data);
@@ -3386,15 +3411,18 @@
         });
 
         lucide.createIcons();
-        if (isBackgroundRetry) {
-          setStatus(`Dati aggiornati (${geojson.features.length} elementi)`, 'success', 3000);
-        } else if (!usedStaleFallback) {
-          setStatus(`${geojson.features.length} elementi caricati${fromCache ? ' (cache)' : ''}`, 'success', 3000);
+        if (failed.length === 0) {
+          setStatus(
+            isBackgroundRetry
+              ? `Dati aggiornati (${geojson.features.length} elementi)`
+              : `${geojson.features.length} elementi caricati`,
+            'success', 3000
+          );
         }
       } catch (err) {
         console.error(err);
         if (!isBackgroundRetry) setStatus('Errore caricamento dati', 'error', 4500);
-        scheduleOsmRetry();
+        scheduleOsmRetry(QUERY_GROUPS.map(g => g.name));
       } finally {
         document.getElementById('refreshBtn').classList.remove('spinning');
       }
