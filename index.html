@@ -3206,29 +3206,31 @@
         let usedStaleFallback = false;
         if (!data) {
           if (!isBackgroundRetry) setStatus(`Caricamento dati… (0/${QUERY_GROUPS.length} gruppi)`, 'loading');
-          let done = 0;
-          const results = await Promise.allSettled(QUERY_GROUPS.map(async g => {
-            const elements = (await fetchOverpass(g.ql)).elements || [];
-            done++;
-            if (!isBackgroundRetry) setStatus(`Caricamento dati… (${done}/${QUERY_GROUPS.length} gruppi)`, 'loading');
-            return { name: g.name, elements };
-          }));
-
+          // Gruppi interrogati IN SEQUENZA (non tutti insieme): i mirror
+          // Overpass pubblici limitano severamente le richieste concorrenti
+          // per IP, e 4 gruppi in parallelo (ognuno già in gara su 5 mirror)
+          // significavano fino a 20 connessioni simultanee agli stessi pochi
+          // server, che finivano per essere rate-limitati/rifiutati tutti
+          // insieme. Un gruppo alla volta è più lento ma molto più affidabile.
           const failed = [];
           const seen = new Set();
           const mergedElements = [];
-          results.forEach((r, i) => {
-            if (r.status === 'fulfilled') {
-              r.value.elements.forEach(el => {
+          let done = 0;
+          for (const g of QUERY_GROUPS) {
+            try {
+              const elements = (await fetchOverpass(g.ql)).elements || [];
+              elements.forEach(el => {
                 const key = `${el.type}/${el.id}`;
                 if (seen.has(key)) return; // dedup di sicurezza tra gruppi
                 seen.add(key);
                 mergedElements.push(el);
               });
-            } else {
-              failed.push(QUERY_GROUPS[i].name);
+            } catch (err) {
+              failed.push(g.name);
             }
-          });
+            done++;
+            if (!isBackgroundRetry) setStatus(`Caricamento dati… (${done}/${QUERY_GROUPS.length} gruppi)`, 'loading');
+          }
 
           if (mergedElements.length === 0) {
             // Rete/Overpass irraggiungibili: se c'è una cache anche scaduta
