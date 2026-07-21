@@ -3099,6 +3099,10 @@
     function scheduleOsmRetry(failedGroupNames) {
       if (osmRetryTimer) return; // già in coda un tentativo: non sovrascrivere la lista
       osmLastFailedGroups = failedGroupNames;
+      // Il messaggio d'errore resta un attimo, poi lascia il posto a un
+      // avviso di retry persistente (si aggiorna da solo quando il
+      // prossimo tentativo, riuscito o no, chiama di nuovo setStatus).
+      setTimeout(() => setStatus('Nuovo tentativo in corso…', 'loading', 0), 2500);
       osmRetryTimer = setTimeout(() => {
         osmRetryTimer = null;
         loadData(true, true);
