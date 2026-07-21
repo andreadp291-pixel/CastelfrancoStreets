@@ -3108,90 +3108,94 @@
       // fallire da solo senza bloccare gli altri. Più veloce (query più
       // piccole = meno timeout) e più resiliente (un gruppo giù non fa
       // sparire tutta la mappa).
-      const AREA_DECL = 'area["name"="Castelfranco Veneto"]->.a;';
+      // Bounding box invece di area["name"=...]: non tutti i mirror Overpass
+      // hanno l'indice delle aree aggiornato/costruito per questo nome, quindi
+      // una query per area può "riuscire" (200 OK) su un mirror ma tornare 0
+      // risultati. Il bbox funziona in modo identico e affidabile ovunque.
+      const OSM_BBOX = '45.6230,11.8730,45.7020,12.0020';
       const QUERY_GROUPS = [
         {
           name: 'strade',
-          ql: `[out:json][timeout:40];${AREA_DECL}(
-            way["highway"="proposed"](area.a);
-            way["highway"="construction"](area.a);
-            way["highway"="cycleway"](area.a);
-            way["cycleway"](area.a);
-            way["highway"~"^(footway|path|pedestrian|steps|bridleway)$"](area.a);
-            way["footway"="crossing"](area.a);
-            way["cycleway"="crossing"](area.a);
-            way["highway"="crossing"](area.a);
-            way["crossing"](area.a);
-            way["highway"]["maxspeed"](area.a);
-            way["highway"]["hgv"](area.a);
-            way["highway"]["hgv:conditional"](area.a);
-            way["highway"]["hgv:national"](area.a);
-            way["highway"]["goods"](area.a);
-            way["highway"]["maxheight"](area.a);
-            way["highway"]["maxweight"](area.a);
-            way["highway"]["maxweight:hgv"](area.a);
-            way["highway"]["maxweight:rating"](area.a);
-            way["highway"]["maxweight:hgv:conditional"](area.a);
-            way["highway"]["maxweigh:hgv"](area.a);
-            way["highway"]["maxweigh:hgv:conditional"](area.a);
-            way["highway"]["maxweigh"](area.a);
-            way["highway"]["maxwidth"](area.a);
-            way["highway"]["maxlength"](area.a);
-            way["highway"]["maxaxleload"](area.a);
-            way["highway"]["hazmat"](area.a);
-            way["highway"]["hazmat:conditional"](area.a);
-            way["highway"]["trailer"](area.a);
-            way["highway"]["trailer:maxweight"](area.a);
-            way["highway"]["hgv:articulated"](area.a);
-            way["highway"]["hgv:articulated:conditional"](area.a);
-            way["ref"~"^(SS|SR|SP|SC)"](area.a);
+          ql: `[out:json][timeout:40][bbox:${OSM_BBOX}];(
+            way["highway"="proposed"];
+            way["highway"="construction"];
+            way["highway"="cycleway"];
+            way["cycleway"];
+            way["highway"~"^(footway|path|pedestrian|steps|bridleway)$"];
+            way["footway"="crossing"];
+            way["cycleway"="crossing"];
+            way["highway"="crossing"];
+            way["crossing"];
+            way["highway"]["maxspeed"];
+            way["highway"]["hgv"];
+            way["highway"]["hgv:conditional"];
+            way["highway"]["hgv:national"];
+            way["highway"]["goods"];
+            way["highway"]["maxheight"];
+            way["highway"]["maxweight"];
+            way["highway"]["maxweight:hgv"];
+            way["highway"]["maxweight:rating"];
+            way["highway"]["maxweight:hgv:conditional"];
+            way["highway"]["maxweigh:hgv"];
+            way["highway"]["maxweigh:hgv:conditional"];
+            way["highway"]["maxweigh"];
+            way["highway"]["maxwidth"];
+            way["highway"]["maxlength"];
+            way["highway"]["maxaxleload"];
+            way["highway"]["hazmat"];
+            way["highway"]["hazmat:conditional"];
+            way["highway"]["trailer"];
+            way["highway"]["trailer:maxweight"];
+            way["highway"]["hgv:articulated"];
+            way["highway"]["hgv:articulated:conditional"];
+            way["ref"~"^(SS|SR|SP|SC)"];
           );out body;>;out skel qt;`
         },
         {
           name: 'segnaletica',
-          ql: `[out:json][timeout:40];${AREA_DECL}(
-            node["traffic_sign"](area.a);
-            node["highway"="stop"](area.a);
-            node["highway"="give_way"](area.a);
-            node["highway"="street_lamp"](area.a);
-            node["highway"="traffic_signals"](area.a);
-            node["highway"="bus_stop"](area.a);
-            node["public_transport"="platform"]["bus"="yes"](area.a);
-            node["amenity"="waste_basket"](area.a);
-            node["man_made"="manhole"](area.a);
-            node["manhole"](area.a);
+          ql: `[out:json][timeout:40][bbox:${OSM_BBOX}];(
+            node["traffic_sign"];
+            node["highway"="stop"];
+            node["highway"="give_way"];
+            node["highway"="street_lamp"];
+            node["highway"="traffic_signals"];
+            node["highway"="bus_stop"];
+            node["public_transport"="platform"]["bus"="yes"];
+            node["amenity"="waste_basket"];
+            node["man_made"="manhole"];
+            node["manhole"];
           )->.pts;
           (
-            node["traffic_sign"](area.a);
-            node["highway"="stop"](area.a);
-            node["highway"="give_way"](area.a);
-            node["highway"="traffic_signals"](area.a);
+            node["traffic_sign"];
+            node["highway"="stop"];
+            node["highway"="give_way"];
+            node["highway"="traffic_signals"];
           )->.signalNodes;
-          way(bn.signalNodes)["highway"](area.a)->.signalWays;
+          way(bn.signalNodes)["highway"]->.signalWays;
           (.pts;.signalWays;);out body;>;out skel qt;`
         },
         {
           name: 'parcheggi',
-          ql: `[out:json][timeout:40];${AREA_DECL}(
-            way["amenity"="parking"](area.a);
-            node["amenity"="parking"](area.a);
-            node["amenity"="parking_space"](area.a);
-            way["amenity"="parking_space"](area.a);
-            node["amenity"="vending_machine"]["vending"="parking_tickets"](area.a);
-            way["amenity"="vending_machine"]["vending"="parking_tickets"](area.a);
-            node["amenity"="bicycle_parking"](area.a);
-            way["amenity"="bicycle_parking"](area.a);
+          ql: `[out:json][timeout:40][bbox:${OSM_BBOX}];(
+            way["amenity"="parking"];
+            node["amenity"="parking"];
+            node["amenity"="parking_space"];
+            way["amenity"="parking_space"];
+            node["amenity"="vending_machine"]["vending"="parking_tickets"];
+            way["amenity"="vending_machine"]["vending"="parking_tickets"];
+            node["amenity"="bicycle_parking"];
+            way["amenity"="bicycle_parking"];
           );out body;>;out skel qt;`
         },
         {
           name: 'natura_servizi',
-          ql: `[out:json][timeout:40];${AREA_DECL}(
-            way["waterway"~"^(river|stream|canal|drain|ditch)$"](area.a);
-            node["amenity"="drinking_water"](area.a);
-            node["man_made"="water_tap"]["drinking_water"](area.a);
-            node["amenity"="bench"](area.a);
-            node["natural"="tree"](area.a);
-            way["natural"="tree_row"](area.a);
+          ql: `[out:json][timeout:40][bbox:${OSM_BBOX}];(
+            way["waterway"~"^(river|stream|canal|drain|ditch)$"];
+            node["amenity"="drinking_water"];
+            node["man_made"="water_tap"]["drinking_water"];
+            node["amenity"="bench"];
+            node["natural"="tree"];
+            way["natural"="tree_row"];
           );out body;>;out skel qt;`
         }
       ];
