@@ -3219,18 +3219,22 @@
       ];
 
       try {
-        // Cache PER GRUPPO: se un gruppo fallisce, quelli già caricati (ora
-        // o in un tentativo precedente) restano visibili. Un retry mirato
-        // ritenta SOLO i gruppi falliti l'ultima volta, non tutti da capo.
+        // Cache PER GRUPPO: una volta che un gruppo è stato caricato con
+        // successo, resta buono per 24h e non viene più richiesto alla rete
+        // finché non scade — anche se un ALTRO gruppo è scaduto o mancante
+        // (prima veniva rifatta la richiesta per tutti e 4 se anche uno solo
+        // non era fresco: sprecava richieste su dati già a posto).
         const groupCache = readOsmGroupCache();
         const now = Date.now();
-        const allFresh = !force && QUERY_GROUPS.every(g => {
-          const c = groupCache[g.name];
+        const isFresh = name => {
+          const c = groupCache[name];
           return c && (now - c.ts) < OSM_CACHE_TTL_MS;
+        };
+        const groupsToFetch = QUERY_GROUPS.filter(g => {
+          if (force) return true; // refresh manuale: rifà sempre tutto
+          if (isBackgroundRetry) return osmLastFailedGroups.includes(g.name); // retry mirato
+          return !isFresh(g.name);
         });
-        const groupsToFetch = (isBackgroundRetry && osmLastFailedGroups.length)
-          ? QUERY_GROUPS.filter(g => osmLastFailedGroups.includes(g.name))
-          : QUERY_GROUPS;
 
         const seen = new Set();
         const mergedElements = [];
@@ -3245,20 +3249,16 @@
           });
         }
 
-        if (allFresh) {
-          QUERY_GROUPS.forEach(g => mergeElements(groupCache[g.name].elements));
-        } else {
-          // Retry mirato: i gruppi non ri-tentati ora mantengono i dati già
-          // in cache (non vengono ributtati via solo perché un altro gruppo
-          // è fallito).
-          if (groupsToFetch.length < QUERY_GROUPS.length) {
-            QUERY_GROUPS.forEach(g => {
-              if (!groupsToFetch.includes(g) && groupCache[g.name]) {
-                mergeElements(groupCache[g.name].elements);
-              }
-            });
+        // I gruppi che non vengono (ri)caricati ora restano con i dati già
+        // in cache, qualunque sia il motivo (fresca, o non tra i falliti in
+        // un retry mirato).
+        QUERY_GROUPS.forEach(g => {
+          if (!groupsToFetch.includes(g) && groupCache[g.name]) {
+            mergeElements(groupCache[g.name].elements);
           }
+        });
 
+        if (groupsToFetch.length > 0) {
           // Gruppi interrogati IN SEQUENZA (non tutti insieme): i mirror
           // Overpass pubblici limitano severamente le richieste concorrenti
           // per IP, e più gruppi in parallelo (ognuno già in gara su 5
