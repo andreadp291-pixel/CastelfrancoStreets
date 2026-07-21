@@ -3009,7 +3009,7 @@
     // Cache locale dati OSM (Overpass): evita di rifare la query pesante
     // a ogni apertura/refresh della pagina finché la cache è fresca.
     // ─────────────────────────────────────────────────────────────
-    const OSM_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 ore
+    const OSM_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 ore
 
     // Mirror Overpass pubblici interrogati in parallelo: si usa la prima
     // risposta valida che arriva, le altre richieste vengono abortite.
