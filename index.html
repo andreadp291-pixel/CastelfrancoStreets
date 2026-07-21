@@ -3437,7 +3437,11 @@
         if (!isBackgroundRetry) setStatus('Errore caricamento dati', 'error', 4500);
         scheduleOsmRetry(QUERY_GROUPS.map(g => g.name));
       } finally {
-        document.getElementById('refreshBtn').classList.remove('spinning');
+        // La rotellina resta attiva finché c'è un retry in coda: si ferma
+        // solo a caricamento davvero riuscito (nessun gruppo mancante).
+        if (!osmRetryTimer) {
+          document.getElementById('refreshBtn').classList.remove('spinning');
+        }
       }
     }
 
