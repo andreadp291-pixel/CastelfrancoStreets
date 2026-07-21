@@ -3024,10 +3024,13 @@
     ];
     const OVERPASS_TIMEOUT_MS = 15000;
 
-    async function fetchOverpass(query) {
-      // 1) Tentativo diretto dal browser: corsa fra i mirror, timeout breve
-      // per fallire in fretta se la rete del visitatore li blocca (es. reti
-      // aziendali/mobili che filtrano host esteri).
+    // Se il tentativo diretto ai mirror fallisce una volta nella sessione
+    // (es. rete che li blocca del tutto), è quasi certo che fallirà anche
+    // per i gruppi successivi: si salta direttamente al proxy per non
+    // sprecare ~15s di timeout ad ogni singolo gruppo.
+    let directOverpassBlocked = false;
+
+    async function fetchOverpassDirect(query) {
       const controllers = OVERPASS_MIRRORS.map(() => new AbortController());
       const requests = OVERPASS_MIRRORS.map((url, i) => {
         const timer = setTimeout(() => controllers[i].abort(), OVERPASS_TIMEOUT_MS);
@@ -3039,19 +3042,29 @@
           .then(res => { if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`); return res.json(); })
           .finally(() => clearTimeout(timer));
       });
+      const data = await Promise.any(requests);
+      controllers.forEach(c => c.abort());
+      return data;
+    }
+
+    async function fetchOverpassViaProxy(query) {
+      // Fallback: proxy sul Raspberry, che rilancia la query server-side
+      // (raggiunge Overpass anche quando il browser del visitatore non ci riesce).
+      const res = await fetch(API_BASE + '/api/overpass', {
+        method: 'POST',
+        body: 'data=' + encodeURIComponent(query)
+      });
+      if (!res.ok) throw new Error(`Proxy Overpass: HTTP ${res.status}`);
+      return res.json();
+    }
+
+    async function fetchOverpass(query) {
+      if (directOverpassBlocked) return fetchOverpassViaProxy(query);
       try {
-        const data = await Promise.any(requests);
-        controllers.forEach(c => c.abort());
-        return data;
+        return await fetchOverpassDirect(query);
       } catch (directErr) {
-        // 2) Fallback: proxy sul Raspberry, che rilancia la query server-side
-        // (raggiunge Overpass anche quando il browser del visitatore non ci riesce).
-        const res = await fetch(API_BASE + '/api/overpass', {
-          method: 'POST',
-          body: 'data=' + encodeURIComponent(query)
-        });
-        if (!res.ok) throw new Error(`Proxy Overpass: HTTP ${res.status}`);
-        return res.json();
+        directOverpassBlocked = true;
+        return fetchOverpassViaProxy(query);
       }
     }
 
