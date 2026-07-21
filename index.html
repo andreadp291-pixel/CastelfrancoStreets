@@ -3082,17 +3082,15 @@
     }
 
     // ─── Retry automatico in background se il caricamento fallisce ───
-    // Backoff esponenziale (15s, 30s, 1m, 2m... fino a un tetto di 5 min):
-    // ritenta SOLO i gruppi che sono falliti l'ultima volta; appena
-    // riescono, i dati mostrati vengono sostituiti in silenzio.
-    const OSM_RETRY_INITIAL_MS = 15000;
-    const OSM_RETRY_MAX_MS = 5 * 60 * 1000;
+    // Intervallo costante (ogni 15s, senza rallentare nel tempo) finché non
+    // riesce: ritenta SOLO i gruppi falliti l'ultima volta (non tutto da
+    // capo), quindi il carico resta contenuto anche ritentando spesso.
+    // Appena riescono, i dati mostrati vengono sostituiti in silenzio.
+    const OSM_RETRY_INTERVAL_MS = 15000;
     let osmRetryTimer = null;
-    let osmRetryDelay = OSM_RETRY_INITIAL_MS;
     let osmLastFailedGroups = [];
     function cancelOsmRetry() {
       if (osmRetryTimer) { clearTimeout(osmRetryTimer); osmRetryTimer = null; }
-      osmRetryDelay = OSM_RETRY_INITIAL_MS;
       osmLastFailedGroups = [];
     }
     function scheduleOsmRetry(failedGroupNames) {
@@ -3101,8 +3099,7 @@
       osmRetryTimer = setTimeout(() => {
         osmRetryTimer = null;
         loadData(true, true);
-      }, osmRetryDelay);
-      osmRetryDelay = Math.min(osmRetryDelay * 2, OSM_RETRY_MAX_MS);
+      }, OSM_RETRY_INTERVAL_MS);
     }
 
     // ─────────────────────────────────────────────────────────────
