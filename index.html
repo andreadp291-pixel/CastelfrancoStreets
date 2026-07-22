@@ -3298,7 +3298,11 @@
         }
         const data = { elements: mergedElements };
 
-        Object.values(layers).forEach(layer => layer.clearLayers());
+        // segnalazioni escluso: non viene popolato da Overpass ma da loadReports(),
+        // ricaricarlo qui lo svuoterebbe senza mai ripopolarlo.
+        Object.entries(layers).forEach(([name, layer]) => {
+          if (name !== 'segnalazioni') layer.clearLayers();
+        });
         const geojson = osmtogeojson(data);
         const wayBearingIndex = buildWayBearingIndex(data);
 
