@@ -3159,7 +3159,11 @@
       { key: 'strade', label: 'Strade' },
       { key: 'segnaletica', label: 'Segnaletica' },
       { key: 'parcheggi', label: 'Parcheggi' },
-      { key: 'natura_servizi', label: 'Natura e servizi' }
+      { key: 'natura_servizi', label: 'Natura e servizi' },
+      // Non è un gruppo Overpass: è il layer Proposte civiche, caricato dal
+      // backend Raspberry (loadReports()). Colonna a parte, stessa tabella:
+      // solo la riga "Backend Raspberry" avrà celle valorizzate per questa.
+      { key: 'proposte', label: 'Proposte' }
     ];
 
     function shortOverpassLabel(url) {
@@ -3167,7 +3171,7 @@
     }
 
     function osmDiagServiceLabels() {
-      return [...OVERPASS_MIRRORS.map(shortOverpassLabel), 'Proxy Raspberry'];
+      return [...OVERPASS_MIRRORS.map(shortOverpassLabel), 'Proxy Raspberry', 'Backend Raspberry'];
     }
 
     // Stato dell'ultimo tentativo reale per servizio+gruppo, persiste tra
@@ -3210,8 +3214,9 @@
         const labels = OSM_DIAG_GROUPS.filter(g => osmDiagCacheGroups.has(g.key)).map(g => g.label);
         return { text: `⚠️ Nessun servizio raggiungibile: uso dati da cache locale per ${labels.join(', ')}`, variant: 'warning' };
       }
-      const cache = readOsmGroupCache();
-      const readyLabels = OSM_DIAG_GROUPS.filter(g => cache[g.key]).map(g => g.label);
+      const osmCache = readOsmGroupCache();
+      const groupHasCache = key => key === 'proposte' ? !!readReportsCache() : !!osmCache[key];
+      const readyLabels = OSM_DIAG_GROUPS.filter(g => groupHasCache(g.key)).map(g => g.label);
       if (readyLabels.length > 0) {
         return { text: `🗂️ Cache locale pronta all'uso (non in uso ora) per ${readyLabels.join(', ')}`, variant: 'ready' };
       }
@@ -3300,6 +3305,18 @@
     }
     function writeOsmGroupCache(cache) {
       try { localStorage.setItem(OSM_GROUP_CACHE_KEY, JSON.stringify(cache)); }
+      catch (err) { /* quota piena o storage non disponibile, non bloccante */ }
+    }
+
+    // Cache locale delle proposte civiche: stesso principio della cache OSM
+    // per gruppo, ma per l'unico endpoint /api/reports sul backend Raspberry.
+    const REPORTS_CACHE_KEY = 'reportsCache_v1';
+    function readReportsCache() {
+      try { return JSON.parse(localStorage.getItem(REPORTS_CACHE_KEY)) || null; }
+      catch (err) { return null; }
+    }
+    function writeReportsCache(reports) {
+      try { localStorage.setItem(REPORTS_CACHE_KEY, JSON.stringify(reports)); }
       catch (err) { /* quota piena o storage non disponibile, non bloccante */ }
     }
 
@@ -4189,12 +4206,26 @@ setTimeout(() => {
     }
 
     async function loadReports() {
+      reportOsmDiagStatus('Backend Raspberry', 'proposte', 'loading');
       try {
         const res = await apiFetch('/api/reports');
-        if (!res.ok) return;
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         allReportsCache = await res.json();
+        writeReportsCache(allReportsCache);
+        reportOsmDiagCache('proposte', false);
+        reportOsmDiagStatus('Backend Raspberry', 'proposte', 'success');
         renderReportMarkers();
-      } catch (err) { /* gestito da apiFetch */ }
+      } catch (err) {
+        reportOsmDiagStatus('Backend Raspberry', 'proposte', 'failed');
+        // Backend irraggiungibile: mostra l'ultima versione salvata, se c'è,
+        // invece di lasciare il layer vuoto.
+        const cached = readReportsCache();
+        if (cached) {
+          allReportsCache = cached;
+          reportOsmDiagCache('proposte', true);
+          renderReportMarkers();
+        }
+      }
     }
 
     async function openReportDetail(id) {
