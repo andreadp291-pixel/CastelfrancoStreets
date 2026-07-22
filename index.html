@@ -3090,14 +3090,24 @@
     // (es. rete che li blocca del tutto), è quasi certo che fallirà anche
     // per i gruppi successivi: si salta direttamente al proxy per non
     // sprecare ~15s di timeout ad ogni singolo gruppo.
-    let directOverpassBlocked = false;
-    // Il flag non deve restare bloccato per sempre: un blackout di rete
-    // anche breve, senza reset, condannerebbe l'app al solo proxy per il
-    // resto della sessione anche dopo che i mirror diretti sono tornati
-    // raggiungibili. Si resetta alla riconnessione (evento 'online') e ad
-    // ogni refresh manuale forzato dall'utente (già un "riprova tutto da
-    // capo" esplicito, vedi loadData).
-    window.addEventListener('online', () => { directOverpassBlocked = false; });
+    //
+    // Scadenza a tempo, non un semplice booleano: un booleano azzerato solo
+    // sull'evento 'online' resta bloccato per sempre se quell'evento non
+    // scatta (successo in CastelSafe con un test reale di disconnessione/
+    // riconnessione — non è affidabile in tutti i casi). Con la scadenza,
+    // anche senza alcun segnale esterno i mirror diretti vengono ritentati
+    // da soli dopo il cooldown. 'online' e il refresh manuale restano come
+    // ACCELERATORI (azzerano subito), non come unico meccanismo — altrimenti
+    // c'è anche un effetto collaterale non ovvio: con il proxy sempre
+    // attivo i mirror diretti non vengono più interrogati affatto, quindi le
+    // loro celle di stato nella tabella restano congelate su "fallito" (X)
+    // per sempre, dando la falsa impressione che pure il fallback su cache
+    // non funzioni.
+    const OSM_DIRECT_RETRY_COOLDOWN_MS = 45 * 1000;
+    let osmDirectBlockedUntil = 0;
+    function isOsmDirectBlocked() { return Date.now() < osmDirectBlockedUntil; }
+    function resetOsmDirectBlocked() { osmDirectBlockedUntil = 0; }
+    window.addEventListener('online', resetOsmDirectBlocked);
 
     // groupKey (facoltativo) identifica il gruppo QUERY_GROUPS per cui si sta
     // interrogando Overpass: se presente, ogni tentativo (per-mirror e poi
@@ -3150,11 +3160,11 @@
     }
 
     async function fetchOverpass(query, groupKey) {
-      if (directOverpassBlocked) return fetchOverpassViaProxy(query, groupKey);
+      if (isOsmDirectBlocked()) return fetchOverpassViaProxy(query, groupKey);
       try {
         return await fetchOverpassDirect(query, groupKey);
       } catch (directErr) {
-        directOverpassBlocked = true;
+        osmDirectBlockedUntil = Date.now() + OSM_DIRECT_RETRY_COOLDOWN_MS;
         return fetchOverpassViaProxy(query, groupKey);
       }
     }
@@ -3202,9 +3212,6 @@
       if (!osmDiagPanelEl) return;
       const cell = osmDiagPanelEl.querySelector(`.osm-diag-cell[data-service="${serviceLabel}"][data-group="${groupKey}"]`);
       if (cell) cell.innerHTML = osmDiagIconHtml(state);
-      // Un fetch appena concluso (successo o fallimento) può aver cambiato
-      // cosa c'è in cache: riallinea i badge R/— aperti in questo momento.
-      renderOsmDiagCacheCells();
     }
 
     function osmDiagIconHtml(state) {
@@ -3220,32 +3227,59 @@
       return '';
     }
 
-    // Badge cache: SOLO due stati, "R" (un dato è pronto in cache, per
-    // qualunque motivo sia finito lì: fetch appena riuscito, fallback in
-    // uso ora, o semplicemente rimasto da una sessione precedente) oppure
-    // "—" (nessun dato). Niente terzo stato "in uso": si è rivelato in
-    // pratica ridondante col ✓ della colonna Server e confondeva i due
-    // significati. Lettura sempre diretta dallo storage (mai un flag in
-    // memoria), quindi riflette anche una cache già presente all'apertura
-    // del pannello senza che sia ancora partito alcun fetch in sessione —
-    // e ignora volutamente il TTL: una cache "scaduta" resta comunque un
-    // paracadute valido da segnalare come disponibile.
-    function osmDiagCacheReady(groupKey) {
-      if (groupKey === 'proposte') return !!readReportsCache();
-      return !!readOsmGroupCache()[groupKey];
+    // Badge cache: TRE visualizzazioni, non due — qui in CastelSafe abbiamo
+    // sbagliato due volte prima di arrivare a questa:
+    // 1° tentativo: badge "in uso" testuale separato + "R" per pronta —
+    //    troppi stati, confuso.
+    // 2° tentativo (overcorrection): sempre e solo "R" quando la cache ha un
+    //    dato, mai una spunta — un test reale offline ha mostrato che così,
+    //    quando la cache è DAVVERO in uso (niente rete), l'utente vede solo
+    //    "R" e non capisce che sta guardando dati salvati e non freschi.
+    // Soluzione: riusa la STESSA icona di successo (spunta verde) della
+    // colonna Server per "cache in uso ora" — semanticamente corretto
+    // ("sta funzionando, anche se tramite cache") — e riserva "R" al caso
+    // neutro "pronta ma non in uso in questo momento".
+    //   used  = true SOLO mentre il fallback su cache è quello effettivamente
+    //           mostrato in questo momento (fetch reale fallito).
+    //   ready = esiste un dato in cache, in uso o no (per fetch riuscito ora
+    //           O per una cache già presente da una sessione precedente).
+    const osmCacheState = {}; // { [groupKey]: { used, ready } }
+
+    function reportOsmCache(groupKey, patch) {
+      const cur = osmCacheState[groupKey] || { used: false, ready: false };
+      osmCacheState[groupKey] = { ...cur, ...patch };
+      renderOsmDiagCacheCell(groupKey);
     }
 
-    function osmDiagCacheCellHtml(groupKey) {
-      return osmDiagCacheReady(groupKey)
-        ? '<span class="osm-diag-cache-r" title="Dato disponibile in cache locale">R</span>'
-        : '<span class="osm-diag-cache-dash">—</span>';
+    function osmDiagCacheHtml(groupKey) {
+      const s = osmCacheState[groupKey] || { used: false, ready: false };
+      if (s.used) return osmDiagIconHtml('success'); // stessa spunta della colonna Server
+      if (s.ready) return '<span class="osm-diag-cache-r" title="Dato disponibile in cache locale, non in uso ora">R</span>';
+      return '<span class="osm-diag-cache-dash">—</span>';
     }
 
-    function renderOsmDiagCacheCells() {
+    function renderOsmDiagCacheCell(groupKey) {
       if (!osmDiagPanelEl) return;
-      [...OSM_DIAG_GROUPS, ...SERVER_DIAG_ROWS].forEach(g => {
-        const cell = osmDiagPanelEl.querySelector(`.osm-diag-cache-cell[data-group="${g.key}"]`);
-        if (cell) cell.innerHTML = osmDiagCacheCellHtml(g.key);
+      const cell = osmDiagPanelEl.querySelector(`.osm-diag-cache-cell[data-group="${groupKey}"]`);
+      if (cell) cell.innerHTML = osmDiagCacheHtml(groupKey);
+    }
+
+    // Da chiamare PRIMA di disegnare il pannello: legge (ignorando il TTL,
+    // vedi osmCacheGetStale più sotto) le cache già presenti su disco e
+    // aggiorna "ready" di conseguenza — copre il caso "l'app è aperta da
+    // prima, la cache esiste già, ma nessun fetch è ancora partito in
+    // questa sessione" (facile da dimenticare, altrimenti mostrerebbe "—"
+    // pur avendo un fallback pronto). Non tocca "used": quello riflette solo
+    // un fallback avvenuto DAVVERO in questa sessione.
+    function refreshCacheReadyState() {
+      const osmCache = osmCacheGetStale();
+      OSM_DIAG_GROUPS.forEach(g => {
+        const cur = osmCacheState[g.key] || { used: false, ready: false };
+        osmCacheState[g.key] = { ...cur, ready: !!osmCache[g.key] };
+      });
+      SERVER_DIAG_ROWS.forEach(r => {
+        const cur = osmCacheState[r.key] || { used: false, ready: false };
+        osmCacheState[r.key] = { ...cur, ready: !!readReportsCache() };
       });
     }
 
@@ -3260,10 +3294,11 @@
     function openOsmDiagPanel() {
       closeOsmDiagPanel();
       const labels = osmDiagServiceLabels();
-      // Le celle cache leggono direttamente localStorage (sincrono), quindi
-      // il markup qui sotto è già "il controllo su disco fatto prima di
-      // disegnare": nessun passaggio async separato serve, a differenza di
-      // uno storage asincrono (es. IndexedDB) dove andrebbe atteso prima.
+      // Prima di disegnare: allinea "ready" alle cache già presenti su
+      // disco, anche se in questa sessione non è ancora partito alcun
+      // fetch (storage sincrono qui, quindi nessun await necessario — ma
+      // la sequenza logica "leggi lo stato, poi disegna" è la stessa).
+      refreshCacheReadyState();
 
       osmDiagBackdropEl = document.createElement('div');
       osmDiagBackdropEl.id = 'osm-diag-backdrop';
@@ -3296,7 +3331,7 @@
               `).join('')}
               <tr class="osm-diag-cache-row">
                 <td class="osm-diag-service">Cache</td>
-                ${OSM_DIAG_GROUPS.map(g => `<td class="osm-diag-cache-cell" data-group="${g.key}">${osmDiagCacheCellHtml(g.key)}</td>`).join('')}
+                ${OSM_DIAG_GROUPS.map(g => `<td class="osm-diag-cache-cell" data-group="${g.key}">${osmDiagCacheHtml(g.key)}</td>`).join('')}
               </tr>
             </tbody>
           </table>
@@ -3313,7 +3348,7 @@
                 <tr>
                   <td class="osm-diag-service">${r.label}</td>
                   <td class="osm-diag-cell" data-service="${SERVER_DIAG_SERVICE}" data-group="${r.key}">${osmDiagIconHtml(osmDiagState[SERVER_DIAG_SERVICE]?.[r.key])}</td>
-                  <td class="osm-diag-cache-cell" data-group="${r.key}">${osmDiagCacheCellHtml(r.key)}</td>
+                  <td class="osm-diag-cache-cell" data-group="${r.key}">${osmDiagCacheHtml(r.key)}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -3342,6 +3377,15 @@
     function readOsmGroupCache() {
       try { return JSON.parse(localStorage.getItem(OSM_GROUP_CACHE_KEY)) || {}; }
       catch (err) { return {}; }
+    }
+    // Alias esplicito: il TTL (OSM_CACHE_TTL_MS) è già applicato solo in
+    // isFresh() per decidere se ri-fetchare, MAI qui in lettura — quindi
+    // questa è già una lettura "stale-tolerant". Nome a parte così il
+    // fallback finale (gruppo fallito, o badge "pronta" nel pannello
+    // diagnostico) dichiara esplicitamente di volere il dato anche scaduto,
+    // invece di dipendere implicitamente da un dettaglio di readOsmGroupCache.
+    function osmCacheGetStale() {
+      return readOsmGroupCache();
     }
     function writeOsmGroupCache(cache) {
       try { localStorage.setItem(OSM_GROUP_CACHE_KEY, JSON.stringify(cache)); }
@@ -3393,7 +3437,7 @@
       // background): segnale esplicito "riprova tutto da capo", non deve
       // restare vincolato alla scorciatoia "salta i mirror diretti" presa
       // magari minuti fa per un blackout di rete nel frattempo rientrato.
-      if (force && !isBackgroundRetry) directOverpassBlocked = false;
+      if (force && !isBackgroundRetry) resetOsmDirectBlocked();
       document.getElementById('refreshBtn').classList.add('spinning');
       if (!isBackgroundRetry) setStatus('Caricamento dati…', 'loading');
 
@@ -3552,19 +3596,20 @@
               const elements = (await fetchOverpass(g.ql, g.name)).elements || [];
               groupCache[g.name] = { ts: Date.now(), elements };
               mergeElements(elements);
+              reportOsmCache(g.name, { used: false, ready: true });
             } catch (err) {
               failed.push(g.name);
               const cached = groupCache[g.name];
               if (cached) {
                 usedCacheFor.push(g.name);
                 mergeElements(cached.elements);
+                reportOsmCache(g.name, { used: true, ready: true });
               }
             }
             done++;
             if (!isBackgroundRetry) setStatus(`Caricamento dati… (${done}/${groupsToFetch.length} gruppi)`, 'loading');
           }
           writeOsmGroupCache(groupCache);
-          renderOsmDiagCacheCells();
 
           if (failed.length) {
             scheduleOsmRetry(failed);
@@ -4256,6 +4301,7 @@ setTimeout(() => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         allReportsCache = await res.json();
         writeReportsCache(allReportsCache);
+        reportOsmCache('proposte', { used: false, ready: true });
         reportOsmDiagStatus(SERVER_DIAG_SERVICE, 'proposte', 'success');
         renderReportMarkers();
       } catch (err) {
@@ -4265,6 +4311,7 @@ setTimeout(() => {
         const cached = readReportsCache();
         if (cached) {
           allReportsCache = cached;
+          reportOsmCache('proposte', { used: true, ready: true });
           renderReportMarkers();
         }
       }
