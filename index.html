@@ -100,6 +100,49 @@
     .ctrl-btn.gps-loading svg { animation: gpsPulse 1.1s ease-in-out infinite; color: var(--primary); }
     @keyframes gpsPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.8); } }
 
+    /* ─── PANNELLO DIAGNOSTICA OSM (pressione prolungata su refresh) ─── */
+    #osm-diag-backdrop {
+      position: fixed; inset: 0; z-index: 100000;
+      background: rgba(15, 23, 42, 0.45);
+    }
+    #osm-diag-panel {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      z-index: 100001;
+      background: #fff; border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px; max-width: calc(100vw - 32px); max-height: calc(100vh - 32px);
+      overflow: auto; font-family: 'Inter', system-ui, sans-serif;
+    }
+    .osm-diag-header {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      margin-bottom: 12px; font-weight: 800; font-size: 0.92rem; color: var(--text-main);
+    }
+    .osm-diag-close {
+      background: #f1f5f9; border: none; border-radius: 50%;
+      width: 28px; height: 28px; cursor: pointer; font-size: 0.85rem;
+      color: #64748b; flex-shrink: 0;
+    }
+    .osm-diag-table-wrap { overflow-x: auto; }
+    .osm-diag-table { border-collapse: collapse; }
+    .osm-diag-table th, .osm-diag-table td {
+      border: 1px solid #e2e8f0; padding: 6px 8px; text-align: center;
+    }
+    .osm-diag-table td.osm-diag-service {
+      text-align: left; white-space: nowrap; font-size: 0.76rem;
+      font-weight: 600; color: var(--text-main);
+    }
+    .osm-diag-table th span {
+      writing-mode: vertical-rl; transform: rotate(180deg);
+      font-size: 0.7rem; font-weight: 700; color: #64748b; white-space: nowrap;
+    }
+    .osm-diag-cell { width: 40px; height: 34px; }
+    .osm-diag-spin { animation: spin .8s linear infinite; transform-origin: center; }
+    .osm-diag-run-btn {
+      margin-top: 14px; width: 100%; padding: 10px; border: none; border-radius: 10px;
+      background: var(--primary); color: #fff; font-weight: 700; cursor: pointer; font-size: 0.85rem;
+    }
+    .osm-diag-run-btn:active { transform: scale(0.98); }
+
     /* ─── CONTROLLI LEAFLET ─── */
     /* ─── LAYERS PANEL ─── */
     #layersPanel {
@@ -3033,42 +3076,168 @@
     // sprecare ~15s di timeout ad ogni singolo gruppo.
     let directOverpassBlocked = false;
 
-    async function fetchOverpassDirect(query) {
+    // groupKey (facoltativo) identifica il gruppo QUERY_GROUPS per cui si sta
+    // interrogando Overpass: se presente, ogni tentativo (per-mirror e poi
+    // proxy) aggiorna lo stato mostrato dal pannello diagnostico (vedi sotto),
+    // riflettendo il caricamento REALE invece di una query di test a parte.
+    async function fetchOverpassDirect(query, groupKey) {
       const controllers = OVERPASS_MIRRORS.map(() => new AbortController());
       const requests = OVERPASS_MIRRORS.map((url, i) => {
-        const timer = setTimeout(() => controllers[i].abort(), OVERPASS_TIMEOUT_MS);
+        const label = shortOverpassLabel(url);
+        reportOsmDiagStatus(label, groupKey, 'loading');
+        // Segnale di timeout separato dal controller "nostro": così sappiamo
+        // distinguere un mirror che ha perso la gara (abortito da noi dopo
+        // che un altro ha già risposto, non un vero fallimento) da un mirror
+        // che è scaduto per davvero (controllers[i].signal.aborted resta
+        // false in quel caso, solo il timeout è scattato).
         return fetch(url, {
           method: 'POST',
           body: 'data=' + encodeURIComponent(query),
-          signal: controllers[i].signal
+          signal: AbortSignal.any([controllers[i].signal, AbortSignal.timeout(OVERPASS_TIMEOUT_MS)])
         })
           .then(res => { if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`); return res.json(); })
-          .finally(() => clearTimeout(timer));
+          .then(data => { reportOsmDiagStatus(label, groupKey, 'success'); return data; })
+          .catch(err => {
+            reportOsmDiagStatus(label, groupKey, controllers[i].signal.aborted ? 'idle' : 'failed');
+            throw err;
+          });
       });
       const data = await Promise.any(requests);
       controllers.forEach(c => c.abort());
       return data;
     }
 
-    async function fetchOverpassViaProxy(query) {
+    async function fetchOverpassViaProxy(query, groupKey) {
       // Fallback: proxy sul Raspberry, che rilancia la query server-side
       // (raggiunge Overpass anche quando il browser del visitatore non ci riesce).
-      const res = await fetch(API_BASE + '/api/overpass', {
-        method: 'POST',
-        body: 'data=' + encodeURIComponent(query)
-      });
-      if (!res.ok) throw new Error(`Proxy Overpass: HTTP ${res.status}`);
-      return res.json();
+      reportOsmDiagStatus('Proxy Raspberry', groupKey, 'loading');
+      try {
+        const res = await fetch(API_BASE + '/api/overpass', {
+          method: 'POST',
+          body: 'data=' + encodeURIComponent(query)
+        });
+        if (!res.ok) throw new Error(`Proxy Overpass: HTTP ${res.status}`);
+        const data = await res.json();
+        reportOsmDiagStatus('Proxy Raspberry', groupKey, 'success');
+        return data;
+      } catch (err) {
+        reportOsmDiagStatus('Proxy Raspberry', groupKey, 'failed');
+        throw err;
+      }
     }
 
-    async function fetchOverpass(query) {
-      if (directOverpassBlocked) return fetchOverpassViaProxy(query);
+    async function fetchOverpass(query, groupKey) {
+      if (directOverpassBlocked) return fetchOverpassViaProxy(query, groupKey);
       try {
-        return await fetchOverpassDirect(query);
+        return await fetchOverpassDirect(query, groupKey);
       } catch (directErr) {
         directOverpassBlocked = true;
-        return fetchOverpassViaProxy(query);
+        return fetchOverpassViaProxy(query, groupKey);
       }
+    }
+
+    // ── DIAGNOSTICA OSM (tenendo premuto il pulsante "Aggiorna") ──────────
+    // Lo stato mostrato nel pannello rispecchia il caricamento REALE:
+    // fetchOverpassDirect/fetchOverpassViaProxy (usate dal normale loadData)
+    // chiamano reportOsmDiagStatus() ad ogni tentativo, quindi la tabella
+    // riflette esattamente cosa succede quando l'app carica davvero i dati,
+    // non una query separata di test.
+    const OSM_DIAG_GROUPS = [
+      { key: 'strade', label: 'Strade' },
+      { key: 'segnaletica', label: 'Segnaletica' },
+      { key: 'parcheggi', label: 'Parcheggi' },
+      { key: 'natura_servizi', label: 'Natura e servizi' }
+    ];
+
+    function shortOverpassLabel(url) {
+      try { return new URL(url).hostname.replace(/^overpass\./, ''); } catch { return url; }
+    }
+
+    function osmDiagServiceLabels() {
+      return [...OVERPASS_MIRRORS.map(shortOverpassLabel), 'Proxy Raspberry'];
+    }
+
+    // Stato dell'ultimo tentativo reale per servizio+gruppo, persiste tra
+    // un'apertura e l'altra del pannello (così mostra subito l'ultimo esito
+    // noto, anche se il pannello viene aperto senza premere "Aggiorna ora").
+    const osmDiagState = {};
+
+    function reportOsmDiagStatus(serviceLabel, groupKey, state) {
+      if (!groupKey) return;
+      if (!osmDiagState[serviceLabel]) osmDiagState[serviceLabel] = {};
+      osmDiagState[serviceLabel][groupKey] = state;
+      if (!osmDiagPanelEl) return;
+      const cell = osmDiagPanelEl.querySelector(`.osm-diag-cell[data-service="${serviceLabel}"][data-group="${groupKey}"]`);
+      if (cell) cell.innerHTML = osmDiagIconHtml(state);
+    }
+
+    function osmDiagIconHtml(state) {
+      if (state === 'success') {
+        return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" stroke="#16a34a" stroke-width="1.3" opacity="0.3"/><path d="M6 12.5l4 4 8-9"/></svg>';
+      }
+      if (state === 'failed') {
+        return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" stroke="#dc2626" stroke-width="1.3" opacity="0.3"/><path d="M8.5 8.5l7 7M15.5 8.5l-7 7"/></svg>';
+      }
+      if (state === 'loading') {
+        return '<svg class="osm-diag-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9" stroke-dasharray="40 16"/></svg>';
+      }
+      return '';
+    }
+
+    let osmDiagPanelEl = null;
+    let osmDiagBackdropEl = null;
+
+    function closeOsmDiagPanel() {
+      if (osmDiagPanelEl) { osmDiagPanelEl.remove(); osmDiagPanelEl = null; }
+      if (osmDiagBackdropEl) { osmDiagBackdropEl.remove(); osmDiagBackdropEl = null; }
+    }
+
+    function openOsmDiagPanel() {
+      closeOsmDiagPanel();
+      const labels = osmDiagServiceLabels();
+
+      osmDiagBackdropEl = document.createElement('div');
+      osmDiagBackdropEl.id = 'osm-diag-backdrop';
+      osmDiagBackdropEl.addEventListener('click', closeOsmDiagPanel);
+      document.body.appendChild(osmDiagBackdropEl);
+
+      const panel = document.createElement('div');
+      panel.id = 'osm-diag-panel';
+      panel.innerHTML = `
+        <div class="osm-diag-header">
+          <span>Stato servizi dati OSM</span>
+          <button type="button" class="osm-diag-close" aria-label="Chiudi">✕</button>
+        </div>
+        <div class="osm-diag-table-wrap">
+          <table class="osm-diag-table">
+            <thead>
+              <tr>
+                <th></th>
+                ${OSM_DIAG_GROUPS.map(g => `<th><span>${g.label}</span></th>`).join('')}
+              </tr>
+            </thead>
+            <tbody>
+              ${labels.map(label => `
+                <tr>
+                  <td class="osm-diag-service">${label}</td>
+                  ${OSM_DIAG_GROUPS.map(g => `<td class="osm-diag-cell" data-service="${label}" data-group="${g.key}">${osmDiagIconHtml(osmDiagState[label]?.[g.key])}</td>`).join('')}
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        <button type="button" class="osm-diag-run-btn">Aggiorna ora</button>
+      `;
+      document.body.appendChild(panel);
+      osmDiagPanelEl = panel;
+
+      panel.querySelector('.osm-diag-close').addEventListener('click', closeOsmDiagPanel);
+      // Aggiorna ora = lo stesso refresh reale del pulsante normale: la
+      // tabella si popola osservando i veri tentativi di fetchOverpass*,
+      // non una query di prova a parte.
+      panel.querySelector('.osm-diag-run-btn').addEventListener('click', () => {
+        loadData(true);
+      });
     }
 
     // Cache PER GRUPPO (non un unico blob): se un gruppo fallisce, quelli
@@ -3268,7 +3437,7 @@
           let done = 0;
           for (const g of groupsToFetch) {
             try {
-              const elements = (await fetchOverpass(g.ql)).elements || [];
+              const elements = (await fetchOverpass(g.ql, g.name)).elements || [];
               groupCache[g.name] = { ts: Date.now(), elements };
               mergeElements(elements);
             } catch (err) {
@@ -3461,7 +3630,31 @@ setTimeout(() => {
     // ─────────────────────────────────────────────────────────────
     // Eventi UI
     // ─────────────────────────────────────────────────────────────
-    document.getElementById('refreshBtn').addEventListener('click', () => loadData(true));
+    // Pressione prolungata (~700ms) sul pulsante refresh: apre il pannello
+    // diagnostico invece del refresh normale. Il click "normale" dopo un
+    // rilascio prolungato viene soppresso, altrimenti partirebbe anche il
+    // refresh vero e proprio insieme all'apertura del pannello.
+    const refreshBtnEl = document.getElementById('refreshBtn');
+    let refreshPressTimer = null;
+    let refreshLongPressed = false;
+    const REFRESH_LONG_PRESS_MS = 700;
+    const cancelRefreshPress = () => clearTimeout(refreshPressTimer);
+    refreshBtnEl.addEventListener('pointerdown', () => {
+      refreshLongPressed = false;
+      clearTimeout(refreshPressTimer);
+      refreshPressTimer = setTimeout(() => {
+        refreshLongPressed = true;
+        openOsmDiagPanel();
+      }, REFRESH_LONG_PRESS_MS);
+    });
+    refreshBtnEl.addEventListener('pointerup', cancelRefreshPress);
+    refreshBtnEl.addEventListener('pointerleave', cancelRefreshPress);
+    refreshBtnEl.addEventListener('pointercancel', cancelRefreshPress);
+
+    refreshBtnEl.addEventListener('click', () => {
+      if (refreshLongPressed) { refreshLongPressed = false; return; }
+      loadData(true);
+    });
 
     // ─── Geolocalizzazione ───
     let gpsMarker = null, gpsAccuracyCircle = null;
