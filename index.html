@@ -140,9 +140,10 @@
     .osm-diag-cache-notice:empty { display: none; }
     .osm-diag-cache-notice {
       margin-top: 12px; padding: 8px 10px; border-radius: 8px;
-      background: #fffbeb; border: 1px solid #fde68a; color: #92400e;
       font-size: 0.76rem; font-weight: 600; line-height: 1.4;
     }
+    .osm-diag-cache-notice.warning { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+    .osm-diag-cache-notice.ready   { background: #f0f9ff; border: 1px solid #bae6fd; color: #075985; }
     .osm-diag-run-btn {
       margin-top: 14px; width: 100%; padding: 10px; border: none; border-radius: 10px;
       background: var(--primary); color: #fff; font-weight: 700; cursor: pointer; font-size: 0.85rem;
@@ -3201,10 +3202,26 @@
     // riga di avviso fuori dalla tabella, non è uno stato per-cella.
     const osmDiagCacheGroups = new Set();
 
-    function osmDiagCacheNoticeHtml() {
-      if (osmDiagCacheGroups.size === 0) return '';
-      const labels = OSM_DIAG_GROUPS.filter(g => osmDiagCacheGroups.has(g.key)).map(g => g.label);
-      return `⚠️ Nessun servizio raggiungibile: uso dati da cache locale per ${labels.join(', ')}`;
+    // Se nessun gruppo sta usando la cache come fallback (nessun servizio
+    // fallito), dichiara comunque se una cache locale esiste ed è pronta a
+    // fare da paracadute nel caso servisse — non solo quando è già in uso.
+    function osmDiagCacheNotice() {
+      if (osmDiagCacheGroups.size > 0) {
+        const labels = OSM_DIAG_GROUPS.filter(g => osmDiagCacheGroups.has(g.key)).map(g => g.label);
+        return { text: `⚠️ Nessun servizio raggiungibile: uso dati da cache locale per ${labels.join(', ')}`, variant: 'warning' };
+      }
+      const cache = readOsmGroupCache();
+      const readyLabels = OSM_DIAG_GROUPS.filter(g => cache[g.key]).map(g => g.label);
+      if (readyLabels.length > 0) {
+        return { text: `🗂️ Cache locale pronta all'uso (non in uso ora) per ${readyLabels.join(', ')}`, variant: 'ready' };
+      }
+      return { text: '', variant: '' };
+    }
+
+    function renderOsmDiagCacheNotice(notice) {
+      const { text, variant } = osmDiagCacheNotice();
+      notice.textContent = text;
+      notice.className = 'osm-diag-cache-notice' + (variant ? ' ' + variant : '');
     }
 
     function reportOsmDiagCache(groupKey, usedCache) {
@@ -3212,7 +3229,7 @@
       else osmDiagCacheGroups.delete(groupKey);
       if (!osmDiagPanelEl) return;
       const notice = osmDiagPanelEl.querySelector('.osm-diag-cache-notice');
-      if (notice) notice.textContent = osmDiagCacheNoticeHtml();
+      if (notice) renderOsmDiagCacheNotice(notice);
     }
 
     let osmDiagPanelEl = null;
@@ -3257,11 +3274,12 @@
             </tbody>
           </table>
         </div>
-        <div class="osm-diag-cache-notice">${osmDiagCacheNoticeHtml()}</div>
+        <div class="osm-diag-cache-notice"></div>
         <button type="button" class="osm-diag-run-btn">Aggiorna ora</button>
       `;
       document.body.appendChild(panel);
       osmDiagPanelEl = panel;
+      renderOsmDiagCacheNotice(panel.querySelector('.osm-diag-cache-notice'));
 
       panel.querySelector('.osm-diag-close').addEventListener('click', closeOsmDiagPanel);
       // Aggiorna ora = lo stesso refresh reale del pulsante normale: la
