@@ -137,6 +137,12 @@
     }
     .osm-diag-cell { width: 40px; height: 34px; }
     .osm-diag-spin { animation: spin .8s linear infinite; transform-origin: center; }
+    .osm-diag-cache-notice:empty { display: none; }
+    .osm-diag-cache-notice {
+      margin-top: 12px; padding: 8px 10px; border-radius: 8px;
+      background: #fffbeb; border: 1px solid #fde68a; color: #92400e;
+      font-size: 0.76rem; font-weight: 600; line-height: 1.4;
+    }
     .osm-diag-run-btn {
       margin-top: 14px; width: 100%; padding: 10px; border: none; border-radius: 10px;
       background: var(--primary); color: #fff; font-weight: 700; cursor: pointer; font-size: 0.85rem;
@@ -3190,6 +3196,25 @@
       return '';
     }
 
+    // Gruppi che, all'ultimo caricamento, sono andati in fallback sulla
+    // cache locale perché TUTTI i servizi (mirror + proxy) sono falliti:
+    // riga di avviso fuori dalla tabella, non è uno stato per-cella.
+    const osmDiagCacheGroups = new Set();
+
+    function osmDiagCacheNoticeHtml() {
+      if (osmDiagCacheGroups.size === 0) return '';
+      const labels = OSM_DIAG_GROUPS.filter(g => osmDiagCacheGroups.has(g.key)).map(g => g.label);
+      return `⚠️ Nessun servizio raggiungibile: uso dati da cache locale per ${labels.join(', ')}`;
+    }
+
+    function reportOsmDiagCache(groupKey, usedCache) {
+      if (usedCache) osmDiagCacheGroups.add(groupKey);
+      else osmDiagCacheGroups.delete(groupKey);
+      if (!osmDiagPanelEl) return;
+      const notice = osmDiagPanelEl.querySelector('.osm-diag-cache-notice');
+      if (notice) notice.textContent = osmDiagCacheNoticeHtml();
+    }
+
     let osmDiagPanelEl = null;
     let osmDiagBackdropEl = null;
 
@@ -3232,6 +3257,7 @@
             </tbody>
           </table>
         </div>
+        <div class="osm-diag-cache-notice">${osmDiagCacheNoticeHtml()}</div>
         <button type="button" class="osm-diag-run-btn">Aggiorna ora</button>
       `;
       document.body.appendChild(panel);
@@ -3446,12 +3472,14 @@
               const elements = (await fetchOverpass(g.ql, g.name)).elements || [];
               groupCache[g.name] = { ts: Date.now(), elements };
               mergeElements(elements);
+              reportOsmDiagCache(g.name, false);
             } catch (err) {
               failed.push(g.name);
               const cached = groupCache[g.name];
               if (cached) {
                 usedCacheFor.push(g.name);
                 mergeElements(cached.elements);
+                reportOsmDiagCache(g.name, true);
               }
             }
             done++;
