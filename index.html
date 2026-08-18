@@ -3295,9 +3295,19 @@
     //   Server (stato fetch) e Cache.
     const OSM_DIAG_GROUPS = [
       { key: 'strade', label: 'Strade' },
-      { key: 'segnaletica', label: 'Segnaletica' },
+      { key: 'segnali', label: 'Segnali' },
+      { key: 'semafori', label: 'Semafori' },
+      { key: 'lampioni', label: 'Lampioni' },
+      { key: 'fermate_bus', label: 'Fermate bus' },
+      { key: 'cestini', label: 'Cestini' },
+      { key: 'tombini', label: 'Tombini' },
       { key: 'parcheggi', label: 'Parcheggi' },
-      { key: 'natura_servizi', label: 'Natura e servizi' }
+      { key: 'parcometri', label: 'Parcometri' },
+      { key: 'parcheggi_bici', label: 'Parcheggi bici' },
+      { key: 'corsi_acqua', label: "Corsi d'acqua" },
+      { key: 'fontanelle', label: 'Fontanelle' },
+      { key: 'panchine', label: 'Panchine' },
+      { key: 'alberi', label: 'Alberi' }
     ];
     const SERVER_DIAG_ROWS = [
       { key: 'proposte', label: 'Proposte civiche' }
@@ -3699,31 +3709,61 @@
             way["ref"~"^(SS|SR|SP|SC)"];
           );out body;>;out skel qt;`
         },
+        // Un gruppo per LAYER (invece del vecchio blocco unico "segnaletica"
+        // con dentro segnali+semafori+lampioni+fermate bus+cestini+tombini):
+        // un mirror che va a scatti o restituisce un risultato parziale su
+        // una query pesante degradava TUTTI i layer bundlati insieme, non
+        // solo quello incriminato. Query singole più leggere = più
+        // resilienti (un layer fallito non trascina giù gli altri) e più
+        // facili da servire per un mirror in difficoltà — a costo di più
+        // richieste sequenziali (vedi il loop più sotto).
         {
-          name: 'segnaletica',
+          name: 'segnali',
           ql: `[out:json][timeout:40][bbox:${OSM_BBOX}];(
             node["traffic_sign"];
             node["highway"="stop"];
             node["highway"="give_way"];
-            node["highway"="street_lamp"];
+          )->.pts;
+          way(bn.pts)["highway"]->.signalWays;
+          (.pts;.signalWays;);out body;>;out skel qt;`
+        },
+        {
+          name: 'semafori',
+          ql: `[out:json][timeout:40][bbox:${OSM_BBOX}];(
             node["highway"="traffic_signals"];
             node["highway"="crossing"]["crossing"="traffic_signals"];
             node["highway"="crossing"]["crossing:signals"="yes"];
             node["railway"="level_crossing"]["crossing:light"="yes"];
-            node["highway"="bus_stop"];
-            node["public_transport"="platform"]["bus"="yes"];
-            node["amenity"="waste_basket"];
-            node["man_made"="manhole"];
-            node["manhole"];
           )->.pts;
-          (
-            node["traffic_sign"];
-            node["highway"="stop"];
-            node["highway"="give_way"];
-            node["highway"="traffic_signals"];
-          )->.signalNodes;
+          (node["highway"="traffic_signals"];)->.signalNodes;
           way(bn.signalNodes)["highway"]->.signalWays;
           (.pts;.signalWays;);out body;>;out skel qt;`
+        },
+        {
+          name: 'lampioni',
+          ql: `[out:json][timeout:40][bbox:${OSM_BBOX}];(
+            node["highway"="street_lamp"];
+          );out body;`
+        },
+        {
+          name: 'fermate_bus',
+          ql: `[out:json][timeout:40][bbox:${OSM_BBOX}];(
+            node["highway"="bus_stop"];
+            node["public_transport"="platform"]["bus"="yes"];
+          );out body;`
+        },
+        {
+          name: 'cestini',
+          ql: `[out:json][timeout:40][bbox:${OSM_BBOX}];(
+            node["amenity"="waste_basket"];
+          );out body;`
+        },
+        {
+          name: 'tombini',
+          ql: `[out:json][timeout:40][bbox:${OSM_BBOX}];(
+            node["man_made"="manhole"];
+            node["manhole"];
+          );out body;`
         },
         {
           name: 'parcheggi',
@@ -3732,19 +3772,44 @@
             node["amenity"="parking"];
             node["amenity"="parking_space"];
             way["amenity"="parking_space"];
+          );out body;>;out skel qt;`
+        },
+        {
+          name: 'parcometri',
+          ql: `[out:json][timeout:40][bbox:${OSM_BBOX}];(
             node["amenity"="vending_machine"]["vending"="parking_tickets"];
             way["amenity"="vending_machine"]["vending"="parking_tickets"];
+          );out body;>;out skel qt;`
+        },
+        {
+          name: 'parcheggi_bici',
+          ql: `[out:json][timeout:40][bbox:${OSM_BBOX}];(
             node["amenity"="bicycle_parking"];
             way["amenity"="bicycle_parking"];
           );out body;>;out skel qt;`
         },
         {
-          name: 'natura_servizi',
+          name: 'corsi_acqua',
           ql: `[out:json][timeout:40][bbox:${OSM_BBOX}];(
             way["waterway"~"^(river|stream|canal|drain|ditch)$"];
+          );out body;>;out skel qt;`
+        },
+        {
+          name: 'fontanelle',
+          ql: `[out:json][timeout:40][bbox:${OSM_BBOX}];(
             node["amenity"="drinking_water"];
             node["man_made"="water_tap"]["drinking_water"];
+          );out body;`
+        },
+        {
+          name: 'panchine',
+          ql: `[out:json][timeout:40][bbox:${OSM_BBOX}];(
             node["amenity"="bench"];
+          );out body;`
+        },
+        {
+          name: 'alberi',
+          ql: `[out:json][timeout:40][bbox:${OSM_BBOX}];(
             node["natural"="tree"];
             way["natural"="tree_row"];
           );out body;>;out skel qt;`
