@@ -1056,10 +1056,12 @@
     <label><input type="checkbox" id="lyr-pedestrian"> <i data-lucide="footprints" width="14" height="14" style="color:#22c55e"></i> Pedonali</label>
     <label><input type="checkbox" id="lyr-crossing"> <i data-lucide="move-horizontal" width="14" height="14" style="color:#8b5cf6"></i> Attraversamenti</label>
     <label><input type="checkbox" id="lyr-trafficsignals"> <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#dc2626;flex-shrink:0"><rect x="7" y="2" width="10" height="16" rx="3"/><circle cx="12" cy="6.5" r="0.8"/><circle cx="12" cy="10" r="0.8"/><circle cx="12" cy="13.5" r="0.8"/><path d="M12 18v2"/><path d="M9 22h6"/></svg> Semafori</label>
+    <label><input type="checkbox" id="lyr-passaggi_livello"> <svg width="14" height="14" viewBox="0 0 24 24" style="flex-shrink:0"><g transform="rotate(45 12 12)"><rect x="1" y="10" width="22" height="4" rx="1" fill="#fff" stroke="#dc2626" stroke-width="1.5"/></g><g transform="rotate(-45 12 12)"><rect x="1" y="10" width="22" height="4" rx="1" fill="#fff" stroke="#dc2626" stroke-width="1.5"/></g><circle cx="12" cy="12" r="1.6" fill="#1e293b"/></svg> Passaggi a livello</label>
     <label><input type="checkbox" id="lyr-maxspeed"> <i data-lucide="gauge" width="14" height="14" style="color:#ef4444"></i> Limiti di velocità</label>
     <label><input type="checkbox" id="lyr-hgv"> <i data-lucide="truck" width="14" height="14" style="color:#0f766e"></i> Mezzi pesanti</label>
     <label><input type="checkbox" id="lyr-strade_ref"> <i data-lucide="signpost" width="14" height="14" style="color:#dc2626"></i> Proprietà (SS/SR/SP/SC)</label>
     <label><input type="checkbox" id="lyr-signs"> <i data-lucide="octagon-alert" width="14" height="14" style="color:#eab308"></i> Segnali stradali</label>
+    <label><input type="checkbox" id="lyr-specchi"> <svg width="14" height="14" viewBox="0 0 24 24" style="flex-shrink:0"><path d="M3 12A9 5 0 0 1 21 12Z" fill="#94a3b8" stroke="#1e293b" stroke-width="1"/><path d="M3 12A9 5 0 0 0 21 12Z" fill="#dc2626" stroke="#1e293b" stroke-width="1"/></svg> Specchi stradali</label>
 
     <div style="height:1px;background:rgba(0,0,0,.07);margin:6px 10px"></div>
     <div class="lp-title" style="margin-top:2px"><i data-lucide="square-parking" width="11" height="11" style="vertical-align:middle;margin-right:4px"></i>Sosta e parcheggi</div>
@@ -1070,15 +1072,15 @@
 
     <div style="height:1px;background:rgba(0,0,0,.07);margin:6px 10px"></div>
     <div class="lp-title" style="margin-top:2px"><i data-lucide="map-pin" width="11" height="11" style="vertical-align:middle;margin-right:4px"></i>Arredo urbano e servizi</div>
-    <label><input type="checkbox" id="lyr-lamps"> <i data-lucide="lightbulb" width="14" height="14" style="color:#facc15"></i> Lampioni</label>
-    <label><input type="checkbox" id="lyr-benches"> <i data-lucide="armchair" width="14" height="14" style="color:#92400e"></i> Panchine</label>
-    <label><input type="checkbox" id="lyr-bins"> <i data-lucide="trash-2" width="14" height="14" style="color:#16a34a"></i> Cestini</label>
-    <label><input type="checkbox" id="lyr-manholes"> <i data-lucide="circle-dot" width="14" height="14" style="color:#475569"></i> Tombini</label>
-    <label><input type="checkbox" id="lyr-fontane"> <i data-lucide="droplet" width="14" height="14" style="color:#0891b2"></i> Fontanelle d'acqua</label>
+    <label><input type="checkbox" id="lyr-lamps"> <svg width="14" height="14" viewBox="0 0 24 26" style="flex-shrink:0"><rect x="7" y="3" width="10" height="8" rx="4" fill="#1e293b"/><circle cx="12" cy="7" r="2.4" fill="#facc15"/><rect x="11" y="11" width="2" height="10" fill="#475569"/><rect x="8.5" y="21" width="7" height="1.8" rx="0.9" fill="#334155"/></svg> Lampioni</label>
+    <label><input type="checkbox" id="lyr-benches"> <svg width="14" height="14" viewBox="0 0 24 18" style="flex-shrink:0"><rect x="3" y="1" width="18" height="2.2" rx="1" fill="#92400e"/><rect x="3" y="5" width="18" height="2.2" rx="1" fill="#92400e"/><rect x="2" y="9" width="20" height="2.4" rx="1" fill="#a16207"/><rect x="3.5" y="11.5" width="2" height="6" fill="#44403c"/><rect x="18.5" y="11.5" width="2" height="6" fill="#44403c"/></svg> Panchine</label>
+    <label><input type="checkbox" id="lyr-bins"> <svg width="14" height="14" viewBox="0 0 18 22" style="flex-shrink:0"><rect x="1" y="2" width="16" height="2.4" rx="1" fill="#16a34a"/><path d="M2.5 5 L15.5 5 L13.5 20 L4.5 20 Z" fill="#22c55e"/><line x1="6" y1="6.5" x2="5.4" y2="18.5" stroke="#15803d" stroke-width="1"/><line x1="9" y1="6.5" x2="9" y2="18.5" stroke="#15803d" stroke-width="1"/><line x1="12" y1="6.5" x2="12.6" y2="18.5" stroke="#15803d" stroke-width="1"/></svg> Cestini</label>
+    <label><input type="checkbox" id="lyr-manholes"> <svg width="14" height="14" viewBox="0 0 20 20" style="flex-shrink:0"><circle cx="10" cy="10" r="9" fill="#64748b" stroke="#1e293b" stroke-width="1.2"/><circle cx="10" cy="10" r="6.3" fill="none" stroke="#1e293b" stroke-width="1"/><line x1="10" y1="2.2" x2="10" y2="17.8" stroke="#1e293b" stroke-width="1"/><line x1="2.2" y1="10" x2="17.8" y2="10" stroke="#1e293b" stroke-width="1"/></svg> Tombini</label>
+    <label><input type="checkbox" id="lyr-fontane"> <svg width="14" height="14" viewBox="0 0 16 24" style="flex-shrink:0"><rect x="4" y="3" width="8" height="4" rx="2" fill="#0891b2"/><rect x="6" y="6" width="4" height="14" rx="1.5" fill="#0891b2"/><path d="M10 9q4 0 4 4" fill="none" stroke="#0891b2" stroke-width="1.8" stroke-linecap="round"/><circle cx="14" cy="14.5" r="1.3" fill="#38bdf8"/></svg> Fontanelle d'acqua</label>
 
     <div style="height:1px;background:rgba(0,0,0,.07);margin:6px 10px"></div>
     <div class="lp-title" style="margin-top:2px"><i data-lucide="trees" width="11" height="11" style="vertical-align:middle;margin-right:4px"></i>Natura</div>
-    <label><input type="checkbox" id="lyr-trees"> <i data-lucide="trees" width="14" height="14" style="color:#15803d"></i> Alberi</label>
+    <label><input type="checkbox" id="lyr-trees"> <svg width="14" height="14" viewBox="0 0 20 24" style="flex-shrink:0"><rect x="9" y="16" width="2" height="7" fill="#78350f"/><circle cx="10" cy="9" r="7" fill="#16a34a"/><circle cx="5" cy="12" r="4.5" fill="#15803d"/><circle cx="15" cy="12" r="4.5" fill="#15803d"/></svg> Alberi</label>
     <label><input type="checkbox" id="lyr-waterway"> <i data-lucide="waves" width="14" height="14" style="color:#0284c7"></i> Corsi d'acqua</label>
   </div>
 
@@ -1567,6 +1569,7 @@
       hgv:          L.layerGroup(),
       strade_ref:   L.layerGroup(),
       signs:        L.layerGroup(),
+      specchi:      L.layerGroup(),
       lamps:        L.layerGroup(),
       busstops:     L.layerGroup(),
       bins:         L.layerGroup(),
@@ -1574,6 +1577,7 @@
       parkometers:  L.layerGroup(),
       waterway:     L.layerGroup(),
       trafficsignals: L.layerGroup(),
+      levelcrossing: L.layerGroup(),
       manholes:     L.layerGroup(),
       bicycleparking: L.layerGroup(),
       fontane:      L.layerGroup(),
@@ -1593,6 +1597,7 @@
       'lyr-hgv':          layers.hgv,
       'lyr-strade_ref':   layers.strade_ref,
       'lyr-signs':        layers.signs,
+      'lyr-specchi':      layers.specchi,
       'lyr-lamps':        layers.lamps,
       'lyr-busstops':     layers.busstops,
       'lyr-bins':         layers.bins,
@@ -1600,6 +1605,7 @@
       'lyr-parkometers':  layers.parkometers,
       'lyr-waterway':     layers.waterway,
       'lyr-trafficsignals': layers.trafficsignals,
+      'lyr-passaggi_livello': layers.levelcrossing,
       'lyr-manholes':     layers.manholes,
       'lyr-bicycleparking': layers.bicycleparking,
       'lyr-fontane':      layers.fontane,
@@ -2284,7 +2290,19 @@
 
     function getType(tags) {
       if (tags.traffic_sign !== undefined || tags.highway === 'stop' || tags.highway === 'give_way') return 'signs';
+      // Specchio stradale: due tag in uso, amenity=traffic_mirror (attuale)
+      // e highway=traffic_mirror (più vecchio/deprecato, ma è quello
+      // effettivamente usato per i 3 specchi già mappati in zona).
+      if (tags.amenity === 'traffic_mirror' || tags.highway === 'traffic_mirror') return 'specchi';
       if (tags.highway === 'street_lamp') return 'lamps';
+      // Passaggio a livello ferroviario: layer SEPARATO da Semafori, non è
+      // un incrocio stradale semaforizzato — è un incrocio con la ferrovia.
+      // Due tag primari diversi per lo stesso concetto in uso in zona:
+      // highway=traffic_signals + traffic_signals=level_crossing (uso
+      // alternativo) e railway=level_crossing + crossing:light=yes (il tag
+      // "corretto" OSM).
+      if (tags.highway === 'traffic_signals' && tags.traffic_signals === 'level_crossing') return 'levelcrossing';
+      if (tags.railway === 'level_crossing' && tags['crossing:light'] === 'yes') return 'levelcrossing';
       if (tags.highway === 'traffic_signals') return 'trafficsignals';
       // Attraversamento pedonale semaforizzato: è comunque un semaforo, va nel
       // layer Semafori — non negli Attraversamenti generici (zebra, non
@@ -2293,11 +2311,6 @@
       // crossing:signals=yes (usato quando crossing=* resta sul valore
       // generico, es. uncontrolled).
       if (tags.highway === 'crossing' && (tags.crossing === 'traffic_signals' || tags['crossing:signals'] === 'yes')) return 'trafficsignals';
-      // Passaggio a livello ferroviario con luci (railway=level_crossing +
-      // crossing:light=yes): tag primario diverso da highway=traffic_signals,
-      // ma è comunque un semaforo — stesso layer, stessa icona "1 luce rossa"
-      // di buildTrafficLightVisual.
-      if (tags.railway === 'level_crossing' && tags['crossing:light'] === 'yes') return 'trafficsignals';
       if (tags.highway === 'bus_stop' || (tags.public_transport === 'platform' && tags.bus === 'yes')) return 'busstops';
       if (tags.amenity === 'waste_basket') return 'bins';
       if (tags.amenity === 'vending_machine' && tags.vending === 'parking_tickets') return 'parkometers';
@@ -2351,6 +2364,7 @@
       crossing:     { label: 'Attraversamento',   bg: '#8b5cf6' },
       construction: { label: 'In costruzione',    bg: '#f59e0b' },
       signs:        { label: 'Segnale stradale',  bg: '#eab308' },
+      specchi:      { label: 'Specchio stradale', bg: '#94a3b8' },
       lamps:        { label: 'Lampione',          bg: '#facc15' },
       busstops:     { label: 'Fermata bus',       bg: '#2563eb' },
       bins:         { label: 'Cestino',           bg: '#16a34a' },
@@ -2358,6 +2372,7 @@
       parkometers:  { label: 'Parcometro',        bg: '#ea580c' },
       waterway:     { label: 'Corso d\'acqua',     bg: '#0284c7' },
       trafficsignals: { label: 'Semaforo',         bg: '#dc2626' },
+      levelcrossing: { label: 'Passaggio a livello', bg: '#1e293b' },
       manholes:     { label: 'Tombino',            bg: '#475569' },
       bicycleparking: { label: 'Parcheggio bici',  bg: '#65a30d' },
       fontane:      { label: 'Fontanella d\'acqua', bg: '#0891b2' },
@@ -2410,14 +2425,15 @@
       'hgv':                      { it: 'Camion (HGV)', icon: 'truck' },
       'hgv:conditional':          { it: 'Camion - condizionale', icon: 'truck' },
       'hgv:national':             { it: 'Camion - nazionale', icon: 'truck' },
-      'hgv_articulated':          { it: 'Autoarticolati', icon: 'truck' },
-      'hgv_articulated:conditional': { it: 'Autoarticolati - condizionale', icon: 'truck' },
+      'hgv:articulated':          { it: 'Autoarticolati', icon: 'truck' },
+      'hgv:articulated:conditional': { it: 'Autoarticolati - condizionale', icon: 'truck' },
       'goods':                    { it: 'Trasporto merci', icon: 'package' },
       'hazmat':                   { it: 'Merci pericolose', icon: 'alert-triangle' },
       'hazmat:conditional':       { it: 'Merci pericolose - condizionale', icon: 'alert-triangle' },
       'trailer':                  { it: 'Rimorchi', icon: 'truck' },
       'trailer:maxweight':        { it: 'Peso max rimorchio', icon: 'scale' },
       'maxweight:hgv:conditional': { it: 'Peso camion – condizionale', icon: 'scale' },
+      'maxweight:rating:hgv':     { it: 'Massa a pieno carico camion', icon: 'scale' },
       'maxweight:conditional':      { it: 'Peso – condizionale',        icon: 'scale' },
       'maxheight:conditional':      { it: 'Altezza – condizionale',     icon: 'ruler' },
       'maxwidth:conditional':       { it: 'Larghezza – condizionale',   icon: 'ruler' },
@@ -2436,6 +2452,7 @@
       'amenity':                  { it: 'Tipo elemento', icon: 'map-pin' },
       'public_transport':         { it: 'Trasporto pubblico', icon: 'bus' },
       'bus':                      { it: 'Fermata bus', icon: 'bus' },
+      'bus_routes':               { it: 'Linee', icon: 'route' },
       'capacity':                 { it: 'Capienza', icon: 'hash' },
       'parking':                  { it: 'Tipo parcheggio', icon: 'square-parking' },
       'fee':                      { it: 'A pagamento', icon: 'euro' },
@@ -2460,7 +2477,83 @@
       'website':                  { it: 'Sito web', icon: 'globe' },
       'url':                      { it: 'Link', icon: 'link' },
       'wikipedia':                { it: 'Wikipedia', icon: 'book-open' },
-      'wikidata':                 { it: 'Wikidata', icon: 'database' }
+      'wikidata':                 { it: 'Wikidata', icon: 'database' },
+
+      'bridge':                   { it: 'Ponte', icon: 'milestone' },
+      'tunnel':                   { it: 'Galleria', icon: 'milestone' },
+      'layer':                    { it: 'Livello', icon: 'layers' },
+      'junction':                 { it: 'Tipo incrocio', icon: 'shuffle' },
+      'sidewalk':                 { it: 'Marciapiede', icon: 'footprints' },
+      'service':                  { it: 'Tipo di accesso', icon: 'route' },
+      'barrier':                  { it: 'Barriera', icon: 'octagon-alert' },
+      'vehicle':                  { it: 'Veicoli', icon: 'car' },
+      'psv':                      { it: 'Mezzi pubblici', icon: 'bus' },
+      'horse':                    { it: 'Cavalli', icon: 'tag' },
+      'man_made':                 { it: 'Tipo manufatto', icon: 'tag' },
+      'noname':                   { it: 'Senza nome', icon: 'tag' },
+      'check_date':               { it: 'Data verifica', icon: 'calendar-check' },
+      'survey:date':              { it: 'Data rilievo', icon: 'calendar-check' },
+      'fixme':                    { it: 'Da verificare', icon: 'alert-triangle' },
+      'abandoned':                { it: 'Abbandonato', icon: 'tag' },
+      'disused':                  { it: 'Dismesso', icon: 'tag' },
+
+      'kerb':                     { it: 'Cordolo', icon: 'tag' },
+      'crossing:markings':        { it: 'Segnaletica orizzontale', icon: 'move-horizontal' },
+      'crossing:island':          { it: 'Isola spartitraffico', icon: 'move-horizontal' },
+      'crossing:signals':         { it: 'Semaforo attraversamento', icon: 'traffic-cone' },
+      'crossing_ref':             { it: 'Codice attraversamento', icon: 'hash' },
+      'button_operated':          { it: 'Pulsante di chiamata', icon: 'bell' },
+      'button':                   { it: 'Pulsante di chiamata', icon: 'bell' },
+      'flashing_lights':          { it: 'Luci lampeggianti', icon: 'zap' },
+      'traffic_signals:sound':    { it: 'Segnale acustico', icon: 'volume-2' },
+      'traffic_signals:vibration':{ it: 'Segnale vibrante', icon: 'bell' },
+      'traffic_signals:direction':{ it: 'Direzione semaforo', icon: 'arrow-right' },
+      'supervised':               { it: 'Sorvegliato', icon: 'shield-check' },
+      'direction':                { it: 'Direzione', icon: 'arrow-right' },
+
+      'railway':                  { it: 'Ferrovia', icon: 'train-track' },
+      'railway:position':         { it: 'Progressiva chilometrica', icon: 'milestone' },
+      'railway:position:exact':   { it: 'Progressiva chilometrica', icon: 'milestone' },
+      'railway:ref':              { it: 'Codice passaggio a livello', icon: 'hash' },
+      'emergency:phone':          { it: 'Telefono di emergenza', icon: 'phone' },
+      'crossing:light':           { it: 'Luce di segnalazione', icon: 'lightbulb' },
+      'crossing:bell':            { it: 'Campanello', icon: 'bell' },
+      'crossing:barrier':         { it: 'Barriera', icon: 'octagon-alert' },
+
+      'lamp_type':                { it: 'Tipo lampada', icon: 'lightbulb' },
+      'light_source':             { it: 'Fonte luminosa', icon: 'zap' },
+      'support':                  { it: 'Supporto', icon: 'tag' },
+      'colour':                   { it: 'Colore', icon: 'palette' },
+
+      'shelter':                  { it: 'Pensilina', icon: 'tag' },
+      'bench':                    { it: 'Panchina presente', icon: 'armchair' },
+      'bin':                      { it: 'Cestino presente', icon: 'trash-2' },
+      'network':                  { it: 'Rete/linea', icon: 'route' },
+      'route_ref':                { it: 'Linee servite', icon: 'hash' },
+      'departures_board':         { it: 'Pannello orari', icon: 'clock' },
+
+      'waste':                    { it: 'Tipo rifiuti', icon: 'trash-2' },
+      'covered':                  { it: 'Coperto', icon: 'tag' },
+      'material':                 { it: 'Materiale', icon: 'tag' },
+      'mounting':                 { it: 'Fissaggio', icon: 'tag' },
+
+      'manhole':                  { it: 'Tipo tombino', icon: 'circle-dot' },
+      'substance':                { it: 'Contenuto', icon: 'tag' },
+      'location':                 { it: 'Posizione', icon: 'map-pin' },
+
+      'bicycle_parking':          { it: 'Tipo rastrelliera', icon: 'bike' },
+      'surveillance':             { it: 'Sorveglianza', icon: 'eye' },
+
+      'traffic_mirror':           { it: 'Tipo specchio', icon: 'scan-eye' },
+
+      'waterway':                 { it: 'Tipo corso d\'acqua', icon: 'waves' },
+      'intermittent':             { it: 'Intermittente', icon: 'droplets' },
+      'boat':                     { it: 'Navigabile', icon: 'ship' },
+      'canoe':                    { it: 'Canoa/kayak', icon: 'ship' },
+      'culvert':                  { it: 'Tombinatura', icon: 'tag' },
+
+      'backrest':                 { it: 'Schienale', icon: 'armchair' },
+      'seats':                    { it: 'Numero posti', icon: 'hash' }
     };
 
     const VALUE_LABELS = {
@@ -2524,17 +2617,64 @@
       'zebra':          'Strisce pedonali',
 
       '-1':             'Senso inverso',
-      'none':           'Nessuna restrizione'
+      'none':           'Nessuna restrizione',
+
+      'river':          'Fiume',
+      'stream':         'Torrente/ruscello',
+      'canal':          'Canale',
+      'drain':          'Canale di scolo',
+      'ditch':          'Fosso',
+
+      'roundabout':     'Rotatoria',
+      'circular':       'Rotatoria (circolare)',
+
+      'stands':         'Archetti/stalli',
+      'wall_loops':     'Anelli a muro',
+      'shed':           'Tettoia chiusa',
+      'lockers':        'Armadietti',
+      'two-tier':       'A doppio piano',
+      'building':       'Edificio dedicato',
+
+      'sewer':          'Fognatura',
+      'storm_drain':    'Acque piovane',
+      'water':          'Acqua',
+      'telecom':        'Telecomunicazioni',
+      'gas':            'Gas',
+      'electricity':    'Elettricità',
+      'unknown':        'Sconosciuto',
+
+      'trash':          'Rifiuti generici',
+      'convex':         'Convesso',
+
+      'full':           'Completa',
+      'half':           'Parziale',
+      'double_half':    'Doppia semi-barriera',
+
+      'pole':           'Palo',
+      'wall':           'Parete',
+      'ceiling':        'Soffitto',
+      'electric':       'Elettrico',
+      'incandescent':   'A incandescenza',
+      'led':            'LED',
+
+      'metal':          'Metallo',
+      'wood':           'Legno',
+      'plastic':        'Plastica',
+      'stone':          'Pietra'
     };
 
     const GROUPS = [
       {
         title: 'Caratteristiche',
-        keys: ['highway','cycleway','footway','crossing','construction','traffic_signals','surface','width','lanes','lit','smoothness','incline','segregated','tactile_paving','wheelchair']
+        keys: ['highway','cycleway','footway','crossing','construction','traffic_signals','surface','width','lanes','lit','smoothness','incline','segregated','tactile_paving','wheelchair','bridge','tunnel','layer','junction','sidewalk','barrier']
+      },
+      {
+        title: 'Semaforo & passaggio a livello',
+        keys: ['crossing:signals','crossing:markings','crossing:island','crossing_ref','button_operated','button','flashing_lights','traffic_signals:sound','traffic_signals:vibration','traffic_signals:direction','supervised','direction','kerb','railway','railway:position','railway:position:exact','railway:ref','emergency:phone','crossing:light','crossing:bell','crossing:barrier']
       },
       {
         title: 'Arredo urbano',
-        keys: ['traffic_sign','traffic_sign:distance','distance','amenity','public_transport','bus','parking','capacity','fee']
+        keys: ['traffic_sign','traffic_sign:distance','distance','amenity','public_transport','bus','bus_routes','parking','capacity','fee','lamp_type','light_source','support','colour','shelter','bench','bin','network','route_ref','departures_board','waste','covered','material','mounting','manhole','substance','location','bicycle_parking','surveillance','traffic_mirror','backrest','seats']
       },
       {
         title: 'Velocità & limiti',
@@ -2546,7 +2686,11 @@
       },
       {
         title: 'Accesso',
-        keys: ['access','bicycle','foot','motor_vehicle','oneway','oneway:bicycle']
+        keys: ['access','bicycle','foot','motor_vehicle','vehicle','psv','horse','oneway','oneway:bicycle','service']
+      },
+      {
+        title: 'Corso d\'acqua',
+        keys: ['waterway','intermittent','boat','canoe','culvert']
       },
       {
         title: 'Fontanella d\'acqua',
@@ -2558,7 +2702,7 @@
       },
       {
         title: 'Stato & progetto',
-        keys: ['start_date','opening_date','operator','note','description']
+        keys: ['start_date','opening_date','operator','note','description','check_date','survey:date','noname','abandoned','disused','fixme','man_made']
       },
       {
         title: 'Link & risorse',
@@ -2711,9 +2855,6 @@
       const tags = feature.properties || {};
       const type = getType(tags);
       const meta = { ...(TYPE_META[type] || TYPE_META.default) };
-      if (type === 'trafficsignals' && (tags.traffic_signals === 'level_crossing' || tags.railway === 'level_crossing')) {
-        meta.label = 'Passaggio a livello';
-      }
       if (type === 'trafficsignals' && tags.highway === 'crossing') {
         meta.label = 'Semaforo pedonale';
       }
@@ -2830,6 +2971,7 @@
     // ─────────────────────────────────────────────────────────────
     const POINT_ICONS = {
       signs:          { icon: 'octagon-alert', bg: '#eab308' },
+      specchi:        { icon: 'scan-eye', bg: '#94a3b8' },
       lamps:          { icon: 'lightbulb', bg: '#facc15' },
       busstops:       { icon: 'bus', bg: '#2563eb' },
       bins:           { icon: 'trash-2', bg: '#16a34a' },
@@ -2920,6 +3062,26 @@
       return index;
     }
 
+    // Linee bus a cui appartiene ciascuna fermata: le relation route=bus
+    // vengono scaricate insieme ai nodi (vedi query "fermate_bus", rel(bn.
+    // pts)) — qui si costruisce l'indice nodeId -> elenco linee (ref della
+    // relation, o il nome se manca il ref) leggendo i membri di ogni
+    // relation route=bus.
+    function buildBusRouteIndex(rawOverpassData) {
+      const index = new Map();
+      rawOverpassData.elements.forEach(el => {
+        if (el.type !== 'relation' || !el.tags || el.tags.route !== 'bus') return;
+        const label = el.tags.ref || el.tags.name || '';
+        if (!label) return;
+        (el.members || []).forEach(m => {
+          if (m.type !== 'node') return;
+          if (!index.has(m.ref)) index.set(m.ref, new Set());
+          index.get(m.ref).add(label);
+        });
+      });
+      return index;
+    }
+
     function wayDirectionDeg(nodeId, wayBearingIndex, forwardOrBackward) {
       const info = wayBearingIndex.get(nodeId);
       if (!info || !info.self) return null;
@@ -2971,22 +3133,6 @@
         };
       }
 
-      // Semaforo di passaggio a livello: i semafori ferroviari lampeggiano
-      // solo rosso (niente giallo/verde), quindi stessa sagoma nera del
-      // semaforo stradale ma con un solo cerchio rosso, centrato, al centro.
-      // Due tag primari diversi per lo stesso concetto: highway=traffic_
-      // signals + traffic_signals=level_crossing, oppure railway=level_
-      // crossing + crossing:light=yes (quest'ultimo il tag "corretto" OSM,
-      // il primo un uso alternativo visto nei dati di questa zona).
-      if (tags && (tags.traffic_signals === 'level_crossing' || tags.railway === 'level_crossing')) {
-        return {
-          w: 18, h: 18,
-          html: `<div class="marker-pop-inner" style="width:18px;height:18px;background:#1e293b;border-radius:50%;border:2px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.4)">
-            <span style="width:7px;height:7px;border-radius:50%;background:#ef4444;box-shadow:0 0 4px rgba(239,68,68,1)"></span>
-          </div>`
-        };
-      }
-
       const variant = String((tags && tags.traffic_signals) || '').toLowerCase();
 
       const box = `<div style="width:15px;height:28px;background:#1e293b;border-radius:4px;border:2px solid white;display:flex;flex-direction:column;align-items:center;justify-content:space-evenly;padding:2px 0;box-shadow:0 2px 6px rgba(0,0,0,.4)">
@@ -3006,6 +3152,178 @@
         w: 15, h: 28,
         html: `<div class="marker-pop-inner" style="position:relative">${box}${badge}</div>`
       };
+    }
+
+    // Il layer "Passaggi a livello" copre DUE cose fisicamente diverse, non
+    // intercambiabili solo perché condividono il layer:
+    // - highway=traffic_signals + traffic_signals=level_crossing: è il
+    //   SEMAFORO del passaggio a livello (il segnale che lampeggia rosso
+    //   per fermare le auto) — stessa sagoma nera "un pallino rosso" degli
+    //   altri semafori, coerente con quello che rappresenta davvero.
+    // - railway=level_crossing (+ crossing:barrier/bell/light...): è il
+    //   PASSAGGIO A LIVELLO stesso, l'incrocio strada/ferrovia con le
+    //   barriere — croce di Sant'Andrea, il segnale internazionale
+    //   dell'incrocio, tutt'altra cosa da un semaforo.
+    function buildLevelCrossingVisual(tags) {
+      if (tags && tags.highway === 'traffic_signals' && tags.traffic_signals === 'level_crossing') {
+        return {
+          w: 18, h: 18,
+          html: `<div class="marker-pop-inner" style="width:18px;height:18px;background:#1e293b;border-radius:50%;border:2px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.4)">
+            <span style="width:7px;height:7px;border-radius:50%;background:#ef4444;box-shadow:0 0 4px rgba(239,68,68,1)"></span>
+          </div>`
+        };
+      }
+      return {
+        w: 22, h: 22,
+        html: `<div class="marker-pop-inner" style="width:22px;height:22px">
+          <svg width="22" height="22" viewBox="0 0 24 24">
+            <g transform="rotate(45 12 12)">
+              <rect x="1" y="10" width="22" height="4" rx="1" fill="#fff" stroke="#dc2626" stroke-width="1.5"/>
+            </g>
+            <g transform="rotate(-45 12 12)">
+              <rect x="1" y="10" width="22" height="4" rx="1" fill="#fff" stroke="#dc2626" stroke-width="1.5"/>
+            </g>
+            <circle cx="12" cy="12" r="1.6" fill="#1e293b"/>
+          </svg>
+        </div>`
+      };
+    }
+
+    // Specchio stradale visto dall'alto: un ellissoide fatto di 2 archi di
+    // cerchio, non un cerchio pieno — metà grigia (la parte riflettente,
+    // rivolta verso directionDeg) e metà rossa (il supporto, dietro).
+    // Ruota l'icona STESSA (non una freccetta separata sopra, come per gli
+    // altri marker direzionali): l'orientamento è già codificato nella
+    // sagoma, quindi la rotazione va sull'elemento giusto, NON su quello
+    // con la classe marker-pop-inner (che ha già una sua animazione di
+    // comparsa che sovrascriverebbe la rotazione a fine animazione) — per
+    // questo la rotazione sta su un div avvolgente esterno, l'animazione
+    // di comparsa resta sul figlio interno.
+    function buildTrafficMirrorIcon(directionDeg) {
+      const rot = Number.isFinite(directionDeg) ? (directionDeg + 180) % 360 : 0;
+      const svg = `<svg width="24" height="24" viewBox="0 0 24 24">
+        <path d="M3 12A9 5 0 0 1 21 12Z" fill="#94a3b8" stroke="#1e293b" stroke-width="1"/>
+        <path d="M3 12A9 5 0 0 0 21 12Z" fill="#dc2626" stroke="#1e293b" stroke-width="1"/>
+      </svg>`;
+      return L.divIcon({
+        className: 'point-marker',
+        html: `<div style="width:24px;height:24px;transform:rotate(${rot}deg);transform-origin:50% 50%"><div class="marker-pop-inner">${svg}</div></div>`,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+      });
+    }
+
+    // Lampione: sagoma di un lampione stradale (alone di luce, corpo cupola,
+    // lampadina, palo con base) invece del pallino generico con l'icona
+    // lucide dentro usato per gli altri arredi urbani.
+    function buildLampIcon() {
+      const svg = `<svg width="24" height="26" viewBox="0 0 24 26">
+        <circle cx="12" cy="8" r="7" fill="#facc15" opacity="0.22"/>
+        <rect x="7" y="3" width="10" height="8" rx="4" fill="#1e293b"/>
+        <circle cx="12" cy="7" r="2.4" fill="#facc15"/>
+        <rect x="11" y="11" width="2" height="10" fill="#475569"/>
+        <rect x="8.5" y="21" width="7" height="1.8" rx="0.9" fill="#334155"/>
+      </svg>`;
+      return L.divIcon({
+        className: 'point-marker',
+        html: `<div class="marker-pop-inner" style="width:24px;height:26px">${svg}</div>`,
+        iconSize: [24, 26],
+        iconAnchor: [12, 22]
+      });
+    }
+
+    // Panchina: vista laterale, schienale a doghe + seduta + gambe — invece
+    // del pallino generico con l'icona lucide "armchair" dentro.
+    function buildBenchIcon() {
+      const svg = `<svg width="24" height="18" viewBox="0 0 24 18">
+        <rect x="3" y="1" width="18" height="2.2" rx="1" fill="#92400e"/>
+        <rect x="3" y="5" width="18" height="2.2" rx="1" fill="#92400e"/>
+        <rect x="2" y="9" width="20" height="2.4" rx="1" fill="#a16207"/>
+        <rect x="3.5" y="11.5" width="2" height="6" fill="#44403c"/>
+        <rect x="18.5" y="11.5" width="2" height="6" fill="#44403c"/>
+      </svg>`;
+      return L.divIcon({
+        className: 'point-marker',
+        html: `<div class="marker-pop-inner" style="width:24px;height:18px">${svg}</div>`,
+        iconSize: [24, 18],
+        iconAnchor: [12, 17]
+      });
+    }
+
+    // Cestino: corpo a trapezio con le fessure verticali del cestino a
+    // rete, invece del pallino generico con l'icona lucide "trash-2".
+    function buildBinIcon() {
+      const svg = `<svg width="18" height="22" viewBox="0 0 18 22">
+        <rect x="1" y="2" width="16" height="2.4" rx="1" fill="#16a34a"/>
+        <path d="M2.5 5 L15.5 5 L13.5 20 L4.5 20 Z" fill="#22c55e"/>
+        <line x1="6" y1="6.5" x2="5.4" y2="18.5" stroke="#15803d" stroke-width="1"/>
+        <line x1="9" y1="6.5" x2="9" y2="18.5" stroke="#15803d" stroke-width="1"/>
+        <line x1="12" y1="6.5" x2="12.6" y2="18.5" stroke="#15803d" stroke-width="1"/>
+      </svg>`;
+      return L.divIcon({
+        className: 'point-marker',
+        html: `<div class="marker-pop-inner" style="width:18px;height:22px">${svg}</div>`,
+        iconSize: [18, 22],
+        iconAnchor: [9, 21]
+      });
+    }
+
+    // Tombino: chiusino visto dall'alto, cerchi concentrici + raggi, il
+    // classico disegno dei tombini — invece del pallino con "circle-dot".
+    function buildManholeIcon() {
+      const svg = `<svg width="20" height="20" viewBox="0 0 20 20">
+        <circle cx="10" cy="10" r="9" fill="#64748b" stroke="#1e293b" stroke-width="1.2"/>
+        <circle cx="10" cy="10" r="6.3" fill="none" stroke="#1e293b" stroke-width="1"/>
+        <line x1="10" y1="2.2" x2="10" y2="17.8" stroke="#1e293b" stroke-width="1"/>
+        <line x1="2.2" y1="10" x2="17.8" y2="10" stroke="#1e293b" stroke-width="1"/>
+        <line x1="4.6" y1="4.6" x2="15.4" y2="15.4" stroke="#1e293b" stroke-width="0.8"/>
+        <line x1="15.4" y1="4.6" x2="4.6" y2="15.4" stroke="#1e293b" stroke-width="0.8"/>
+      </svg>`;
+      return L.divIcon({
+        className: 'point-marker',
+        html: `<div class="marker-pop-inner" style="width:20px;height:20px">${svg}</div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
+      });
+    }
+
+    // Fontanella: erogatore su palo con zampillo e goccia — il colore del
+    // corpo segue lo stato (classifyFontanaStatus, stesso calcolo di prima:
+    // verde aperta, rossa chiusa, azzurro default) invece del pallino con
+    // l'icona lucide "droplet" dentro.
+    function buildFontanaIcon(tags) {
+      const status = classifyFontanaStatus(tags);
+      const color = status ? status.color : '#0891b2';
+      const svg = `<svg width="16" height="24" viewBox="0 0 16 24">
+        <rect x="4" y="3" width="8" height="4" rx="2" fill="${color}"/>
+        <rect x="6" y="6" width="4" height="14" rx="1.5" fill="${color}"/>
+        <path d="M10 9q4 0 4 4" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="14" cy="14.5" r="1.3" fill="#38bdf8"/>
+        <rect x="4.5" y="20" width="7" height="2" rx="1" fill="#0f172a" opacity="0.55"/>
+      </svg>`;
+      return L.divIcon({
+        className: 'point-marker',
+        html: `<div class="marker-pop-inner" style="width:16px;height:24px">${svg}</div>`,
+        iconSize: [16, 24],
+        iconAnchor: [8, 22]
+      });
+    }
+
+    // Albero: chioma a ciuffi tondeggianti + tronco, invece del pallino
+    // generico con l'icona lucide "trees" dentro.
+    function buildTreeIcon() {
+      const svg = `<svg width="20" height="24" viewBox="0 0 20 24">
+        <rect x="9" y="16" width="2" height="7" fill="#78350f"/>
+        <circle cx="10" cy="9" r="7" fill="#16a34a"/>
+        <circle cx="5" cy="12" r="4.5" fill="#15803d"/>
+        <circle cx="15" cy="12" r="4.5" fill="#15803d"/>
+      </svg>`;
+      return L.divIcon({
+        className: 'point-marker',
+        html: `<div class="marker-pop-inner" style="width:20px;height:24px">${svg}</div>`,
+        iconSize: [20, 24],
+        iconAnchor: [10, 22]
+      });
     }
 
     // In Italia "*_ahead" non è un segnale a parte: è lo stesso segnale
@@ -3368,7 +3686,9 @@
     const OSM_DIAG_GROUPS = [
       { key: 'strade', label: 'Strade' },
       { key: 'segnali', label: 'Segnali' },
+      { key: 'specchi', label: 'Specchi stradali' },
       { key: 'semafori', label: 'Semafori' },
+      { key: 'passaggi_livello', label: 'Passaggi a livello' },
       { key: 'lampioni', label: 'Lampioni' },
       { key: 'fermate_bus', label: 'Fermate bus' },
       { key: 'cestini', label: 'Cestini' },
@@ -3729,7 +4049,7 @@
       'hgv_articulated':           'hgv:articulated',
       'hgv_articulated:conditional':'hgv:articulated:conditional',
     };
-    const POINT_TYPES = ['signs', 'lamps', 'busstops', 'bins', 'trafficsignals', 'manholes', 'bicycleparking', 'fontane', 'benches', 'trees'];
+    const POINT_TYPES = ['signs', 'specchi', 'lamps', 'busstops', 'bins', 'trafficsignals', 'levelcrossing', 'manholes', 'bicycleparking', 'fontane', 'benches', 'trees'];
 
     // Layer disegnati finora PER GRUPPO — a livello di MODULO, non dentro
     // loadData(): deve sopravvivere tra una chiamata e l'altra, non solo
@@ -3811,6 +4131,7 @@
       });
 
       const wayBearingIndex = buildWayBearingIndex(localData);
+      const busRouteIndex = buildBusRouteIndex(localData);
 
       L.geoJSON(geojson, {
         filter: feature => feature.geometry && feature.geometry.type !== 'Point',
@@ -3912,9 +4233,37 @@
         const [lng, lat] = feature.geometry.coordinates;
         const directionDeg = parseDirectionDeg(tags, feature, wayBearingIndex);
 
+        if (type === 'busstops') {
+          // tags È feature.properties (stesso riferimento, non una copia):
+          // scrivendoci sopra la card di dettaglio (che legge feature.
+          // properties) vede subito il campo sintetico.
+          const idParts = String(feature.id || '').split('/');
+          const nodeId = idParts.length === 2 ? parseInt(idParts[1], 10) : null;
+          const routes = nodeId !== null ? busRouteIndex.get(nodeId) : null;
+          if (routes && routes.size) {
+            tags['bus_routes'] = [...routes].sort((a, b) => a.localeCompare(b, 'it', { numeric: true })).join(', ');
+          }
+        }
+
         let icon;
         if (type === 'trafficsignals') {
           icon = makeDirectionalDivIcon(buildTrafficLightVisual(tags), directionDeg);
+        } else if (type === 'levelcrossing') {
+          icon = makeDirectionalDivIcon(buildLevelCrossingVisual(tags), directionDeg);
+        } else if (type === 'specchi') {
+          icon = buildTrafficMirrorIcon(directionDeg);
+        } else if (type === 'lamps') {
+          icon = buildLampIcon();
+        } else if (type === 'benches') {
+          icon = buildBenchIcon();
+        } else if (type === 'bins') {
+          icon = buildBinIcon();
+        } else if (type === 'manholes') {
+          icon = buildManholeIcon();
+        } else if (type === 'fontane') {
+          icon = buildFontanaIcon(tags);
+        } else if (type === 'trees') {
+          icon = buildTreeIcon();
         } else if (type === 'signs') {
           icon = makeDirectionalDivIcon(buildSignVisual(tags), directionDeg);
         } else {
@@ -4046,16 +4395,33 @@
           (.pts;.signalWays;);out body;>;out skel qt;`
         },
         {
+          name: 'specchi',
+          ql: `[out:json][timeout:40][bbox:${OSM_BBOX}];(
+            node["amenity"="traffic_mirror"];
+            node["highway"="traffic_mirror"];
+          );out body;`
+        },
+        {
+          // Passaggi a livello (traffic_signals=level_crossing e railway=
+          // level_crossing) esclusi qui — layer a parte, vedi il gruppo
+          // "passaggi_livello" più sotto: non sono incroci stradali
+          // semaforizzati, sono incroci con la ferrovia.
           name: 'semafori',
           ql: `[out:json][timeout:40][bbox:${OSM_BBOX}];(
-            node["highway"="traffic_signals"];
+            node["highway"="traffic_signals"]["traffic_signals"!="level_crossing"];
             node["highway"="crossing"]["crossing"="traffic_signals"];
             node["highway"="crossing"]["crossing:signals"="yes"];
-            node["railway"="level_crossing"]["crossing:light"="yes"];
           )->.pts;
-          (node["highway"="traffic_signals"];)->.signalNodes;
+          (node["highway"="traffic_signals"]["traffic_signals"!="level_crossing"];)->.signalNodes;
           way(bn.signalNodes)["highway"]->.signalWays;
           (.pts;.signalWays;);out body;>;out skel qt;`
+        },
+        {
+          name: 'passaggi_livello',
+          ql: `[out:json][timeout:40][bbox:${OSM_BBOX}];(
+            node["highway"="traffic_signals"]["traffic_signals"="level_crossing"];
+            node["railway"="level_crossing"]["crossing:light"="yes"];
+          );out body;`
         },
         {
           name: 'lampioni',
@@ -4064,11 +4430,17 @@
           );out body;`
         },
         {
+          // Anche le relation route=bus che contengono queste fermate come
+          // membro (rel(bn.pts)): servono per mostrare a quali linee
+          // appartiene ciascuna fermata nella card di dettaglio — vedi
+          // buildBusRouteIndex.
           name: 'fermate_bus',
           ql: `[out:json][timeout:40][bbox:${OSM_BBOX}];(
             node["highway"="bus_stop"];
             node["public_transport"="platform"]["bus"="yes"];
-          );out body;`
+          )->.pts;
+          rel(bn.pts)["route"="bus"]->.routes;
+          (.pts;.routes;);out body;`
         },
         {
           name: 'cestini',
