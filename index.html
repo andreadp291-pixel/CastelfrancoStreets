@@ -3214,21 +3214,32 @@
     // interrogando Overpass: se presente, ogni tentativo (per-mirror e poi
     // proxy) aggiorna lo stato mostrato dal pannello diagnostico (vedi sotto),
     // riflettendo il caricamento REALE invece di una query di test a parte.
-    async function fetchOverpassDirect(query, groupKey) {
-      const controllers = OVERPASS_MIRRORS.map(() => new AbortController());
-      const requests = OVERPASS_MIRRORS.map((url, i) => {
+    //
+    // NON si prende più la PRIMA risposta valida che arriva (Promise.any):
+    // un mirror può rispondere in fretta ma con MENO elementi (replica
+    // indietro, query tagliata per carico interno...) — è esattamente il
+    // sintomo osservato sui semafori, che a volte arrivavano incompleti.
+    // Si aspettano invece TUTTI i mirror (ognuno comunque limitato a
+    // OVERPASS_TIMEOUT_MS) e si tiene quello con più elementi tra chi
+    // risponde con successo, arrivi prima o dopo. Il costo è che ogni
+    // gruppo impiega quanto il mirror più lento (o il timeout), non più
+    // quanto il più veloce — scelta deliberata per la completezza del dato.
+    // Ritorna { firstSettled, result }: "result" è il dato finale (il
+    // mirror con più elementi, vedi sopra); "firstSettled" si risolve
+    // appena il PRIMO mirror risponde (bene o male), molto prima di
+    // "result" che aspetta tutti quanti. Serve al chiamante (loadData) per
+    // passare al gruppo successivo non appena c'è un minimo di movimento,
+    // invece di lasciare gli altri mirror inattivi fino alla fine di questo
+    // gruppo — vedi il commento sulla pipeline più sotto in loadData.
+    function fetchOverpassDirect(query, groupKey) {
+      const requests = OVERPASS_MIRRORS.map(url => {
         const label = shortOverpassLabel(url);
         reportOsmDiagStatus(label, groupKey, 'loading');
-        // Segnale di timeout separato dal controller "nostro": così sappiamo
-        // distinguere un mirror che ha perso la gara (abortito da noi dopo
-        // che un altro ha già risposto, non un vero fallimento) da un mirror
-        // che è scaduto per davvero (controllers[i].signal.aborted resta
-        // false in quel caso, solo il timeout è scattato).
         let gotResponse = false;
         return fetch(url, {
           method: 'POST',
           body: 'data=' + encodeURIComponent(query),
-          signal: AbortSignal.any([controllers[i].signal, AbortSignal.timeout(OVERPASS_TIMEOUT_MS)])
+          signal: AbortSignal.timeout(OVERPASS_TIMEOUT_MS)
         })
           .then(res => {
             // Una risposta HTTP, qualunque sia lo status, dimostra che il
@@ -3244,19 +3255,25 @@
           })
           .then(data => { reportOsmDiagStatus(label, groupKey, 'success'); return data; })
           .catch(err => {
-            const lostRace = controllers[i].signal.aborted;
-            reportOsmDiagStatus(label, groupKey, lostRace ? 'idle' : 'failed');
-            // Nessuna risposta HTTP arrivata, e non solo perché abbiamo
-            // abortito noi dopo aver perso la gara: qui il server non è
-            // stato raggiunto per davvero (timeout, DNS, CORS, connessione
-            // rifiutata...).
-            if (!gotResponse && !lostRace) reportOsmDiagReachable(label, false);
+            reportOsmDiagStatus(label, groupKey, 'failed');
+            if (!gotResponse) reportOsmDiagReachable(label, false);
             throw err;
           });
       });
-      const data = await Promise.any(requests);
-      controllers.forEach(c => c.abort());
-      return data;
+
+      const firstSettled = Promise.race(requests.map(p => p.then(() => {}, () => {})));
+
+      const result = Promise.allSettled(requests).then(settled => {
+        const succeeded = settled.filter(r => r.status === 'fulfilled').map(r => r.value);
+        if (succeeded.length === 0) {
+          throw new Error('Tutti i mirror Overpass diretti hanno fallito o sono scaduti');
+        }
+        return succeeded.reduce((best, cur) =>
+          (cur.elements?.length || 0) > (best.elements?.length || 0) ? cur : best
+        );
+      });
+
+      return { firstSettled, result };
     }
 
     async function fetchOverpassViaProxy(query, groupKey) {
@@ -3282,14 +3299,21 @@
       }
     }
 
-    async function fetchOverpass(query, groupKey) {
-      if (isOsmDirectBlocked()) return fetchOverpassViaProxy(query, groupKey);
-      try {
-        return await fetchOverpassDirect(query, groupKey);
-      } catch (directErr) {
+    // Ritorna sempre { firstSettled, result }, sia che si passi dai mirror
+    // diretti sia dal proxy, così il chiamante può fare pipeline (aspettare
+    // solo firstSettled prima di passare al gruppo successivo) in entrambi
+    // i casi senza doverli distinguere.
+    function fetchOverpass(query, groupKey) {
+      if (isOsmDirectBlocked()) {
+        const result = fetchOverpassViaProxy(query, groupKey);
+        return { firstSettled: result.then(() => {}, () => {}), result };
+      }
+      const direct = fetchOverpassDirect(query, groupKey);
+      const result = direct.result.catch(() => {
         osmDirectBlockedUntil = Date.now() + OSM_DIRECT_RETRY_COOLDOWN_MS;
         return fetchOverpassViaProxy(query, groupKey);
-      }
+      });
+      return { firstSettled: direct.firstSettled, result };
     }
 
     // ── DIAGNOSTICA (tenendo premuto il pulsante "Aggiorna") ──────────────
@@ -3539,7 +3563,14 @@
     // Cache PER GRUPPO (non un unico blob): se un gruppo fallisce, quelli
     // già caricati restano disponibili e non vengono ributtati via, e un
     // retry ritenta solo i gruppi mancanti invece di rifare tutto da capo.
-    const OSM_GROUP_CACHE_KEY = 'osmGroupCache_v1';
+    // La chiave è per NOME gruppo con un TTL di 24h, non per contenuto della
+    // query: se il testo di una query cambia (es. i fix ai semafori) ma il
+    // nome resta lo stesso, un browser con una cache già scritta PRIMA del
+    // fix continua a servire il dato vecchio/incompleto fino a scadenza
+    // naturale — bisogna bump-are la versione qui ogni volta che si tocca
+    // una query esistente, per invalidare tutte le cache in un colpo solo
+    // invece di aspettare 24h o contare su un refresh manuale.
+    const OSM_GROUP_CACHE_KEY = 'osmGroupCache_v2';
     function readOsmGroupCache() {
       try { return JSON.parse(localStorage.getItem(OSM_GROUP_CACHE_KEY)) || {}; }
       catch (err) { return {}; }
@@ -3868,31 +3899,48 @@
         });
 
         if (groupsToFetch.length > 0) {
-          // Gruppi interrogati IN SEQUENZA (non tutti insieme): i mirror
+          // Gruppi avviati IN PIPELINE, non tutti insieme e non uno alla
+          // volta in stretta sequenza: per ogni gruppo si aspetta solo che
+          // il PRIMO mirror risponda (bene o male, vedi firstSettled in
+          // fetchOverpassDirect) prima di avviare il gruppo successivo,
+          // invece di aspettare che TUTTI i mirror di questo gruppo abbiano
+          // finito — altrimenti, aspettando i mirror più lenti per avere il
+          // dato più completo (vedi sopra), gli altri mirror restavano
+          // inattivi nel frattempo invece di poter già lavorare sul gruppo
+          // dopo. Si resta comunque entro ~1 gruppo di "sovrapposizione" per
+          // mirror alla volta, non tutti i 14 gruppi in parallelo: i mirror
           // Overpass pubblici limitano severamente le richieste concorrenti
-          // per IP, e più gruppi in parallelo (ognuno già in gara su 5
-          // mirror) significavano troppe connessioni simultanee agli stessi
-          // pochi server, rate-limitati/rifiutati tutti insieme.
+          // per IP.
           if (!isBackgroundRetry) setStatus(`Caricamento dati… (0/${groupsToFetch.length} gruppi)`, 'loading');
           let done = 0;
+          const pending = [];
           for (const g of groupsToFetch) {
-            try {
-              const elements = (await fetchOverpass(g.ql, g.name)).elements || [];
-              groupCache[g.name] = { ts: Date.now(), elements };
-              mergeElements(elements);
-              reportOsmCache(g.name, { used: false, ready: true });
-            } catch (err) {
-              failed.push(g.name);
-              const cached = groupCache[g.name];
-              if (cached) {
-                usedCacheFor.push(g.name);
-                mergeElements(cached.elements);
-                reportOsmCache(g.name, { used: true, ready: true });
-              }
-            }
-            done++;
-            if (!isBackgroundRetry) setStatus(`Caricamento dati… (${done}/${groupsToFetch.length} gruppi)`, 'loading');
+            const { firstSettled, result } = fetchOverpass(g.ql, g.name);
+            pending.push(
+              result
+                .then(data => {
+                  const elements = data.elements || [];
+                  groupCache[g.name] = { ts: Date.now(), elements };
+                  mergeElements(elements);
+                  reportOsmCache(g.name, { used: false, ready: true });
+                })
+                .catch(() => {
+                  failed.push(g.name);
+                  const cached = groupCache[g.name];
+                  if (cached) {
+                    usedCacheFor.push(g.name);
+                    mergeElements(cached.elements);
+                    reportOsmCache(g.name, { used: true, ready: true });
+                  }
+                })
+                .then(() => {
+                  done++;
+                  if (!isBackgroundRetry) setStatus(`Caricamento dati… (${done}/${groupsToFetch.length} gruppi)`, 'loading');
+                })
+            );
+            await firstSettled;
           }
+          await Promise.allSettled(pending);
           writeOsmGroupCache(groupCache);
 
           if (failed.length) {
