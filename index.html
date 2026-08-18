@@ -131,6 +131,10 @@
       text-align: left; white-space: nowrap; font-size: 0.76rem;
       font-weight: 600; color: var(--text-main);
     }
+    .osm-diag-service-icon-wrap {
+      display: inline-flex; vertical-align: middle; margin-right: 5px;
+    }
+    .osm-diag-service-icon-wrap svg { width: 13px; height: 13px; }
     .osm-diag-table th span {
       writing-mode: vertical-rl; transform: rotate(180deg);
       font-size: 0.7rem; font-weight: 700; color: #64748b; white-space: nowrap;
@@ -1051,7 +1055,7 @@
     <label><input type="checkbox" id="lyr-cycleway"> <i data-lucide="bike" width="14" height="14" style="color:#06b6d4"></i> Ciclabili</label>
     <label><input type="checkbox" id="lyr-pedestrian"> <i data-lucide="footprints" width="14" height="14" style="color:#22c55e"></i> Pedonali</label>
     <label><input type="checkbox" id="lyr-crossing"> <i data-lucide="move-horizontal" width="14" height="14" style="color:#8b5cf6"></i> Attraversamenti</label>
-    <label><input type="checkbox" id="lyr-trafficsignals"> <i data-lucide="traffic-cone" width="14" height="14" style="color:#dc2626"></i> Semafori</label>
+    <label><input type="checkbox" id="lyr-trafficsignals"> <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#dc2626;flex-shrink:0"><rect x="7" y="2" width="10" height="16" rx="3"/><circle cx="12" cy="6.5" r="0.8"/><circle cx="12" cy="10" r="0.8"/><circle cx="12" cy="13.5" r="0.8"/><path d="M12 18v2"/><path d="M9 22h6"/></svg> Semafori</label>
     <label><input type="checkbox" id="lyr-maxspeed"> <i data-lucide="gauge" width="14" height="14" style="color:#ef4444"></i> Limiti di velocità</label>
     <label><input type="checkbox" id="lyr-hgv"> <i data-lucide="truck" width="14" height="14" style="color:#0f766e"></i> Mezzi pesanti</label>
     <label><input type="checkbox" id="lyr-strade_ref"> <i data-lucide="signpost" width="14" height="14" style="color:#dc2626"></i> Proprietà (SS/SR/SP/SC)</label>
@@ -1552,6 +1556,11 @@
       proposed:     L.layerGroup(),
       cycleway:     L.layerGroup(),
       pedestrian:   L.layerGroup(),
+      // Percorsi ciclopedonali (ciclabile con foot=yes/designated, o percorso
+      // pedonale con bicycle=yes/designated): non hanno una voce propria nel
+      // pannello Layer, sono agganciati a mano alla visibilità/colore dei
+      // checkbox Ciclabili+Pedonali — vedi updateSharedPathLayers più sotto.
+      cyclopedonale: L.layerGroup(),
       crossing:     L.layerGroup(),
       construction: L.layerGroup(),
       maxspeed:     L.layerGroup(),
@@ -1618,6 +1627,39 @@
           map.removeLayer(layerGroup);
         }
       });
+    });
+
+    // ─── Percorsi ciclopedonali: nessun checkbox proprio, agganciati a
+    // Ciclabili+Pedonali (vedi isSharedFootBike più sopra). Visibili quando
+    // ALMENO UNO dei due layer è attivo; colore del layer attivo quando è
+    // uno solo, un terzo colore quando sono attivi ENTRAMBI insieme —
+    // ricalcolato ogni volta che uno dei due checkbox cambia stato.
+    const SHARED_PATH_COLOR = '#d946ef';
+    let sharedPathEntries = []; // { styleObj, geoLayer } — ricostruito a ogni loadData
+    function sharedPathColor() {
+      const cycleOn = document.getElementById('lyr-cycleway').checked;
+      const pedOn = document.getElementById('lyr-pedestrian').checked;
+      if (cycleOn && pedOn) return SHARED_PATH_COLOR;
+      return cycleOn ? STYLES.cycleway.color : STYLES.pedestrian.color;
+    }
+    function updateSharedPathLayers() {
+      const visible = document.getElementById('lyr-cycleway').checked || document.getElementById('lyr-pedestrian').checked;
+      const color = sharedPathColor();
+      sharedPathEntries.forEach(({ styleObj, geoLayer }) => {
+        // Si muta l'oggetto stile invece di sostituirlo: wireLayerInteractions
+        // tiene lo STESSO riferimento per il mouseout, quindi il colore
+        // aggiornato si applica anche lì senza dover ri-agganciare gli eventi.
+        styleObj.color = color;
+        geoLayer.setStyle(styleObj);
+      });
+      if (visible) {
+        if (!map.hasLayer(layers.cyclopedonale)) { layers.cyclopedonale.addTo(map); lucide.createIcons(); }
+      } else if (map.hasLayer(layers.cyclopedonale)) {
+        map.removeLayer(layers.cyclopedonale);
+      }
+    }
+    ['lyr-cycleway', 'lyr-pedestrian'].forEach(id => {
+      document.getElementById(id).addEventListener('change', updateSharedPathLayers);
     });
 
     // Toggle layers panel
@@ -2265,6 +2307,19 @@
       }
 
       return 'default';
+    }
+
+    // Un percorso classificato "cycleway" o "pedestrian" da getType() che
+    // ammette ESPLICITAMENTE anche l'altro modo (foot=yes/designated su una
+    // ciclabile, o bicycle=yes/designated su un percorso pedonale) è un
+    // ciclopedonale: niente colore fisso proprio, viene mostrato nel layer
+    // Ciclabili e nel layer Pedonali, con un terzo colore quando ENTRAMBI
+    // sono attivi insieme — vedi updateSharedPathLayers.
+    function isSharedFootBike(tags) {
+      const type = getType(tags);
+      if (type === 'cycleway') return tags.foot === 'yes' || tags.foot === 'designated';
+      if (type === 'pedestrian') return tags.bicycle === 'yes' || tags.bicycle === 'designated';
+      return false;
     }
 
     const TYPE_META = {
@@ -3123,15 +3178,33 @@
         // che un altro ha già risposto, non un vero fallimento) da un mirror
         // che è scaduto per davvero (controllers[i].signal.aborted resta
         // false in quel caso, solo il timeout è scattato).
+        let gotResponse = false;
         return fetch(url, {
           method: 'POST',
           body: 'data=' + encodeURIComponent(query),
           signal: AbortSignal.any([controllers[i].signal, AbortSignal.timeout(OVERPASS_TIMEOUT_MS)])
         })
-          .then(res => { if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`); return res.json(); })
+          .then(res => {
+            // Una risposta HTTP, qualunque sia lo status, dimostra che il
+            // server È raggiungibile in rete — indipendentemente dal fatto
+            // che QUESTA query specifica vada a buon fine (potrebbe fallire
+            // per rate limit, query troppo pesante, errore lato server...).
+            // La raggiungibilità (colonna nome servizio) e il successo del
+            // singolo dato (celle per gruppo) sono quindi tracciati separati.
+            gotResponse = true;
+            reportOsmDiagReachable(label, true);
+            if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+            return res.json();
+          })
           .then(data => { reportOsmDiagStatus(label, groupKey, 'success'); return data; })
           .catch(err => {
-            reportOsmDiagStatus(label, groupKey, controllers[i].signal.aborted ? 'idle' : 'failed');
+            const lostRace = controllers[i].signal.aborted;
+            reportOsmDiagStatus(label, groupKey, lostRace ? 'idle' : 'failed');
+            // Nessuna risposta HTTP arrivata, e non solo perché abbiamo
+            // abortito noi dopo aver perso la gara: qui il server non è
+            // stato raggiunto per davvero (timeout, DNS, CORS, connessione
+            // rifiutata...).
+            if (!gotResponse && !lostRace) reportOsmDiagReachable(label, false);
             throw err;
           });
       });
@@ -3144,17 +3217,21 @@
       // Fallback: proxy sul Raspberry, che rilancia la query server-side
       // (raggiunge Overpass anche quando il browser del visitatore non ci riesce).
       reportOsmDiagStatus('Proxy Raspberry', groupKey, 'loading');
+      let gotResponse = false;
       try {
         const res = await fetch(API_BASE + '/api/overpass', {
           method: 'POST',
           body: 'data=' + encodeURIComponent(query)
         });
+        gotResponse = true;
+        reportOsmDiagReachable('Proxy Raspberry', true);
         if (!res.ok) throw new Error(`Proxy Overpass: HTTP ${res.status}`);
         const data = await res.json();
         reportOsmDiagStatus('Proxy Raspberry', groupKey, 'success');
         return data;
       } catch (err) {
         reportOsmDiagStatus('Proxy Raspberry', groupKey, 'failed');
+        if (!gotResponse) reportOsmDiagReachable('Proxy Raspberry', false);
         throw err;
       }
     }
@@ -3212,6 +3289,39 @@
       if (!osmDiagPanelEl) return;
       const cell = osmDiagPanelEl.querySelector(`.osm-diag-cell[data-service="${serviceLabel}"][data-group="${groupKey}"]`);
       if (cell) cell.innerHTML = osmDiagIconHtml(state);
+    }
+
+    // Raggiungibilità del SERVER in sé (colonna nome servizio), separata dal
+    // successo della singola query (celle per gruppo, gestite sopra): un
+    // server può essere raggiungibile e rispondere con un errore (rate
+    // limit, query troppo pesante...), oppure essere del tutto irraggiungibile
+    // (timeout di rete, DNS, connessione rifiutata). Indicizzata per servizio,
+    // non per (servizio, gruppo): è una proprietà del server, non del dato
+    // che gli si sta chiedendo in quel momento.
+    const osmDiagReachable = {};
+
+    function reportOsmDiagReachable(serviceLabel, reachable) {
+      osmDiagReachable[serviceLabel] = reachable;
+      updateOsmDiagServiceIcon(serviceLabel);
+    }
+
+    function osmDiagServiceIconHtml(reachable) {
+      // Riusa le STESSE icone spunta/croce delle celle dati (osmDiagIconHtml),
+      // solo rimpicciolite: niente icone diverse per lo stesso significato.
+      if (reachable === true) return `<span class="osm-diag-service-icon-wrap" title="Raggiungibile">${osmDiagIconHtml('success')}</span>`;
+      if (reachable === false) return `<span class="osm-diag-service-icon-wrap" title="Non raggiungibile">${osmDiagIconHtml('failed')}</span>`;
+      return '';
+    }
+
+    // Aggiorna la spunta/croce nella cella col nome del servizio. Una riga
+    // "Dati Server" e una riga mirror possono condividere lo stesso servizio
+    // (es. più tipi di dato sullo stesso backend), quindi si aggiornano
+    // tutte le celle con quella chiave, non solo la prima trovata.
+    function updateOsmDiagServiceIcon(serviceLabel) {
+      if (!osmDiagPanelEl) return;
+      osmDiagPanelEl.querySelectorAll(`.osm-diag-service[data-service-key="${serviceLabel}"]`).forEach(td => {
+        td.innerHTML = osmDiagServiceIconHtml(osmDiagReachable[serviceLabel]) + td.dataset.label;
+      });
     }
 
     function osmDiagIconHtml(state) {
@@ -3325,7 +3435,7 @@
             <tbody>
               ${labels.map(label => `
                 <tr>
-                  <td class="osm-diag-service">${label}</td>
+                  <td class="osm-diag-service" data-service-key="${label}" data-label="${label}">${osmDiagServiceIconHtml(osmDiagReachable[label])}${label}</td>
                   ${OSM_DIAG_GROUPS.map(g => `<td class="osm-diag-cell" data-service="${label}" data-group="${g.key}">${osmDiagIconHtml(osmDiagState[label]?.[g.key])}</td>`).join('')}
                 </tr>
               `).join('')}
@@ -3346,7 +3456,7 @@
             <tbody>
               ${SERVER_DIAG_ROWS.map(r => `
                 <tr>
-                  <td class="osm-diag-service">${r.label}</td>
+                  <td class="osm-diag-service" data-service-key="${SERVER_DIAG_SERVICE}" data-label="${r.label}">${osmDiagServiceIconHtml(osmDiagReachable[SERVER_DIAG_SERVICE])}${r.label}</td>
                   <td class="osm-diag-cell" data-service="${SERVER_DIAG_SERVICE}" data-group="${r.key}">${osmDiagIconHtml(osmDiagState[SERVER_DIAG_SERVICE]?.[r.key])}</td>
                   <td class="osm-diag-cache-cell" data-group="${r.key}">${osmDiagCacheHtml(r.key)}</td>
                 </tr>
@@ -3430,6 +3540,53 @@
     }
 
     // ─────────────────────────────────────────────────────────────
+    // Confine comunale di Castelfranco Veneto (poligono reale, non il bbox
+    // rettangolare usato per interrogare Overpass — vedi OSM_BBOX più sotto).
+    // Confine ufficiale OSM (relation 45549), semplificato con Douglas-Peucker
+    // (epsilon ~0.0003°, ~30m) da ~1980 a 195 vertici: sufficiente a
+    // distinguere Castelfranco dai comuni confinanti, troppo leggero per
+    // pesare sul rendering. Coppie [lat, lon].
+    // ─────────────────────────────────────────────────────────────
+    const CASTELFRANCO_BOUNDARY = [[45.66879,11.86777],[45.66731,11.86807],[45.66648,11.87335],[45.66632,11.88088],[45.66283,11.88174],[45.66290,11.88312],[45.65884,11.88454],[45.65885,11.88731],[45.65639,11.88740],[45.65451,11.88943],[45.65425,11.88590],[45.64953,11.88688],[45.64826,11.88754],[45.64726,11.88896],[45.64522,11.89009],[45.63847,11.89155],[45.63369,11.89321],[45.63197,11.89517],[45.63028,11.89550],[45.62997,11.89421],[45.63258,11.89235],[45.63310,11.88949],[45.63237,11.88927],[45.63050,11.89040],[45.62993,11.89021],[45.62833,11.89242],[45.62774,11.89085],[45.62656,11.89194],[45.62585,11.88999],[45.61954,11.89441],[45.61306,11.89821],[45.61434,11.89961],[45.61685,11.90119],[45.61847,11.90126],[45.62414,11.90010],[45.62535,11.89935],[45.62641,11.89779],[45.62751,11.89768],[45.62837,11.90153],[45.62767,11.90174],[45.62722,11.90419],[45.62591,11.90603],[45.62613,11.90696],[45.62553,11.90793],[45.62501,11.90740],[45.62456,11.90771],[45.62308,11.91093],[45.62227,11.91074],[45.62081,11.91135],[45.61925,11.91320],[45.61867,11.91716],[45.61974,11.91689],[45.62182,11.91777],[45.62103,11.92252],[45.61889,11.92752],[45.62147,11.92712],[45.62224,11.92837],[45.62259,11.92604],[45.62546,11.92421],[45.62877,11.92616],[45.63052,11.92859],[45.63127,11.92895],[45.63249,11.92920],[45.63417,11.92846],[45.63602,11.92844],[45.63713,11.92751],[45.63885,11.92715],[45.64830,11.93232],[45.64804,11.93415],[45.64759,11.93424],[45.64736,11.93855],[45.64685,11.93901],[45.64771,11.94535],[45.65111,11.94244],[45.65107,11.94371],[45.65029,11.95069],[45.64768,11.95054],[45.64756,11.95362],[45.64685,11.95722],[45.64466,11.95666],[45.64445,11.96199],[45.64233,11.96208],[45.64198,11.96481],[45.64106,11.96535],[45.64111,11.96620],[45.64052,11.96628],[45.64055,11.96881],[45.64240,11.96624],[45.64690,11.96505],[45.64702,11.96552],[45.64817,11.96554],[45.64819,11.96638],[45.64963,11.96642],[45.65017,11.96637],[45.65042,11.96542],[45.65099,11.96546],[45.65138,11.96822],[45.65315,11.96724],[45.65312,11.96664],[45.65473,11.96638],[45.65442,11.96883],[45.65448,11.96924],[45.65500,11.96916],[45.65539,11.97188],[45.65682,11.97204],[45.65830,11.97152],[45.65908,11.97508],[45.66150,11.97457],[45.66183,11.97371],[45.66391,11.97328],[45.66424,11.97620],[45.66298,11.97647],[45.66303,11.97832],[45.66126,11.97877],[45.66126,11.97937],[45.66005,11.97966],[45.66055,11.98316],[45.66074,11.98373],[45.66116,11.98367],[45.66166,11.98635],[45.66232,11.98722],[45.66445,11.99708],[45.67009,11.99641],[45.68567,11.99175],[45.68706,11.99310],[45.68804,11.99284],[45.68870,11.99406],[45.68967,11.99381],[45.68988,11.99414],[45.69428,11.99294],[45.69559,11.98774],[45.69998,11.97791],[45.70060,11.97200],[45.70185,11.96605],[45.70464,11.96100],[45.70563,11.95794],[45.70786,11.95362],[45.70730,11.95270],[45.70617,11.94342],[45.70400,11.94397],[45.70389,11.94283],[45.70253,11.94322],[45.70229,11.94211],[45.69830,11.94318],[45.69773,11.94220],[45.69735,11.94231],[45.69664,11.93913],[45.69501,11.93976],[45.69437,11.93685],[45.69350,11.93714],[45.69327,11.93582],[45.68939,11.93677],[45.68824,11.92899],[45.69061,11.92813],[45.69084,11.92756],[45.69462,11.92757],[45.69541,11.92451],[45.69709,11.92441],[45.69709,11.92155],[45.69893,11.92150],[45.69799,11.90990],[45.69879,11.90850],[45.69840,11.90671],[45.69657,11.90684],[45.69641,11.90605],[45.69513,11.90660],[45.69523,11.90728],[45.69266,11.90793],[45.69198,11.90885],[45.69014,11.90947],[45.69028,11.91116],[45.68912,11.91245],[45.68877,11.90975],[45.68698,11.91054],[45.68695,11.90941],[45.68646,11.90945],[45.68627,11.90881],[45.68625,11.90583],[45.68567,11.90596],[45.68539,11.90319],[45.68491,11.90329],[45.68492,11.90063],[45.68407,11.90070],[45.68351,11.89879],[45.68491,11.89472],[45.68313,11.89511],[45.68237,11.89060],[45.68040,11.89197],[45.67791,11.89281],[45.67696,11.88705],[45.67490,11.88646],[45.67367,11.88696],[45.67330,11.88453],[45.67187,11.88491],[45.66879,11.86777]];
+
+    // Ray casting standard (point-in-polygon) su CASTELFRANCO_BOUNDARY.
+    function isPointInCastelfranco(lat, lon) {
+      let inside = false;
+      for (let i = 0, j = CASTELFRANCO_BOUNDARY.length - 1; i < CASTELFRANCO_BOUNDARY.length; j = i++) {
+        const [yi, xi] = CASTELFRANCO_BOUNDARY[i];
+        const [yj, xj] = CASTELFRANCO_BOUNDARY[j];
+        const intersect = ((yi > lat) !== (yj > lat)) &&
+          (lon < (xj - xi) * (lat - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+      }
+      return inside;
+    }
+
+    // true se ALMENO UN punto della geometria cade dentro il confine: le
+    // strade che attraversano il confine restano visibili per intero
+    // (niente geometrie tagliate a metà), solo gli elementi interamente
+    // fuori Castelfranco (nei comuni confinanti, dentro il bbox rettangolare
+    // ma fuori dal poligono reale) vengono scartati.
+    function geometryInCastelfranco(geometry) {
+      if (!geometry) return false;
+      const coords = geometry.coordinates;
+      switch (geometry.type) {
+        case 'Point':
+          return isPointInCastelfranco(coords[1], coords[0]);
+        case 'MultiPoint':
+        case 'LineString':
+          return coords.some(([lon, lat]) => isPointInCastelfranco(lat, lon));
+        case 'Polygon':
+        case 'MultiLineString':
+          return coords.some(ring => ring.some(([lon, lat]) => isPointInCastelfranco(lat, lon)));
+        case 'MultiPolygon':
+          return coords.some(poly => poly.some(ring => ring.some(([lon, lat]) => isPointInCastelfranco(lat, lon))));
+        default:
+          return true;
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
     // Load data
     // ─────────────────────────────────────────────────────────────
     async function loadData(force = false, isBackgroundRetry = false) {
@@ -3455,6 +3612,12 @@
       // hanno l'indice delle aree aggiornato/costruito per questo nome, quindi
       // una query per area può "riuscire" (200 OK) su un mirror ma tornare 0
       // risultati. Il bbox funziona in modo identico e affidabile ovunque.
+      // È un RETTANGOLO che avanza nei comuni confinanti (Resana, Riese Pio
+      // X, Castello di Godego, San Zenone, Loreggia...): il confine reale è
+      // irregolare, quindi il risultato include elementi fuori Castelfranco.
+      // Si tiene il bbox per l'interrogazione (economico, affidabile su tutti
+      // i mirror) e si scarta poi lato client, dopo il merge, ciò che cade
+      // fuori dal confine comunale reale: vedi CASTELFRANCO_BOUNDARY più sotto.
       const OSM_BBOX = '45.6230,11.8730,45.7020,12.0020';
       const QUERY_GROUPS = [
         {
@@ -3630,7 +3793,12 @@
         Object.entries(layers).forEach(([name, layer]) => {
           if (name !== 'segnalazioni') layer.clearLayers();
         });
+        sharedPathEntries = [];
         const geojson = osmtogeojson(data);
+        // Scarta gli elementi interamente fuori dal confine comunale reale
+        // (il bbox di interrogazione è un rettangolo che sconfina nei comuni
+        // vicini, vedi CASTELFRANCO_BOUNDARY più sopra).
+        geojson.features = geojson.features.filter(f => geometryInCastelfranco(f.geometry));
         const wayBearingIndex = buildWayBearingIndex(data);
 
         // Normalizza typo comuni nei tag OSM
@@ -3666,7 +3834,16 @@
               return;
             }
 
-            if (type !== 'default') {
+            if ((type === 'cycleway' || type === 'pedestrian') && isSharedFootBike(tags)) {
+              // Ciclopedonale: niente colore fisso, va nel layer dedicato con
+              // uno stile ricalcolato da updateSharedPathLayers in base ai
+              // checkbox Ciclabili/Pedonali attivi in quel momento.
+              const base = { color: sharedPathColor(), weight: 4, lineCap: 'round', opacity: .9 };
+              wireLayerInteractions(layer, feature, base, name);
+              layer.setStyle(base);
+              layers.cyclopedonale.addLayer(layer);
+              sharedPathEntries.push({ styleObj: base, geoLayer: layer });
+            } else if (type !== 'default') {
               const base = { ...(STYLES[type] || STYLES.default) };
               wireLayerInteractions(layer, feature, base, name);
               layers[type].addLayer(layer);
@@ -3726,6 +3903,7 @@
 
           }
         });
+        updateSharedPathLayers();
 
         // ─── Punti (segnali, lampioni, fermate bus, cestini) ───
         const POINT_TYPES = ['signs', 'lamps', 'busstops', 'bins', 'trafficsignals', 'manholes', 'bicycleparking', 'fontane', 'benches', 'trees'];
@@ -4298,6 +4476,10 @@ setTimeout(() => {
       reportOsmDiagStatus(SERVER_DIAG_SERVICE, 'proposte', 'loading');
       try {
         const res = await apiFetch('/api/reports');
+        // Una risposta arrivata (anche un 401, gestito dentro apiFetch)
+        // dimostra che il backend è raggiungibile, a prescindere da come va
+        // a finire QUESTA richiesta.
+        reportOsmDiagReachable(SERVER_DIAG_SERVICE, true);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         allReportsCache = await res.json();
         writeReportsCache(allReportsCache);
@@ -4306,6 +4488,9 @@ setTimeout(() => {
         renderReportMarkers();
       } catch (err) {
         reportOsmDiagStatus(SERVER_DIAG_SERVICE, 'proposte', 'failed');
+        // apiFetch lancia anche per un 401 (autenticazione), che è comunque
+        // una risposta reale del backend: non è un caso di irraggiungibilità.
+        if (err.message !== 'Non autenticato') reportOsmDiagReachable(SERVER_DIAG_SERVICE, false);
         // Backend irraggiungibile: mostra l'ultima versione salvata, se c'è,
         // invece di lasciare il layer vuoto.
         const cached = readReportsCache();
