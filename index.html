@@ -1635,7 +1635,7 @@
     // uno solo, un terzo colore quando sono attivi ENTRAMBI insieme —
     // ricalcolato ogni volta che uno dei due checkbox cambia stato.
     const SHARED_PATH_COLOR = '#d946ef';
-    let sharedPathEntries = []; // { styleObj, geoLayer } — ricostruito a ogni loadData
+    let sharedPathEntries = []; // { styleObj, geoLayer, groupName } — voci rimosse/sostituite per gruppo da renderBatch, non azzerato in blocco
     function sharedPathColor() {
       const cycleOn = document.getElementById('lyr-cycleway').checked;
       const pedOn = document.getElementById('lyr-pedestrian').checked;
@@ -3719,6 +3719,222 @@
       }
     }
 
+    // Normalizza typo comuni nei tag OSM
+    const TAG_TYPOS = {
+      'maxweigh:hgv':              'maxweight:hgv',
+      'maxweighrating:hgv':        'maxweight:rating:hgv',
+      'maxweigh:hgv:conditional':  'maxweight:hgv:conditional',
+      'maxweigh':                  'maxweight',
+      'maxweigh:rating':           'maxweight:rating',
+      'hgv_articulated':           'hgv:articulated',
+      'hgv_articulated:conditional':'hgv:articulated:conditional',
+    };
+    const POINT_TYPES = ['signs', 'lamps', 'busstops', 'bins', 'trafficsignals', 'manholes', 'bicycleparking', 'fontane', 'benches', 'trees'];
+
+    // Layer disegnati finora PER GRUPPO — a livello di MODULO, non dentro
+    // loadData(): deve sopravvivere tra una chiamata e l'altra, non solo
+    // dentro la stessa, altrimenti loadData non saprebbe più cosa ha già
+    // disegnato una chiamata precedente e non potrebbe sostituirlo in modo
+    // mirato — dovrebbe azzerare tutti i layer a inizio funzione "per
+    // sicurezza", che è esattamente la causa delle sparizioni viste con le
+    // chiamate sovrapposte o con un semplice refresh manuale (force:true
+    // rifetcha tutti i gruppi, quindi con l'azzeramento a monte la mappa
+    // restava vuota finché non rientrava tutto da rete). Con
+    // groupRenderedLayers persistente, renderBatch sa sempre esattamente
+    // quali layer appartengono a quale gruppo e li sostituisce SOLO quando
+    // arriva un dato valido pronto a prenderne il posto — niente più
+    // azzeramento cieco di tutto a ogni chiamata.
+    const groupRenderedLayers = {};
+
+    // Converte e disegna il lotto di elementi grezzi di UN gruppo, per
+    // conto suo — niente merge globale di tutti i gruppi prima di
+    // disegnare (un merge globale per id apriva un bug: un nodo
+    // "scheletro" senza tag di UN gruppo poteva mascherare la copia con i
+    // tag pieni dello STESSO nodo arrivata da un ALTRO gruppo, a seconda
+    // dell'ordine di arrivo). Ogni gruppo si converte e disegna dai propri
+    // dati grezzi, indipendente dagli altri, e SOSTITUISCE (non somma) il
+    // proprio rendering precedente — sia quello di un mirror più lento ma
+    // migliore nella STESSA loadData(), sia quello di una loadData()
+    // precedente: groupRenderedLayers è persistente, vedi sopra.
+    function renderBatch(elements, groupName) {
+      if (!elements.length) return 0;
+      const localData = { elements };
+      const geojson = osmtogeojson(localData);
+      if (!geojson.features.length) return 0;
+
+      const rawCount = geojson.features.length;
+      const trafficSignalsBefore = groupName === 'semafori'
+        ? geojson.features.filter(f => getType(f.properties || {}) === 'trafficsignals').length
+        : null;
+
+      // Scarta gli elementi interamente fuori dal confine comunale reale
+      // (il bbox di interrogazione è un rettangolo che sconfina nei comuni
+      // vicini, vedi CASTELFRANCO_BOUNDARY più sopra).
+      geojson.features = geojson.features.filter(f => geometryInCastelfranco(f.geometry));
+      console.log(`[${groupName}] ${rawCount} feature grezze -> ${geojson.features.length} dentro il confine comunale`);
+      if (trafficSignalsBefore !== null) {
+        const trafficSignalsAfter = geojson.features.filter(f => getType(f.properties || {}) === 'trafficsignals').length;
+        console.log(`[semafori] classificate "trafficsignals": ${trafficSignalsBefore} prima del filtro confine, ${trafficSignalsAfter} dopo`);
+      }
+      // Niente feature utilizzabili DOPO il filtro: si esce qui, PRIMA
+      // di toccare quanto già disegnato per questo gruppo. Un mirror
+      // "migliore" per numero di elementi grezzi (motivo per cui
+      // onUpdate lo ha proposto) potrebbe comunque finire vuoto dopo il
+      // filtro sul confine — rimuovere il rendering buono già mostrato
+      // PRIMA di sapere se questo nuovo lotto ha davvero qualcosa da
+      // mettere al suo posto lo farebbe sparire senza sostituirlo.
+      if (!geojson.features.length) return 0;
+
+      // Solo ORA, con dati validi in mano, si rimuove quanto disegnato
+      // in precedenza per QUESTO gruppo (da un mirror precedente nella
+      // stessa loadData(), o da una loadData() precedente) e si ricomincia
+      // a tracciare il nuovo — sostituzione, non somma di doppioni.
+      if (groupRenderedLayers[groupName]) {
+        groupRenderedLayers[groupName].forEach(({ layerGroup, layer }) => layerGroup.removeLayer(layer));
+        sharedPathEntries = sharedPathEntries.filter(e => e.groupName !== groupName);
+      }
+      const addedLayers = [];
+      groupRenderedLayers[groupName] = addedLayers;
+      function addTracked(layerGroup, layer) {
+        layerGroup.addLayer(layer);
+        addedLayers.push({ layerGroup, layer });
+      }
+
+      geojson.features.forEach(f => {
+        if (!f.properties) return;
+        Object.keys(TAG_TYPOS).forEach(typo => {
+          if (f.properties[typo] !== undefined) {
+            f.properties[TAG_TYPOS[typo]] = f.properties[typo];
+            delete f.properties[typo];
+          }
+        });
+      });
+
+      const wayBearingIndex = buildWayBearingIndex(localData);
+
+      L.geoJSON(geojson, {
+        filter: feature => feature.geometry && feature.geometry.type !== 'Point',
+        style: feature => ({ ...(STYLES[getType(feature.properties || {})] || STYLES.default) }),
+        onEachFeature: (feature, layer) => {
+          const tags = feature.properties || {};
+          const type = getType(tags);
+          const name = tags.name || tags['name:it'] || '';
+
+          if (type === 'parking' || type === 'parkometers') {
+            renderParkingFeature(feature, addTracked);
+            return;
+          }
+
+          if ((type === 'cycleway' || type === 'pedestrian') && isSharedFootBike(tags)) {
+            // Ciclopedonale: niente colore fisso, va nel layer dedicato con
+            // uno stile ricalcolato da updateSharedPathLayers in base ai
+            // checkbox Ciclabili/Pedonali attivi in quel momento.
+            const base = { color: sharedPathColor(), weight: 4, lineCap: 'round', opacity: .9 };
+            wireLayerInteractions(layer, feature, base, name);
+            layer.setStyle(base);
+            addTracked(layers.cyclopedonale, layer);
+            sharedPathEntries.push({ styleObj: base, geoLayer: layer, groupName });
+          } else if (type !== 'default') {
+            const base = { ...(STYLES[type] || STYLES.default) };
+            wireLayerInteractions(layer, feature, base, name);
+            addTracked(layers[type], layer);
+          } else if (hasHGVData(tags) || (tags.maxspeed && isRoadForMaxspeed(tags))) {
+            // Strada normale con dati HGV o velocità: rendi il layer base cliccabile
+            wireLayerInteractions(layer, feature, STYLES.default, name);
+          }
+
+          if (tags.maxspeed && isRoadForMaxspeed(tags)) {
+            const base = maxspeedStyle(tags.maxspeed);
+            const speedLayer = L.geoJSON(feature, { style: () => ({ ...base }) });
+            wireLayerInteractions(speedLayer, feature, base, name ? `${name} • ${tags.maxspeed}` : `${tags.maxspeed}`);
+            forEachSubLayer(speedLayer, sub => addTracked(layers.maxspeed, sub));
+          }
+
+          if (hasHGVData(tags)) {
+            const base = classifyHGV(tags);
+            const hgvLayer = L.geoJSON(feature, {
+              style: () => ({
+                color: base.color,
+                weight: base.weight,
+                opacity: base.opacity,
+                dashArray: base.dashArray || null,
+                lineCap: 'round'
+              })
+            });
+
+            wireLayerInteractions(hgvLayer, feature, {
+              color: base.color,
+              weight: base.weight,
+              opacity: base.opacity,
+              dashArray: base.dashArray || null,
+              lineCap: 'round'
+            }, name);
+
+            forEachSubLayer(hgvLayer, sub => addTracked(layers.hgv, sub));
+          }
+
+          if (tags.ref) {
+            const refStyle = classifyRef(tags.ref);
+            if (refStyle) {
+              const refLayer = L.geoJSON(feature, {
+                style: () => ({
+                  color: refStyle.color,
+                  weight: 4,
+                  opacity: 0.85,
+                  dashArray: null,
+                  lineCap: 'round'
+                })
+              });
+              wireLayerInteractions(refLayer, feature, {
+                color: refStyle.color, weight: 4, opacity: 0.85, lineCap: 'round'
+              }, name ? `${name} (${tags.ref})` : tags.ref);
+              forEachSubLayer(refLayer, sub => addTracked(layers.strade_ref, sub));
+            }
+          }
+
+        }
+      });
+      updateSharedPathLayers();
+
+      // ─── Punti (segnali, lampioni, fermate bus, cestini...) ───
+      geojson.features.forEach(feature => {
+        if (!feature.geometry || feature.geometry.type !== 'Point') return;
+        const tags = feature.properties || {};
+        const type = getType(tags);
+
+        if (type === 'parking' || type === 'parkometers') {
+          renderParkingFeature(feature, addTracked);
+          return;
+        }
+        if (!POINT_TYPES.includes(type)) return;
+
+        const name = tags.name || tags['name:it'] || '';
+        const [lng, lat] = feature.geometry.coordinates;
+        const directionDeg = parseDirectionDeg(tags, feature, wayBearingIndex);
+
+        let icon;
+        if (type === 'trafficsignals') {
+          icon = makeDirectionalDivIcon(buildTrafficLightVisual(tags), directionDeg);
+        } else if (type === 'signs') {
+          icon = makeDirectionalDivIcon(buildSignVisual(tags), directionDeg);
+        } else {
+          icon = makePointIcon(type, tags);
+        }
+
+        const marker = L.marker([lat, lng], { icon });
+        wirePointInteractions(marker, feature, name);
+        addTracked(layers[type], marker);
+      });
+      // Icone lucide (<i data-lucide>) convertite subito per QUESTO
+      // batch, non solo a fine caricamento: altrimenti i marker di un
+      // gruppo arrivato presto restano con l'icona vuota finché non
+      // scatta un altro lucide.createIcons() più avanti.
+      lucide.createIcons();
+      if (groupName === 'semafori') console.log(`[semafori] marker nel layer "Semafori" dopo questo batch: ${layers.trafficsignals.getLayers().length}`);
+
+      return geojson.features.length;
+    }
+
     // ─────────────────────────────────────────────────────────────
     // Load data
     // ─────────────────────────────────────────────────────────────
@@ -3727,12 +3943,9 @@
     // sistematicamente morti e ogni gruppo deve aspettarne il timeout) può
     // durare più di OSM_RETRY_INTERVAL_MS=15s — quindi un retry automatico
     // può scattare mentre la chiamata precedente sta ancora girando. Senza
-    // questa guardia, la SECONDA chiamata azzera subito tutti i layer
-    // (Object.entries(layers)...clearLayers()) mentre la PRIMA ha già
-    // finito di disegnare alcuni gruppi: quei gruppi non ricevono più
-    // aggiornamenti (il loro fetch è concluso, nessun altro onUpdate in
-    // arrivo) e restano vuoti — esattamente "tutto quello che era attivo è
-    // sparito al nuovo tentativo".
+    // questa guardia, la SECONDA chiamata partirebbe mentre la prima non ha
+    // ancora finito, con due renderBatch potenzialmente in corsa tra loro
+    // sullo stesso gruppo.
     let loadDataInFlight = false;
     async function loadData(force = false, isBackgroundRetry = false) {
       if (loadDataInFlight) {
@@ -3939,228 +4152,13 @@
           return !isFresh(g.name);
         });
 
-        // Layer azzerati una sola volta QUI, prima di iniziare a
-        // (ri)caricare — da qui in poi ogni gruppo, che arrivi da rete o da
-        // cache, viene disegnato per conto suo appena pronto (renderBatch)
-        // invece che aspettare che TUTTI i 14 gruppi abbiano finito prima di
-        // mostrare qualcosa sulla mappa.
-        // segnalazioni escluso: non viene popolato da Overpass ma da loadReports(),
-        // ricaricarlo qui lo svuoterebbe senza mai ripopolarlo.
-        Object.entries(layers).forEach(([name, layer]) => {
-          if (name !== 'segnalazioni') layer.clearLayers();
-        });
-        sharedPathEntries = [];
-
-        // Normalizza typo comuni nei tag OSM
-        const TAG_TYPOS = {
-          'maxweigh:hgv':              'maxweight:hgv',
-          'maxweighrating:hgv':        'maxweight:rating:hgv',
-          'maxweigh:hgv:conditional':  'maxweight:hgv:conditional',
-          'maxweigh':                  'maxweight',
-          'maxweigh:rating':           'maxweight:rating',
-          'hgv_articulated':           'hgv:articulated',
-          'hgv_articulated:conditional':'hgv:articulated:conditional',
-        };
-        const POINT_TYPES = ['signs', 'lamps', 'busstops', 'bins', 'trafficsignals', 'manholes', 'bicycleparking', 'fontane', 'benches', 'trees'];
-
-        // Layer disegnati finora PER GRUPPO (non per l'intero caricamento):
-        // un gruppo può essere disegnato più volte nella stessa loadData()
-        // se un mirror più lento risponde con PIÙ elementi di uno più
-        // veloce arrivato prima (vedi onUpdate più sotto) — in quel caso va
-        // SOSTITUITO quanto già disegnato per quel gruppo, non sommato,
-        // altrimenti si vedrebbero doppioni sulla mappa.
-        const groupRenderedLayers = {};
-
-        // Converte e disegna il lotto di elementi grezzi di UN gruppo, per
-        // conto suo — niente più un merge globale di tutti i gruppi prima
-        // di disegnare. Oltre a essere più lento a mostrare qualcosa, un
-        // merge globale per id apriva anche un bug: un nodo "scheletro"
-        // senza tag (via ">;out skel qt;", serve solo per la geometria di
-        // una via) di UN gruppo poteva mascherare la copia con i tag pieni
-        // dello STESSO nodo arrivata da un ALTRO gruppo, a seconda
-        // dell'ordine di arrivo — con la pipeline l'ordine non è più fisso,
-        // quindi capitava a intermittenza. Ogni gruppo si converte e
-        // disegna dai propri dati grezzi, indipendente dagli altri: il
-        // problema semplicemente non si pone più.
-        function renderBatch(elements, groupName) {
-          if (!elements.length) return 0;
-          const localData = { elements };
-          const geojson = osmtogeojson(localData);
-          if (!geojson.features.length) return 0;
-
-          const rawCount = geojson.features.length;
-          const trafficSignalsBefore = groupName === 'semafori'
-            ? geojson.features.filter(f => getType(f.properties || {}) === 'trafficsignals').length
-            : null;
-
-          // Scarta gli elementi interamente fuori dal confine comunale reale
-          // (il bbox di interrogazione è un rettangolo che sconfina nei comuni
-          // vicini, vedi CASTELFRANCO_BOUNDARY più sopra).
-          geojson.features = geojson.features.filter(f => geometryInCastelfranco(f.geometry));
-          console.log(`[${groupName}] ${rawCount} feature grezze -> ${geojson.features.length} dentro il confine comunale`);
-          if (trafficSignalsBefore !== null) {
-            const trafficSignalsAfter = geojson.features.filter(f => getType(f.properties || {}) === 'trafficsignals').length;
-            console.log(`[semafori] classificate "trafficsignals": ${trafficSignalsBefore} prima del filtro confine, ${trafficSignalsAfter} dopo`);
-          }
-          // Niente feature utilizzabili DOPO il filtro: si esce qui, PRIMA
-          // di toccare quanto già disegnato per questo gruppo. Un mirror
-          // "migliore" per numero di elementi grezzi (motivo per cui
-          // onUpdate lo ha proposto) potrebbe comunque finire vuoto dopo il
-          // filtro sul confine — rimuovere il rendering buono già mostrato
-          // PRIMA di sapere se questo nuovo lotto ha davvero qualcosa da
-          // mettere al suo posto lo farebbe sparire senza sostituirlo.
-          if (!geojson.features.length) return 0;
-
-          // Solo ORA, con dati validi in mano, si rimuove quanto disegnato
-          // in precedenza per QUESTO gruppo (se questo è un ridisegno
-          // dovuto a un mirror più lento ma migliore) e si ricomincia a
-          // tracciare il nuovo — sostituzione, non somma di doppioni.
-          if (groupRenderedLayers[groupName]) {
-            groupRenderedLayers[groupName].forEach(({ layerGroup, layer }) => layerGroup.removeLayer(layer));
-            sharedPathEntries = sharedPathEntries.filter(e => e.groupName !== groupName);
-          }
-          const addedLayers = [];
-          groupRenderedLayers[groupName] = addedLayers;
-          function addTracked(layerGroup, layer) {
-            layerGroup.addLayer(layer);
-            addedLayers.push({ layerGroup, layer });
-          }
-
-          geojson.features.forEach(f => {
-            if (!f.properties) return;
-            Object.keys(TAG_TYPOS).forEach(typo => {
-              if (f.properties[typo] !== undefined) {
-                f.properties[TAG_TYPOS[typo]] = f.properties[typo];
-                delete f.properties[typo];
-              }
-            });
-          });
-
-          const wayBearingIndex = buildWayBearingIndex(localData);
-
-          L.geoJSON(geojson, {
-            filter: feature => feature.geometry && feature.geometry.type !== 'Point',
-            style: feature => ({ ...(STYLES[getType(feature.properties || {})] || STYLES.default) }),
-            onEachFeature: (feature, layer) => {
-              const tags = feature.properties || {};
-              const type = getType(tags);
-              const name = tags.name || tags['name:it'] || '';
-
-              if (type === 'parking' || type === 'parkometers') {
-                renderParkingFeature(feature, addTracked);
-                return;
-              }
-
-              if ((type === 'cycleway' || type === 'pedestrian') && isSharedFootBike(tags)) {
-                // Ciclopedonale: niente colore fisso, va nel layer dedicato con
-                // uno stile ricalcolato da updateSharedPathLayers in base ai
-                // checkbox Ciclabili/Pedonali attivi in quel momento.
-                const base = { color: sharedPathColor(), weight: 4, lineCap: 'round', opacity: .9 };
-                wireLayerInteractions(layer, feature, base, name);
-                layer.setStyle(base);
-                addTracked(layers.cyclopedonale, layer);
-                sharedPathEntries.push({ styleObj: base, geoLayer: layer, groupName });
-              } else if (type !== 'default') {
-                const base = { ...(STYLES[type] || STYLES.default) };
-                wireLayerInteractions(layer, feature, base, name);
-                addTracked(layers[type], layer);
-              } else if (hasHGVData(tags) || (tags.maxspeed && isRoadForMaxspeed(tags))) {
-                // Strada normale con dati HGV o velocità: rendi il layer base cliccabile
-                wireLayerInteractions(layer, feature, STYLES.default, name);
-              }
-
-              if (tags.maxspeed && isRoadForMaxspeed(tags)) {
-                const base = maxspeedStyle(tags.maxspeed);
-                const speedLayer = L.geoJSON(feature, { style: () => ({ ...base }) });
-                wireLayerInteractions(speedLayer, feature, base, name ? `${name} • ${tags.maxspeed}` : `${tags.maxspeed}`);
-                forEachSubLayer(speedLayer, sub => addTracked(layers.maxspeed, sub));
-              }
-
-              if (hasHGVData(tags)) {
-                const base = classifyHGV(tags);
-                const hgvLayer = L.geoJSON(feature, {
-                  style: () => ({
-                    color: base.color,
-                    weight: base.weight,
-                    opacity: base.opacity,
-                    dashArray: base.dashArray || null,
-                    lineCap: 'round'
-                  })
-                });
-
-                wireLayerInteractions(hgvLayer, feature, {
-                  color: base.color,
-                  weight: base.weight,
-                  opacity: base.opacity,
-                  dashArray: base.dashArray || null,
-                  lineCap: 'round'
-                }, name);
-
-                forEachSubLayer(hgvLayer, sub => addTracked(layers.hgv, sub));
-              }
-
-              if (tags.ref) {
-                const refStyle = classifyRef(tags.ref);
-                if (refStyle) {
-                  const refLayer = L.geoJSON(feature, {
-                    style: () => ({
-                      color: refStyle.color,
-                      weight: 4,
-                      opacity: 0.85,
-                      dashArray: null,
-                      lineCap: 'round'
-                    })
-                  });
-                  wireLayerInteractions(refLayer, feature, {
-                    color: refStyle.color, weight: 4, opacity: 0.85, lineCap: 'round'
-                  }, name ? `${name} (${tags.ref})` : tags.ref);
-                  forEachSubLayer(refLayer, sub => addTracked(layers.strade_ref, sub));
-                }
-              }
-
-            }
-          });
-          updateSharedPathLayers();
-
-          // ─── Punti (segnali, lampioni, fermate bus, cestini...) ───
-          geojson.features.forEach(feature => {
-            if (!feature.geometry || feature.geometry.type !== 'Point') return;
-            const tags = feature.properties || {};
-            const type = getType(tags);
-
-            if (type === 'parking' || type === 'parkometers') {
-              renderParkingFeature(feature, addTracked);
-              return;
-            }
-            if (!POINT_TYPES.includes(type)) return;
-
-            const name = tags.name || tags['name:it'] || '';
-            const [lng, lat] = feature.geometry.coordinates;
-            const directionDeg = parseDirectionDeg(tags, feature, wayBearingIndex);
-
-            let icon;
-            if (type === 'trafficsignals') {
-              icon = makeDirectionalDivIcon(buildTrafficLightVisual(tags), directionDeg);
-            } else if (type === 'signs') {
-              icon = makeDirectionalDivIcon(buildSignVisual(tags), directionDeg);
-            } else {
-              icon = makePointIcon(type, tags);
-            }
-
-            const marker = L.marker([lat, lng], { icon });
-            wirePointInteractions(marker, feature, name);
-            addTracked(layers[type], marker);
-          });
-          // Icone lucide (<i data-lucide>) convertite subito per QUESTO
-          // batch, non solo a fine caricamento: altrimenti i marker di un
-          // gruppo arrivato presto restano con l'icona vuota finché non
-          // scatta un altro lucide.createIcons() più avanti.
-          lucide.createIcons();
-          if (groupName === 'semafori') console.log(`[semafori] marker nel layer "Semafori" dopo questo batch: ${layers.trafficsignals.getLayers().length}`);
-
-          return geojson.features.length;
-        }
-
+        // Niente più azzeramento di tutti i layer qui a inizio funzione:
+        // renderBatch (definita a livello di modulo, vedi sopra, così
+        // "ricorda" tra una loadData() e l'altra cosa ha disegnato) sostituisce
+        // il rendering di un gruppo SOLO quando ha dati validi pronti a
+        // prenderne il posto — quindi quello che è già visibile sulla mappa
+        // resta lì finché non arriva davvero qualcosa di nuovo per lo stesso
+        // gruppo, invece di sparire subito e riapparire pian piano.
         let totalFeatures = 0;
         const failed = [];
         const usedCacheFor = [];
@@ -4260,7 +4258,16 @@
           }
         }
 
-        if (totalFeatures === 0) {
+        // totalFeatures conta solo quanto disegnato in QUESTA chiamata: uno
+        // 0 qui non vuol dire "mappa vuota" se una chiamata precedente ha
+        // già disegnato qualcosa che nessuno ha toccato (niente più
+        // azzeramento cieco a inizio funzione, vedi renderBatch/
+        // groupRenderedLayers sopra) — es. un retry in background per un
+        // singolo gruppo che fallisce di nuovo non deve mostrare "nessun
+        // dato disponibile" quando il resto della mappa è a posto. L'errore
+        // ha senso solo se DAVVERO non è mai stato disegnato niente, in
+        // nessuna chiamata.
+        if (totalFeatures === 0 && Object.keys(groupRenderedLayers).length === 0) {
           throw new Error('Nessun dato OSM disponibile (rete/Overpass irraggiungibile e nessuna cache salvata)');
         }
 
