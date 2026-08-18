@@ -2276,6 +2276,18 @@
       if (tags.traffic_sign !== undefined || tags.highway === 'stop' || tags.highway === 'give_way') return 'signs';
       if (tags.highway === 'street_lamp') return 'lamps';
       if (tags.highway === 'traffic_signals') return 'trafficsignals';
+      // Attraversamento pedonale semaforizzato: è comunque un semaforo, va nel
+      // layer Semafori — non negli Attraversamenti generici (zebra, non
+      // segnalato...) gestiti più sotto. Due tag alternativi in uso in zona
+      // per lo stesso concetto: crossing=traffic_signals (principale) e
+      // crossing:signals=yes (usato quando crossing=* resta sul valore
+      // generico, es. uncontrolled).
+      if (tags.highway === 'crossing' && (tags.crossing === 'traffic_signals' || tags['crossing:signals'] === 'yes')) return 'trafficsignals';
+      // Passaggio a livello ferroviario con luci (railway=level_crossing +
+      // crossing:light=yes): tag primario diverso da highway=traffic_signals,
+      // ma è comunque un semaforo — stesso layer, stessa icona "1 luce rossa"
+      // di buildTrafficLightVisual.
+      if (tags.railway === 'level_crossing' && tags['crossing:light'] === 'yes') return 'trafficsignals';
       if (tags.highway === 'bus_stop' || (tags.public_transport === 'platform' && tags.bus === 'yes')) return 'busstops';
       if (tags.amenity === 'waste_basket') return 'bins';
       if (tags.amenity === 'vending_machine' && tags.vending === 'parking_tickets') return 'parkometers';
@@ -2689,8 +2701,15 @@
       const tags = feature.properties || {};
       const type = getType(tags);
       const meta = { ...(TYPE_META[type] || TYPE_META.default) };
-      if (type === 'trafficsignals' && tags.traffic_signals === 'level_crossing') {
+      if (type === 'trafficsignals' && (tags.traffic_signals === 'level_crossing' || tags.railway === 'level_crossing')) {
         meta.label = 'Passaggio a livello';
+      }
+      if (type === 'trafficsignals' && tags.highway === 'crossing') {
+        meta.label = 'Semaforo pedonale';
+      }
+      if ((type === 'cycleway' || type === 'pedestrian') && isSharedFootBike(tags)) {
+        meta.label = 'Ciclopedonale';
+        meta.bg = SHARED_PATH_COLOR;
       }
 
       document.getElementById('infoHeader').style.background = meta.bg;
@@ -2929,11 +2948,27 @@
     // ed emergency (per mezzi di soccorso) hanno un badge colorato distintivo
     // sopra il corpo nero del semaforo, oltre ai tre pallini standard.
     function buildTrafficLightVisual(tags) {
-      // Semaforo di passaggio a livello (highway=traffic_signals + traffic_signals
-      // =level_crossing): i semafori ferroviari lampeggiano solo rosso (niente
-      // giallo/verde), quindi stessa sagoma nera del semaforo stradale ma con
-      // un solo cerchio rosso, centrato, al centro.
-      if (tags && tags.traffic_signals === 'level_crossing') {
+      // Semaforo pedonale su un attraversamento (highway=crossing + crossing=
+      // traffic_signals): per i pedoni ha solo rosso/verde, niente giallo —
+      // sagoma a due pallini invece dei tre del semaforo veicolare.
+      if (tags && tags.highway === 'crossing') {
+        return {
+          w: 13, h: 22,
+          html: `<div class="marker-pop-inner" style="width:13px;height:22px;background:#1e293b;border-radius:4px;border:2px solid white;display:flex;flex-direction:column;align-items:center;justify-content:space-evenly;padding:2px 0;box-shadow:0 2px 6px rgba(0,0,0,.4)">
+            <span style="width:6px;height:6px;border-radius:50%;background:#ef4444;box-shadow:0 0 3px rgba(239,68,68,.9)"></span>
+            <span style="width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 3px rgba(34,197,94,.9)"></span>
+          </div>`
+        };
+      }
+
+      // Semaforo di passaggio a livello: i semafori ferroviari lampeggiano
+      // solo rosso (niente giallo/verde), quindi stessa sagoma nera del
+      // semaforo stradale ma con un solo cerchio rosso, centrato, al centro.
+      // Due tag primari diversi per lo stesso concetto: highway=traffic_
+      // signals + traffic_signals=level_crossing, oppure railway=level_
+      // crossing + crossing:light=yes (quest'ultimo il tag "corretto" OSM,
+      // il primo un uso alternativo visto nei dati di questa zona).
+      if (tags && (tags.traffic_signals === 'level_crossing' || tags.railway === 'level_crossing')) {
         return {
           w: 18, h: 18,
           html: `<div class="marker-pop-inner" style="width:18px;height:18px;background:#1e293b;border-radius:50%;border:2px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.4)">
@@ -3618,7 +3653,14 @@
       // Si tiene il bbox per l'interrogazione (economico, affidabile su tutti
       // i mirror) e si scarta poi lato client, dopo il merge, ciò che cade
       // fuori dal confine comunale reale: vedi CASTELFRANCO_BOUNDARY più sotto.
-      const OSM_BBOX = '45.6230,11.8730,45.7020,12.0020';
+      // Il rettangolo DEVE contenere per intero CASTELFRANCO_BOUNDARY, non
+      // solo "circa" — il bbox precedente (45.6230,11.8730,45.7020,12.0020)
+      // tagliava fuori a monte ~1.1km sul lato sud, ~0.65km a nord e una
+      // fetta a ovest: quella parte di comune (con le sue strade, incroci,
+      // semafori...) non veniva proprio interrogata, a prescindere dal
+      // filtro sul confine reale applicato dopo. Min/max di
+      // CASTELFRANCO_BOUNDARY più un margine di sicurezza di 0.003° (~330m).
+      const OSM_BBOX = '45.6100,11.8648,45.7109,12.0001';
       const QUERY_GROUPS = [
         {
           name: 'strade',
@@ -3665,6 +3707,9 @@
             node["highway"="give_way"];
             node["highway"="street_lamp"];
             node["highway"="traffic_signals"];
+            node["highway"="crossing"]["crossing"="traffic_signals"];
+            node["highway"="crossing"]["crossing:signals"="yes"];
+            node["railway"="level_crossing"]["crossing:light"="yes"];
             node["highway"="bus_stop"];
             node["public_transport"="platform"]["bus"="yes"];
             node["amenity"="waste_basket"];
