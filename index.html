@@ -1356,8 +1356,15 @@
         <label class="rp-photo-field" for="rpPhoto">
           <i data-lucide="image-plus" width="16" height="16"></i>
           <span id="rpPhotoLabel">Scegli un'immagine&hellip;</span>
+          <input type="file" id="rpPhoto" accept="image/jpeg,image/png,image/webp">
         </label>
-        <input type="file" id="rpPhoto" accept="image/jpeg,image/png,image/webp">
+      </div>
+      <div class="rp-label">Documento (opzionale)
+        <label class="rp-photo-field" for="rpDocument">
+          <i data-lucide="file-plus" width="16" height="16"></i>
+          <span id="rpDocumentLabel">Scegli un documento&hellip;</span>
+          <input type="file" id="rpDocument" accept="application/pdf,.pdf,.doc,.docx">
+        </label>
       </div>
       <div id="reportFormError" class="auth-error"></div>
       <button type="submit" class="rp-submit"><i data-lucide="send" width="15" height="15"></i>Invia proposta</button>
@@ -5124,6 +5131,7 @@ setTimeout(() => {
     function openReportForm() {
       document.getElementById('reportForm').reset();
       document.getElementById('rpPhotoLabel').textContent = "Scegli un'immagine…";
+      document.getElementById('rpDocumentLabel').textContent = "Scegli un documento…";
       document.getElementById('reportFormError').textContent = '';
       document.getElementById('reportCoords').textContent =
         `${pendingPinLatLng.lat.toFixed(6)}, ${pendingPinLatLng.lng.toFixed(6)}`;
@@ -5134,6 +5142,10 @@ setTimeout(() => {
     document.getElementById('rpPhoto').addEventListener('change', (e) => {
       const f = e.target.files[0];
       document.getElementById('rpPhotoLabel').textContent = f ? f.name : "Scegli un'immagine…";
+    });
+    document.getElementById('rpDocument').addEventListener('change', (e) => {
+      const f = e.target.files[0];
+      document.getElementById('rpDocumentLabel').textContent = f ? f.name : "Scegli un documento…";
     });
 
     document.getElementById('reportForm').addEventListener('submit', async (e) => {
@@ -5150,6 +5162,8 @@ setTimeout(() => {
       fd.append('lng', pendingPinLatLng.lng);
       const photoFile = document.getElementById('rpPhoto').files[0];
       if (photoFile) fd.append('photo', photoFile);
+      const documentFile = document.getElementById('rpDocument').files[0];
+      if (documentFile) fd.append('document', documentFile);
 
       try {
         const res = await apiFetch('/api/reports', { method: 'POST', body: fd });
