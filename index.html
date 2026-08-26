@@ -530,6 +530,7 @@
 }
 #reportForm .rp-submit:hover { filter: brightness(1.08); transform: translateY(-1px); }
 #reportForm .rp-submit:active { transform: translateY(0); }
+#reportForm .rp-submit:disabled { opacity: .75; cursor: default; transform: none; }
 .temp-pwd-box {
   display: none; background: #f0fdf4; border: 1px solid #86efac; border-radius: 10px;
   padding: 10px 12px; font-size: 12.5px; margin-bottom: 14px; word-break: break-all;
@@ -1435,7 +1436,7 @@
         </label>
       </div>
       <div id="reportFormError" class="auth-error"></div>
-      <button type="submit" class="rp-submit"><i data-lucide="send" width="15" height="15"></i>Invia proposta</button>
+      <button type="submit" id="rpSubmitBtn" class="rp-submit"><i data-lucide="send" width="15" height="15"></i><span>Invia proposta</span></button>
     </form>
   </div>
 </div>
@@ -5438,6 +5439,15 @@ setTimeout(() => {
       document.getElementById('rpDocumentLabel').textContent = f ? f.name : "Scegli un documento…";
     });
 
+    function setReportSubmitLoading(loading) {
+      const btn = document.getElementById('rpSubmitBtn');
+      btn.disabled = loading;
+      btn.innerHTML = loading
+        ? `<div class="spinner"></div><span>Invio in corso…</span>`
+        : `<i data-lucide="send" width="15" height="15"></i><span>Invia proposta</span>`;
+      if (!loading) lucide.createIcons();
+    }
+
     document.getElementById('reportForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const errEl = document.getElementById('reportFormError');
@@ -5457,6 +5467,7 @@ setTimeout(() => {
       const documentFile = document.getElementById('rpDocument').files[0];
       if (documentFile) fd.append('document', documentFile);
 
+      setReportSubmitLoading(true);
       try {
         const res = await apiFetch('/api/reports', { method: 'POST', body: fd });
         if (!res.ok) {
@@ -5470,6 +5481,7 @@ setTimeout(() => {
         setStatus('Proposta inviata', 'success', 2500);
         loadReports();
       } catch (err) { /* gestito da apiFetch */ }
+      finally { setReportSubmitLoading(false); }
     });
 
     // ─── Caricamento e rendering proposte ───
