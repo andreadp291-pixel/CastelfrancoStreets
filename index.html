@@ -657,6 +657,9 @@
   background: rgba(255,255,255,0.22);
   text-transform: uppercase;
   white-space: nowrap;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Blocco nome strada */
@@ -929,6 +932,8 @@
     .geom-mode-btn.active { background: var(--primary); color: white; }
     .geom-mode-btn.finish-btn { background: #16a34a; color: white; display: none; }
     .geom-mode-btn.finish-btn.show { display: flex; }
+    .geom-mode-btn.geom-aux-btn { padding: 8px 10px; display: none; }
+    .geom-mode-btn.geom-aux-btn.show { display: flex; }
 
     /* ─── PHOTO LIGHTBOX ─── */
     #photoLightbox {
@@ -950,15 +955,16 @@
     }
     #photoLightboxToolbar button:hover { background: rgba(255,255,255,.24); }
     #photoLightboxViewport {
-      flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center;
-      cursor: grab;
+      flex: 1; overflow: hidden; display: flex; align-items: center; justify-content: center;
+      cursor: grab; touch-action: none;
     }
     #photoLightboxViewport.grabbing { cursor: grabbing; }
     #photoLightboxImg {
       max-width: 90vw; max-height: 90vh;
       transform-origin: center center;
-      transition: transform .15s ease-out;
+      transition: transform .1s ease-out;
       user-select: none; -webkit-user-drag: none;
+      touch-action: none;
     }
 
     .spinner {
@@ -1189,11 +1195,11 @@
   <!-- INFO PANEL -->
   <div id="infoPanel">
     <div class="panel-header" id="infoHeader">
-      <div style="display:flex;align-items:center;gap:8px">
-        <i data-lucide="map-pin" width="15" height="15"></i>
-        <span id="infoTitle">Dettagli</span>
+      <div style="display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden">
+        <i data-lucide="map-pin" width="15" height="15" style="flex-shrink:0"></i>
+        <span id="infoTitle" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Dettagli</span>
       </div>
-      <div style="display:flex;align-items:center;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
         <span class="info-type-badge" id="infoBadge"></span>
         <div id="closeInfo" class="panel-close"><i data-lucide="x" width="16" height="16"></i></div>
       </div>
@@ -1470,6 +1476,8 @@
     <button type="button" class="geom-mode-btn active" data-geom="point"><i data-lucide="map-pin" width="14" height="14"></i>Punto</button>
     <button type="button" class="geom-mode-btn" data-geom="line"><i data-lucide="spline" width="14" height="14"></i>Linea</button>
     <button type="button" class="geom-mode-btn" data-geom="polygon"><i data-lucide="shapes" width="14" height="14"></i>Area</button>
+    <button type="button" id="geomUndoBtn" class="geom-mode-btn geom-aux-btn" title="Annulla ultimo punto (Ctrl+Z)"><i data-lucide="undo-2" width="14" height="14"></i></button>
+    <button type="button" id="geomNewPartBtn" class="geom-mode-btn geom-aux-btn" title="Aggiungi un'altra linea/area"><i data-lucide="plus-circle" width="14" height="14"></i></button>
     <button type="button" id="geomFinishBtn" class="geom-mode-btn finish-btn"><i data-lucide="check" width="14" height="14"></i>Fine</button>
   </div>
 
@@ -4861,17 +4869,24 @@ setTimeout(() => {
     let pendingPinLatLng = null;
     let currentPhotoObjectUrl = null;
 
-    // ─── Lightbox foto proposte (zoom + pan) ───
-    let lbZoom = 1;
+    // ─── Lightbox foto proposte (zoom + pan via transform, non scroll nativo:
+    // lo scroll di un elemento centrato con flexbox raggiunge l'overflow solo
+    // da un lato, quindi il pan si pilota a mano con translate/scale) ───
+    let lbZoom = 1, lbPanX = 0, lbPanY = 0;
     const LB_MIN_ZOOM = 1, LB_MAX_ZOOM = 5, LB_ZOOM_STEP = 0.5;
-    function applyLightboxZoom() {
-      document.getElementById('photoLightboxImg').style.transform = `scale(${lbZoom})`;
+    function applyLightboxTransform() {
+      document.getElementById('photoLightboxImg').style.transform = `translate(${lbPanX}px, ${lbPanY}px) scale(${lbZoom})`;
+    }
+    function setLightboxZoom(z) {
+      lbZoom = Math.min(LB_MAX_ZOOM, Math.max(LB_MIN_ZOOM, z));
+      if (lbZoom === LB_MIN_ZOOM) { lbPanX = 0; lbPanY = 0; }
+      applyLightboxTransform();
     }
     function openPhotoLightbox(url) {
-      lbZoom = 1;
+      lbZoom = 1; lbPanX = 0; lbPanY = 0;
       const img = document.getElementById('photoLightboxImg');
       img.src = url;
-      applyLightboxZoom();
+      applyLightboxTransform();
       document.getElementById('photoLightbox').classList.add('open');
     }
     function closePhotoLightbox() {
@@ -4881,35 +4896,32 @@ setTimeout(() => {
     document.getElementById('photoLightbox').addEventListener('click', (e) => {
       if (e.target.id === 'photoLightbox' || e.target.id === 'photoLightboxViewport') closePhotoLightbox();
     });
-    document.getElementById('lbZoomIn').addEventListener('click', () => {
-      lbZoom = Math.min(LB_MAX_ZOOM, lbZoom + LB_ZOOM_STEP);
-      applyLightboxZoom();
-    });
-    document.getElementById('lbZoomOut').addEventListener('click', () => {
-      lbZoom = Math.max(LB_MIN_ZOOM, lbZoom - LB_ZOOM_STEP);
-      applyLightboxZoom();
-    });
+    document.getElementById('lbZoomIn').addEventListener('click', () => setLightboxZoom(lbZoom + LB_ZOOM_STEP));
+    document.getElementById('lbZoomOut').addEventListener('click', () => setLightboxZoom(lbZoom - LB_ZOOM_STEP));
     document.getElementById('photoLightboxViewport').addEventListener('wheel', (e) => {
       e.preventDefault();
-      lbZoom = Math.min(LB_MAX_ZOOM, Math.max(LB_MIN_ZOOM, lbZoom + (e.deltaY < 0 ? LB_ZOOM_STEP : -LB_ZOOM_STEP)));
-      applyLightboxZoom();
+      setLightboxZoom(lbZoom + (e.deltaY < 0 ? LB_ZOOM_STEP : -LB_ZOOM_STEP));
     }, { passive: false });
     (() => {
       const viewport = document.getElementById('photoLightboxViewport');
-      let dragging = false, startX = 0, startY = 0, startScrollLeft = 0, startScrollTop = 0;
-      viewport.addEventListener('mousedown', (e) => {
-        if (e.target.id !== 'photoLightboxImg') return;
+      let dragging = false, startX = 0, startY = 0, startPanX = 0, startPanY = 0;
+      viewport.addEventListener('pointerdown', (e) => {
+        if (lbZoom <= LB_MIN_ZOOM) return;
         dragging = true;
+        viewport.setPointerCapture(e.pointerId);
         viewport.classList.add('grabbing');
         startX = e.clientX; startY = e.clientY;
-        startScrollLeft = viewport.scrollLeft; startScrollTop = viewport.scrollTop;
+        startPanX = lbPanX; startPanY = lbPanY;
       });
-      window.addEventListener('mousemove', (e) => {
+      viewport.addEventListener('pointermove', (e) => {
         if (!dragging) return;
-        viewport.scrollLeft = startScrollLeft - (e.clientX - startX);
-        viewport.scrollTop = startScrollTop - (e.clientY - startY);
+        lbPanX = startPanX + (e.clientX - startX);
+        lbPanY = startPanY + (e.clientY - startY);
+        applyLightboxTransform();
       });
-      window.addEventListener('mouseup', () => { dragging = false; viewport.classList.remove('grabbing'); });
+      const endDrag = () => { dragging = false; viewport.classList.remove('grabbing'); };
+      viewport.addEventListener('pointerup', endDrag);
+      viewport.addEventListener('pointercancel', endDrag);
     })();
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && document.getElementById('photoLightbox').classList.contains('open')) closePhotoLightbox();
@@ -5220,10 +5232,11 @@ setTimeout(() => {
       setStatus('Disconnesso', '', 2000);
     });
 
-    // ─── Pin-drop: nuova proposta (punto, linea o area) ───
+    // ─── Pin-drop: nuova proposta (punto, o linea/area multi-parte come OSM) ───
     let geometryMode = 'point'; // 'point' | 'line' | 'polygon'
-    let drawingPoints = []; // L.LatLng[] mentre si disegna una linea/area
-    let drawingLayer = null; // L.Polyline/L.Polygon di anteprima durante il disegno
+    let drawingParts = []; // parti già confermate: L.LatLng[][]
+    let currentPart = []; // L.LatLng[] della parte in corso di disegno
+    let drawingLayer = null; // anteprima tratteggiata di tutte le parti
 
     const GEOM_MIN_POINTS = { line: 2, polygon: 3 };
 
@@ -5241,19 +5254,32 @@ setTimeout(() => {
       }
     });
 
+    function partIsValid(part) {
+      const min = GEOM_MIN_POINTS[geometryMode];
+      return !!min && part.length >= min;
+    }
+    function updateGeomButtons() {
+      const isShapeMode = geometryMode !== 'point';
+      document.getElementById('geomUndoBtn').classList.toggle('show', isShapeMode);
+      document.getElementById('geomNewPartBtn').classList.toggle('show', isShapeMode && partIsValid(currentPart));
+      const canFinish = isShapeMode && (drawingParts.length > 0 || partIsValid(currentPart));
+      document.getElementById('geomFinishBtn').classList.toggle('show', canFinish);
+    }
+
     function setGeometryMode(mode) {
       geometryMode = mode;
-      drawingPoints = [];
+      drawingParts = [];
+      currentPart = [];
       if (drawingLayer) { map.removeLayer(drawingLayer); drawingLayer = null; }
       document.querySelectorAll('.geom-mode-btn[data-geom]').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.geom === mode);
       });
-      document.getElementById('geomFinishBtn').classList.remove('show');
       map.doubleClickZoom.enable();
+      updateGeomButtons();
       const messages = {
         point: 'Tocca la mappa per posizionare la proposta',
-        line: 'Tocca la mappa per aggiungere punti alla linea, poi premi Fine',
-        polygon: 'Tocca la mappa per aggiungere punti all\'area, poi premi Fine'
+        line: 'Tocca la mappa per aggiungere punti alla linea. "+" per un\'altra linea, Ctrl+Z per annullare',
+        polygon: 'Tocca la mappa per aggiungere punti all\'area. "+" per un\'altra area, Ctrl+Z per annullare'
       };
       if (pinDropMode) setStatus(messages[mode], 'loading', 0);
     }
@@ -5262,10 +5288,13 @@ setTimeout(() => {
     });
 
     function cancelDrawing() {
-      drawingPoints = [];
+      drawingParts = [];
+      currentPart = [];
       if (drawingLayer) { map.removeLayer(drawingLayer); drawingLayer = null; }
-      document.getElementById('geomFinishBtn').classList.remove('show');
       document.getElementById('geomModeBar').classList.remove('show');
+      document.getElementById('geomFinishBtn').classList.remove('show');
+      document.getElementById('geomUndoBtn').classList.remove('show');
+      document.getElementById('geomNewPartBtn').classList.remove('show');
       map.doubleClickZoom.enable();
     }
 
@@ -5275,25 +5304,53 @@ setTimeout(() => {
 
     function updateDrawingLayer() {
       if (drawingLayer) { map.removeLayer(drawingLayer); drawingLayer = null; }
-      if (drawingPoints.length < 2) return;
+      const parts = currentPart.length > 0 ? drawingParts.concat([currentPart]) : drawingParts;
+      const totalPoints = parts.reduce((n, p) => n + p.length, 0);
+      if (totalPoints < 2) return;
       const color = currentDrawColor();
       drawingLayer = geometryMode === 'polygon'
-        ? L.polygon(drawingPoints, { color, weight: 2, fillColor: color, fillOpacity: .25, dashArray: '6 5' })
-        : L.polyline(drawingPoints, { color, weight: 4, dashArray: '6 5' });
+        ? L.polygon(parts, { color, weight: 2, fillColor: color, fillOpacity: .25, dashArray: '6 5' })
+        : L.polyline(parts, { color, weight: 4, dashArray: '6 5' });
       drawingLayer.addTo(map);
     }
 
+    function undoLastPoint() {
+      if (currentPart.length > 0) {
+        currentPart.pop();
+      } else if (drawingParts.length > 0) {
+        currentPart = drawingParts.pop();
+        currentPart.pop();
+      } else {
+        return;
+      }
+      updateDrawingLayer();
+      updateGeomButtons();
+    }
+    document.getElementById('geomUndoBtn').addEventListener('click', undoLastPoint);
+    document.addEventListener('keydown', (e) => {
+      if (!pinDropMode || geometryMode === 'point') return;
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undoLastPoint(); }
+    });
+
+    function startNewPart() {
+      if (!partIsValid(currentPart)) return;
+      drawingParts.push(currentPart);
+      currentPart = [];
+      updateDrawingLayer();
+      updateGeomButtons();
+    }
+    document.getElementById('geomNewPartBtn').addEventListener('click', startNewPart);
+
     function finishDrawing() {
-      const min = GEOM_MIN_POINTS[geometryMode];
-      if (!min || drawingPoints.length < min) return;
-      pendingPinLatLng = drawingPoints[0];
-      pendingGeomCoords = drawingPoints.map(p => [p.lat, p.lng]);
+      if (partIsValid(currentPart)) { drawingParts.push(currentPart); currentPart = []; }
+      if (drawingParts.length === 0) return;
+      pendingPinLatLng = drawingParts[0][0];
+      pendingGeomCoords = drawingParts.map(part => part.map(p => [p.lat, p.lng]));
       pendingGeomType = geometryMode;
       showPendingPinMarker();
       pinDropMode = false;
       document.getElementById('map').classList.remove('map-pin-mode');
       document.getElementById('geomModeBar').classList.remove('show');
-      document.getElementById('geomFinishBtn').classList.remove('show');
       document.getElementById('status').classList.remove('show');
       map.doubleClickZoom.enable();
       openReportForm();
@@ -5314,12 +5371,11 @@ setTimeout(() => {
         openReportForm();
         return;
       }
-      // linea/area: accumula vertici, mostra anteprima tratteggiata
+      // linea/area: accumula vertici della parte corrente, mostra anteprima tratteggiata
       map.doubleClickZoom.disable();
-      drawingPoints.push(e.latlng);
+      currentPart.push(e.latlng);
       updateDrawingLayer();
-      const min = GEOM_MIN_POINTS[geometryMode];
-      document.getElementById('geomFinishBtn').classList.toggle('show', drawingPoints.length >= min);
+      updateGeomButtons();
     });
     map.on('dblclick', () => { if (pinDropMode && geometryMode !== 'point') finishDrawing(); });
 
@@ -5361,10 +5417,14 @@ setTimeout(() => {
       document.getElementById('rpPhotoLabel').textContent = "Scegli un'immagine…";
       document.getElementById('rpDocumentLabel').textContent = "Scegli un documento…";
       document.getElementById('reportFormError').textContent = '';
-      const coordsLabels = { point: null, line: `Linea — ${pendingGeomCoords.length} punti`, polygon: `Area — ${pendingGeomCoords.length} punti` };
-      document.getElementById('reportCoords').textContent = pendingGeomType === 'point'
-        ? `${pendingPinLatLng.lat.toFixed(6)}, ${pendingPinLatLng.lng.toFixed(6)}`
-        : coordsLabels[pendingGeomType];
+      if (pendingGeomType === 'point') {
+        document.getElementById('reportCoords').textContent = `${pendingPinLatLng.lat.toFixed(6)}, ${pendingPinLatLng.lng.toFixed(6)}`;
+      } else {
+        const totalPoints = pendingGeomCoords.reduce((n, p) => n + p.length, 0);
+        const partsLabel = pendingGeomCoords.length > 1 ? `, ${pendingGeomCoords.length} parti` : '';
+        document.getElementById('reportCoords').textContent =
+          `${pendingGeomType === 'polygon' ? 'Area' : 'Linea'} — ${totalPoints} punti${partsLabel}`;
+      }
       closePanel('infoPanel'); closePanel('legendPanel'); closePanel('adminPanel');
       document.getElementById('reportPanel').classList.add('active');
     }
