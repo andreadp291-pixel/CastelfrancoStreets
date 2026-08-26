@@ -899,6 +899,68 @@
     #status.error { background: #dc2626; }
     #status.success { background: #16a34a; }
 
+    /* ─── GEOMETRY MODE BAR (disegno proposte: punto/linea/area) ─── */
+    #geomModeBar {
+      position: fixed;
+      bottom: calc(60px + env(safe-area-inset-bottom));
+      left: 50%;
+      transform: translateX(-50%) translateY(6px);
+      background: var(--bg-dark);
+      color: white;
+      padding: 6px;
+      border-radius: 30px;
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      gap: 4px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .3s, transform .3s;
+      box-shadow: 0 8px 22px rgba(0,0,0,.25);
+    }
+    #geomModeBar.show { display: flex; opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+    .geom-mode-btn {
+      display: flex; align-items: center; gap: 6px;
+      border: none; background: transparent; color: #cbd5e1;
+      padding: 8px 13px; border-radius: 24px; font-size: 12.5px; font-weight: 600;
+      cursor: pointer; transition: background .15s, color .15s;
+    }
+    .geom-mode-btn:hover { background: rgba(255,255,255,.08); }
+    .geom-mode-btn.active { background: var(--primary); color: white; }
+    .geom-mode-btn.finish-btn { background: #16a34a; color: white; display: none; }
+    .geom-mode-btn.finish-btn.show { display: flex; }
+
+    /* ─── PHOTO LIGHTBOX ─── */
+    #photoLightbox {
+      position: fixed; inset: 0; z-index: 5000;
+      background: rgba(15,23,42,.92);
+      display: none;
+      flex-direction: column;
+    }
+    #photoLightbox.open { display: flex; }
+    #photoLightboxToolbar {
+      position: absolute; top: calc(14px + env(safe-area-inset-top)); right: 14px;
+      display: flex; gap: 8px; z-index: 5001;
+    }
+    #photoLightboxToolbar button {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: rgba(255,255,255,.12); color: white; border: none;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: background .15s;
+    }
+    #photoLightboxToolbar button:hover { background: rgba(255,255,255,.24); }
+    #photoLightboxViewport {
+      flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center;
+      cursor: grab;
+    }
+    #photoLightboxViewport.grabbing { cursor: grabbing; }
+    #photoLightboxImg {
+      max-width: 90vw; max-height: 90vh;
+      transform-origin: center center;
+      transition: transform .15s ease-out;
+      user-select: none; -webkit-user-drag: none;
+    }
+
     .spinner {
       width: 13px;
       height: 13px;
@@ -1403,6 +1465,24 @@
 </div>
 
   <div id="status"></div>
+
+  <div id="geomModeBar">
+    <button type="button" class="geom-mode-btn active" data-geom="point"><i data-lucide="map-pin" width="14" height="14"></i>Punto</button>
+    <button type="button" class="geom-mode-btn" data-geom="line"><i data-lucide="spline" width="14" height="14"></i>Linea</button>
+    <button type="button" class="geom-mode-btn" data-geom="polygon"><i data-lucide="shapes" width="14" height="14"></i>Area</button>
+    <button type="button" id="geomFinishBtn" class="geom-mode-btn finish-btn"><i data-lucide="check" width="14" height="14"></i>Fine</button>
+  </div>
+
+  <div id="photoLightbox">
+    <div id="photoLightboxToolbar">
+      <button type="button" id="lbZoomOut" title="Riduci"><i data-lucide="minus" width="18" height="18"></i></button>
+      <button type="button" id="lbZoomIn" title="Ingrandisci"><i data-lucide="plus" width="18" height="18"></i></button>
+      <button type="button" id="lbClose" title="Chiudi"><i data-lucide="x" width="18" height="18"></i></button>
+    </div>
+    <div id="photoLightboxViewport">
+      <img id="photoLightboxImg" alt="">
+    </div>
+  </div>
 
   <!-- Guida flottante: proposte civiche vs segnalazioni di guasto -->
   <div id="proposalsHelp">
@@ -4781,6 +4861,60 @@ setTimeout(() => {
     let pendingPinLatLng = null;
     let currentPhotoObjectUrl = null;
 
+    // ─── Lightbox foto proposte (zoom + pan) ───
+    let lbZoom = 1;
+    const LB_MIN_ZOOM = 1, LB_MAX_ZOOM = 5, LB_ZOOM_STEP = 0.5;
+    function applyLightboxZoom() {
+      document.getElementById('photoLightboxImg').style.transform = `scale(${lbZoom})`;
+    }
+    function openPhotoLightbox(url) {
+      lbZoom = 1;
+      const img = document.getElementById('photoLightboxImg');
+      img.src = url;
+      applyLightboxZoom();
+      document.getElementById('photoLightbox').classList.add('open');
+    }
+    function closePhotoLightbox() {
+      document.getElementById('photoLightbox').classList.remove('open');
+    }
+    document.getElementById('lbClose').addEventListener('click', closePhotoLightbox);
+    document.getElementById('photoLightbox').addEventListener('click', (e) => {
+      if (e.target.id === 'photoLightbox' || e.target.id === 'photoLightboxViewport') closePhotoLightbox();
+    });
+    document.getElementById('lbZoomIn').addEventListener('click', () => {
+      lbZoom = Math.min(LB_MAX_ZOOM, lbZoom + LB_ZOOM_STEP);
+      applyLightboxZoom();
+    });
+    document.getElementById('lbZoomOut').addEventListener('click', () => {
+      lbZoom = Math.max(LB_MIN_ZOOM, lbZoom - LB_ZOOM_STEP);
+      applyLightboxZoom();
+    });
+    document.getElementById('photoLightboxViewport').addEventListener('wheel', (e) => {
+      e.preventDefault();
+      lbZoom = Math.min(LB_MAX_ZOOM, Math.max(LB_MIN_ZOOM, lbZoom + (e.deltaY < 0 ? LB_ZOOM_STEP : -LB_ZOOM_STEP)));
+      applyLightboxZoom();
+    }, { passive: false });
+    (() => {
+      const viewport = document.getElementById('photoLightboxViewport');
+      let dragging = false, startX = 0, startY = 0, startScrollLeft = 0, startScrollTop = 0;
+      viewport.addEventListener('mousedown', (e) => {
+        if (e.target.id !== 'photoLightboxImg') return;
+        dragging = true;
+        viewport.classList.add('grabbing');
+        startX = e.clientX; startY = e.clientY;
+        startScrollLeft = viewport.scrollLeft; startScrollTop = viewport.scrollTop;
+      });
+      window.addEventListener('mousemove', (e) => {
+        if (!dragging) return;
+        viewport.scrollLeft = startScrollLeft - (e.clientX - startX);
+        viewport.scrollTop = startScrollTop - (e.clientY - startY);
+      });
+      window.addEventListener('mouseup', () => { dragging = false; viewport.classList.remove('grabbing'); });
+    })();
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.getElementById('photoLightbox').classList.contains('open')) closePhotoLightbox();
+    });
+
     const REPORT_STATUS_LABEL = {
       aperto: 'Aperto', in_lavorazione: 'In lavorazione', risolto: 'Risolto', rifiutato: 'Rifiutato'
     };
@@ -5086,26 +5220,112 @@ setTimeout(() => {
       setStatus('Disconnesso', '', 2000);
     });
 
-    // ─── Pin-drop: nuova proposta ───
+    // ─── Pin-drop: nuova proposta (punto, linea o area) ───
+    let geometryMode = 'point'; // 'point' | 'line' | 'polygon'
+    let drawingPoints = []; // L.LatLng[] mentre si disegna una linea/area
+    let drawingLayer = null; // L.Polyline/L.Polygon di anteprima durante il disegno
+
+    const GEOM_MIN_POINTS = { line: 2, polygon: 3 };
+
     document.getElementById('newReportBtn').addEventListener('click', () => {
       pinDropMode = !pinDropMode;
       document.getElementById('newReportBtn').classList.toggle('spinning', false);
       document.getElementById('map').classList.toggle('map-pin-mode', pinDropMode);
-      setStatus(pinDropMode ? 'Tocca la mappa per posizionare la proposta' : '', pinDropMode ? 'loading' : '', 0);
-      if (!pinDropMode) document.getElementById('status').classList.remove('show');
+      document.getElementById('geomModeBar').classList.toggle('show', pinDropMode);
+      if (pinDropMode) {
+        setGeometryMode('point');
+        setStatus('Tocca la mappa per posizionare la proposta', 'loading', 0);
+      } else {
+        cancelDrawing();
+        document.getElementById('status').classList.remove('show');
+      }
     });
+
+    function setGeometryMode(mode) {
+      geometryMode = mode;
+      drawingPoints = [];
+      if (drawingLayer) { map.removeLayer(drawingLayer); drawingLayer = null; }
+      document.querySelectorAll('.geom-mode-btn[data-geom]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.geom === mode);
+      });
+      document.getElementById('geomFinishBtn').classList.remove('show');
+      map.doubleClickZoom.enable();
+      const messages = {
+        point: 'Tocca la mappa per posizionare la proposta',
+        line: 'Tocca la mappa per aggiungere punti alla linea, poi premi Fine',
+        polygon: 'Tocca la mappa per aggiungere punti all\'area, poi premi Fine'
+      };
+      if (pinDropMode) setStatus(messages[mode], 'loading', 0);
+    }
+    document.querySelectorAll('.geom-mode-btn[data-geom]').forEach(btn => {
+      btn.addEventListener('click', () => setGeometryMode(btn.dataset.geom));
+    });
+
+    function cancelDrawing() {
+      drawingPoints = [];
+      if (drawingLayer) { map.removeLayer(drawingLayer); drawingLayer = null; }
+      document.getElementById('geomFinishBtn').classList.remove('show');
+      document.getElementById('geomModeBar').classList.remove('show');
+      map.doubleClickZoom.enable();
+    }
+
+    function currentDrawColor() {
+      return REPORT_CATEGORY_COLOR[document.getElementById('rpCategory').value] || '#64748b';
+    }
+
+    function updateDrawingLayer() {
+      if (drawingLayer) { map.removeLayer(drawingLayer); drawingLayer = null; }
+      if (drawingPoints.length < 2) return;
+      const color = currentDrawColor();
+      drawingLayer = geometryMode === 'polygon'
+        ? L.polygon(drawingPoints, { color, weight: 2, fillColor: color, fillOpacity: .25, dashArray: '6 5' })
+        : L.polyline(drawingPoints, { color, weight: 4, dashArray: '6 5' });
+      drawingLayer.addTo(map);
+    }
+
+    function finishDrawing() {
+      const min = GEOM_MIN_POINTS[geometryMode];
+      if (!min || drawingPoints.length < min) return;
+      pendingPinLatLng = drawingPoints[0];
+      pendingGeomCoords = drawingPoints.map(p => [p.lat, p.lng]);
+      pendingGeomType = geometryMode;
+      showPendingPinMarker();
+      pinDropMode = false;
+      document.getElementById('map').classList.remove('map-pin-mode');
+      document.getElementById('geomModeBar').classList.remove('show');
+      document.getElementById('geomFinishBtn').classList.remove('show');
+      document.getElementById('status').classList.remove('show');
+      map.doubleClickZoom.enable();
+      openReportForm();
+    }
+    document.getElementById('geomFinishBtn').addEventListener('click', finishDrawing);
 
     map.on('click', (e) => {
       if (!pinDropMode) return;
-      pinDropMode = false;
-      document.getElementById('map').classList.remove('map-pin-mode');
-      document.getElementById('status').classList.remove('show');
-      pendingPinLatLng = e.latlng;
-      showPendingPinMarker(pendingPinLatLng);
-      openReportForm();
+      if (geometryMode === 'point') {
+        pinDropMode = false;
+        document.getElementById('map').classList.remove('map-pin-mode');
+        document.getElementById('geomModeBar').classList.remove('show');
+        document.getElementById('status').classList.remove('show');
+        pendingPinLatLng = e.latlng;
+        pendingGeomCoords = null;
+        pendingGeomType = 'point';
+        showPendingPinMarker();
+        openReportForm();
+        return;
+      }
+      // linea/area: accumula vertici, mostra anteprima tratteggiata
+      map.doubleClickZoom.disable();
+      drawingPoints.push(e.latlng);
+      updateDrawingLayer();
+      const min = GEOM_MIN_POINTS[geometryMode];
+      document.getElementById('geomFinishBtn').classList.toggle('show', drawingPoints.length >= min);
     });
+    map.on('dblclick', () => { if (pinDropMode && geometryMode !== 'point') finishDrawing(); });
 
     let pendingPinMarker = null;
+    let pendingGeomType = 'point';
+    let pendingGeomCoords = null;
     function pendingPinIcon(category) {
       const color = REPORT_CATEGORY_COLOR[category] || '#64748b';
       return L.divIcon({
@@ -5114,18 +5334,26 @@ setTimeout(() => {
         iconSize: [22, 22], iconAnchor: [11, 22]
       });
     }
-    function showPendingPinMarker(latlng) {
-      if (pendingPinMarker) map.removeLayer(pendingPinMarker);
-      pendingPinMarker = L.marker(latlng, {
-        icon: pendingPinIcon(document.getElementById('rpCategory').value),
-        interactive: false, zIndexOffset: 1000
-      }).addTo(map);
+    function showPendingPinMarker() {
+      if (pendingPinMarker) { map.removeLayer(pendingPinMarker); pendingPinMarker = null; }
+      const color = currentDrawColor();
+      if (pendingGeomType === 'point') {
+        pendingPinMarker = L.marker(pendingPinLatLng, {
+          icon: pendingPinIcon(document.getElementById('rpCategory').value),
+          interactive: false, zIndexOffset: 1000
+        }).addTo(map);
+      } else if (pendingGeomType === 'polygon') {
+        pendingPinMarker = L.polygon(pendingGeomCoords, { color, weight: 2, fillColor: color, fillOpacity: .3, interactive: false }).addTo(map);
+      } else {
+        pendingPinMarker = L.polyline(pendingGeomCoords, { color, weight: 5, interactive: false }).addTo(map);
+      }
     }
     function clearPendingPinMarker() {
       if (pendingPinMarker) { map.removeLayer(pendingPinMarker); pendingPinMarker = null; }
     }
     document.getElementById('rpCategory').addEventListener('change', (e) => {
-      if (pendingPinMarker) pendingPinMarker.setIcon(pendingPinIcon(e.target.value));
+      if (pendingPinMarker) showPendingPinMarker();
+      updateDrawingLayer();
     });
 
     function openReportForm() {
@@ -5133,12 +5361,14 @@ setTimeout(() => {
       document.getElementById('rpPhotoLabel').textContent = "Scegli un'immagine…";
       document.getElementById('rpDocumentLabel').textContent = "Scegli un documento…";
       document.getElementById('reportFormError').textContent = '';
-      document.getElementById('reportCoords').textContent =
-        `${pendingPinLatLng.lat.toFixed(6)}, ${pendingPinLatLng.lng.toFixed(6)}`;
+      const coordsLabels = { point: null, line: `Linea — ${pendingGeomCoords.length} punti`, polygon: `Area — ${pendingGeomCoords.length} punti` };
+      document.getElementById('reportCoords').textContent = pendingGeomType === 'point'
+        ? `${pendingPinLatLng.lat.toFixed(6)}, ${pendingPinLatLng.lng.toFixed(6)}`
+        : coordsLabels[pendingGeomType];
       closePanel('infoPanel'); closePanel('legendPanel'); closePanel('adminPanel');
       document.getElementById('reportPanel').classList.add('active');
     }
-    document.getElementById('closeReport').addEventListener('click', () => { closePanel('reportPanel'); clearPendingPinMarker(); });
+    document.getElementById('closeReport').addEventListener('click', () => { closePanel('reportPanel'); clearPendingPinMarker(); cancelDrawing(); });
     document.getElementById('rpPhoto').addEventListener('change', (e) => {
       const f = e.target.files[0];
       document.getElementById('rpPhotoLabel').textContent = f ? f.name : "Scegli un'immagine…";
@@ -5160,6 +5390,8 @@ setTimeout(() => {
       fd.append('description', document.getElementById('rpDescription').value);
       fd.append('lat', pendingPinLatLng.lat);
       fd.append('lng', pendingPinLatLng.lng);
+      fd.append('geom_type', pendingGeomType);
+      if (pendingGeomType !== 'point' && pendingGeomCoords) fd.append('geom_coords', JSON.stringify(pendingGeomCoords));
       const photoFile = document.getElementById('rpPhoto').files[0];
       if (photoFile) fd.append('photo', photoFile);
       const documentFile = document.getElementById('rpDocument').files[0];
@@ -5174,6 +5406,7 @@ setTimeout(() => {
         }
         closePanel('reportPanel');
         clearPendingPinMarker();
+        cancelDrawing();
         setStatus('Proposta inviata', 'success', 2500);
         loadReports();
       } catch (err) { /* gestito da apiFetch */ }
@@ -5187,9 +5420,17 @@ setTimeout(() => {
       allReportsCache
         .filter(r => activeCategoryFilters.has(r.category))
         .forEach(r => {
-          const marker = L.marker([r.lat, r.lng], { icon: reportMarkerIcon(r.category) });
-          marker.on('click', () => openReportDetail(r.id));
-          layers.segnalazioni.addLayer(marker);
+          const color = REPORT_CATEGORY_COLOR[r.category] || '#64748b';
+          let layer;
+          if (r.geom_type === 'polygon' && r.geom_coords) {
+            layer = L.polygon(r.geom_coords, { color, weight: 2, fillColor: color, fillOpacity: .25 });
+          } else if (r.geom_type === 'line' && r.geom_coords) {
+            layer = L.polyline(r.geom_coords, { color, weight: 5, opacity: .85 });
+          } else {
+            layer = L.marker([r.lat, r.lng], { icon: reportMarkerIcon(r.category) });
+          }
+          layer.on('click', () => openReportDetail(r.id));
+          layers.segnalazioni.addLayer(layer);
         });
     }
 
@@ -5241,7 +5482,7 @@ setTimeout(() => {
       const canDelete = currentUser && (currentUser.role === 'superadmin' || (currentUser.user_id === report.author_id && report.status === 'aperto'));
 
       const photoHtml = report.photo_path
-        ? `<img id="detailPhoto" style="max-width:100%;border-radius:10px;margin-top:6px;display:none">`
+        ? `<img id="detailPhoto" style="max-width:100%;border-radius:10px;margin-top:6px;display:none;cursor:zoom-in">`
         : '';
 
       const statusOptions = Object.keys(REPORT_STATUS_LABEL).map(s =>
@@ -5305,6 +5546,7 @@ setTimeout(() => {
             currentPhotoObjectUrl = URL.createObjectURL(blob);
             img.src = currentPhotoObjectUrl;
             img.style.display = '';
+            img.addEventListener('click', () => openPhotoLightbox(currentPhotoObjectUrl));
           })
           .catch(() => { /* foto non caricata, non bloccante */ });
       }
