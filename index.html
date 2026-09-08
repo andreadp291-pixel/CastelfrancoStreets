@@ -4279,8 +4279,13 @@
 
       // Scarta gli elementi interamente fuori dal confine comunale reale
       // (il bbox di interrogazione è un rettangolo che sconfina nei comuni
-      // vicini, vedi CASTELFRANCO_BOUNDARY più sopra).
-      geojson.features = geojson.features.filter(f => geometryInCastelfranco(f.geometry));
+      // vicini, vedi CASTELFRANCO_BOUNDARY più sopra). Eccezione: la SR308
+      // (vedi QUERY_GROUPS) è presa per relation id apposta perché il suo
+      // tracciato esce da Castelfranco per raggiungere Mussolente/Loria —
+      // va mostrata per intero, non solo nel tratto dentro il confine.
+      geojson.features = groupName === 'strada_proposta_sr308'
+        ? geojson.features
+        : geojson.features.filter(f => geometryInCastelfranco(f.geometry));
       console.log(`[${groupName}] ${rawCount} feature grezze -> ${geojson.features.length} dentro il confine comunale`);
       if (trafficSignalsBefore !== null) {
         const trafficSignalsAfter = geojson.features.filter(f => getType(f.properties || {}) === 'trafficsignals').length;
@@ -4565,6 +4570,18 @@
             way["highway"]["hgv:articulated:conditional"];
             way["ref"~"^(SS|SR|SP|SC)"];
           );out body;>;out skel qt;`
+        },
+        // SR308 "Prolungamento Strada del Santo" (relation 15609956): un
+        // progetto di strada proposta che si estende ben oltre OSM_BBOX,
+        // fino a Mussolente/Loria (lat/lon della relazione: 45.667–45.735,
+        // 11.821–11.905, contro un OSM_BBOX che a nord arriva solo a
+        // 45.7109). Interrogata per relation id, non per bbox: altrimenti
+        // la parte a nord del tracciato resterebbe sempre fuori e la
+        // relazione si vedrebbe solo a metà. Vedi anche l'eccezione al
+        // filtro sul confine comunale in renderBatch, per lo stesso motivo.
+        {
+          name: 'strada_proposta_sr308',
+          ql: `[out:json][timeout:40];relation(15609956);way(r);out body;>;out skel qt;`
         },
         // Un gruppo per LAYER (invece del vecchio blocco unico "segnaletica"
         // con dentro segnali+semafori+lampioni+fermate bus+cestini+tombini):
