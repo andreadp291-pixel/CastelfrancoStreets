@@ -2449,7 +2449,13 @@
     function isSharedFootBike(tags) {
       const type = getType(tags);
       if (type === 'cycleway') return tags.foot === 'yes' || tags.foot === 'designated';
-      if (type === 'pedestrian') return tags.bicycle === 'yes' || tags.bicycle === 'designated';
+      if (type === 'pedestrian') {
+        // highway=path è per convenzione OSM un sentiero multiuso: si
+        // considera ciclopedonale anche senza bicycle=yes/designated
+        // esplicito, a meno che non escluda espressamente le bici.
+        if (tags.highway === 'path' && tags.bicycle !== 'no' && tags.bicycle !== 'private') return true;
+        return tags.bicycle === 'yes' || tags.bicycle === 'designated';
+      }
       return false;
     }
 
