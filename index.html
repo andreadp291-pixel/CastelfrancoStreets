@@ -742,7 +742,9 @@
 #activeLegendsPanel {
   position: fixed;
   right: calc(14px + env(safe-area-inset-right));
-  bottom: calc(14px + env(safe-area-inset-bottom));
+  /* staccata dalla riga di attribuzione OSM del layer di base (in basso
+     a destra sulla mappa), altrimenti le due si sovrappongono */
+  bottom: calc(34px + env(safe-area-inset-bottom));
   width: 270px;
   max-width: calc(100% - 24px);
   max-height: 48vh;
