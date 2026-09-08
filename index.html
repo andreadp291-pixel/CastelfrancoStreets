@@ -738,6 +738,44 @@
   margin-bottom: 10px;
 }
 
+/* ─── Legenda dinamica dei layer attivi ─── */
+#activeLegendsPanel {
+  position: fixed;
+  left: calc(12px + env(safe-area-inset-left));
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  width: 270px;
+  max-width: calc(100% - 24px);
+  max-height: 48vh;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15), 0 4px 16px rgba(0,0,0,0.08);
+  z-index: 1500;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+#activeLegendsPanel.show { display: flex; }
+#activeLegendsHeader {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 13px;
+  font-size: 12.5px; font-weight: 700; color: var(--text-main);
+  cursor: pointer; user-select: none; flex-shrink: 0;
+  border-bottom: 1px solid #eef2f7;
+}
+#activeLegendsPanel.collapsed #activeLegendsHeader { border-bottom: none; }
+#activeLegendsHeader:hover { background: #f8fafc; }
+#activeLegendsChevron { transition: transform .2s; color: var(--text-light); }
+#activeLegendsBody {
+  overflow-y: auto;
+  padding: 14px 16px;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+#activeLegendsBody::-webkit-scrollbar { width: 4px; }
+#activeLegendsBody::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+#activeLegendsPanel.collapsed #activeLegendsBody { display: none; }
+
 /* Righe dati */
 .info-row {
   display: flex;
@@ -1259,7 +1297,8 @@
         <div style="font-weight:700;color:var(--text-main);margin-bottom:5px;display:flex;align-items:center;gap:5px;font-size:11.5px"><i data-lucide="circle-help" width="12" height="12"></i>Come usare</div>
         <div style="color:var(--text-light);font-size:11px;line-height:1.7">
           Attiva i layer dal controllo in alto. Clicca un segmento per i dettagli.
-          Aggiorna per ricaricare i dati.
+          Aggiorna per ricaricare i dati. I layer con una legenda colori la mostrano
+          automaticamente in basso a sinistra quando li attivi.
         </div>
       </div>
       <div style="margin-top:12px;font-size:11px;color:var(--text-light);display:flex;align-items:center;gap:6px">
@@ -1274,87 +1313,102 @@
       </div>
     </div>
 
-    <!-- Legenda velocità -->
-    <div class="legend-section">
-      <div class="legend-section-title">Limiti di velocità</div>
-      <div class="legend-list">
-        <div class="legend-item"><span class="legend-line" style="border-color:#86efac"></span><span>≤ 10 km/h</span></div>
-        <div class="legend-item"><span class="legend-line" style="border-color:#22c55e"></span><span>≤ 30 km/h</span></div>
-        <div class="legend-item"><span class="legend-line" style="border-color:#facc15"></span><span>≤ 50 km/h</span></div>
-        <div class="legend-item"><span class="legend-line" style="border-color:#fb923c"></span><span>≤ 70 km/h</span></div>
-        <div class="legend-item"><span class="legend-line" style="border-color:#f87171"></span><span>≤ 90 km/h</span></div>
-        <div class="legend-item"><span class="legend-line" style="border-color:#dc2626"></span><span>Oltre 90 km/h</span></div>
-      </div>
-      <div class="legend-note">
-        Mostra solo strade con tag <code>maxspeed</code>; i binari non vengono inclusi.
-      </div>
-    </div>
-
-    <!-- Legenda HGV -->
-    <div class="legend-section">
-      <div class="legend-section-title">Mezzi pesanti</div>
-      <div class="legend-list">
-        <div class="legend-item"><span class="legend-line" style="border-color:#22c55e"></span><span>Libero: <code>hgv=yes</code> / <code>goods=yes</code></span></div>
-        <div class="legend-item"><span class="legend-line" style="border-color:#3b82f6"></span><span>Designato / consigliato</span></div>
-        <div class="legend-item"><span class="legend-line" style="border-color:#d946ef"></span><span>Solo destinazione / delivery / local</span></div>
-        <div class="legend-item"><span class="legend-line" style="border-color:#f59e0b"></span><span>Limiti fisici: altezza, peso, larghezza, assi</span></div>
-        <div class="legend-item"><span class="legend-line" style="border-color:#ef4444"></span><span>Divieto camion / merci</span></div>
-        <div class="legend-item"><span class="legend-line dashed" style="border-color:#0f766e"></span><span>Condizioni o restrizioni speciali</span></div>
-      </div>
-      <div class="legend-note">
-        Tag usati: <code>hgv</code>, <code>goods</code>, <code>maxweight</code>, <code>maxheight</code>, <code>hazmat</code> e affini.
-      </div>
-    </div>
-
-    <!-- Legenda Strade per proprietà -->
-    <div class="legend-section">
-      <div class="legend-section-title">Strade per proprietà</div>
-      <div class="legend-list">
-        <div class="legend-item"><span class="legend-line" style="border-color:#dc2626"></span><span><strong>SS</strong> – Strada Statale</span></div>
-        <div class="legend-item"><span class="legend-line" style="border-color:#7c3aed"></span><span><strong>SR</strong> – Strada Regionale</span></div>
-        <div class="legend-item"><span class="legend-line" style="border-color:#d97706"></span><span><strong>SP</strong> – Strada Provinciale</span></div>
-        <div class="legend-item"><span class="legend-line" style="border-color:#0369a1"></span><span><strong>SC</strong> – Strada Comunale</span></div>
-      </div>
-      <div class="legend-note">
-        Colorazione basata sul tag <code>ref</code> (es. <code>SP68</code>, <code>SS53</code>). Le strade senza ref non vengono mostrate.
-      </div>
-    </div>
-
-    <!-- Legenda Fontanelle -->
-    <div class="legend-section">
-      <div class="legend-section-title">Fontanelle d'acqua</div>
-      <div class="legend-list">
-        <div class="legend-item"><span class="legend-line" style="border-color:#16a34a"></span><span>Aperta / funzionante</span></div>
-        <div class="legend-item"><span class="legend-line" style="border-color:#dc2626"></span><span>Chiusa / non funzionante</span></div>
-        <div class="legend-item"><span class="legend-line" style="border-color:#0891b2"></span><span>Stato non specificato</span></div>
-      </div>
-      <div class="legend-note">
-        Colorazione basata sui tag <code>operational_status</code>, <code>drinking_water</code> e <code>access</code>.
-      </div>
-    </div>
-
-    <!-- Legenda Parcheggi -->
-    <div class="legend-section">
-      <div class="legend-section-title">Parcheggi</div>
-      <div class="legend-list">
-        <div class="legend-item"><span class="legend-line" style="border-color:#15803d"></span><span>Gratuito</span></div>
-        <div class="legend-item"><span class="legend-line" style="border-color:#1d4ed8"></span><span>A pagamento</span></div>
-        <div class="legend-item"><span class="legend-line" style="border-color:#7c3aed"></span><span>Disco orario / tempo limitato</span></div>
-        <div class="legend-item"><span class="legend-line" style="border-color:#ea580c"></span><span>Privato / clienti / permesso</span></div>
-        <div class="legend-item"><span class="legend-line" style="border-color:#64748b"></span><span>Non specificato</span></div>
-        <div class="legend-item"><span class="legend-line" style="border-color:#eab308"></span><span>Stallo disabili</span></div>
-        <div class="legend-item"><span class="legend-line" style="border-color:#0284c7"></span><span>Stallo ricarica elettrica</span></div>
-        <div class="legend-item"><span class="legend-line" style="border-color:#d97706"></span><span>Stallo carico/scarico o mezzi pesanti</span></div>
-        <div class="legend-item"><span class="legend-line" style="border-color:#db2777"></span><span>Stallo famiglie / donne</span></div>
-        <div class="legend-item"><span class="legend-line" style="border-color:#ea580c"></span><span>Parcometro</span></div>
-      </div>
-      <div class="legend-note">
-        Tocca un'area, uno stallo o un parcometro sulla mappa per vedere accesso, costo e limitazioni.
-      </div>
-    </div>
-
   </div><!-- fine legend-content -->
 </div><!-- fine legendPanel -->
+
+<!-- Contenuto delle legende colori per layer: tenuto in un <template> (non
+     renderizzato) e clonato in #activeLegendsBody solo per i layer attivi,
+     vedi updateActiveLegends(). Così non serve duplicare i colori anche in JS. -->
+<template id="legendTemplates">
+
+  <div class="legend-section" data-layer="lyr-maxspeed">
+    <div class="legend-section-title">Limiti di velocità</div>
+    <div class="legend-list">
+      <div class="legend-item"><span class="legend-line" style="border-color:#86efac"></span><span>≤ 10 km/h</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#22c55e"></span><span>≤ 30 km/h</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#facc15"></span><span>≤ 50 km/h</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#fb923c"></span><span>≤ 70 km/h</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#f87171"></span><span>≤ 90 km/h</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#dc2626"></span><span>Oltre 90 km/h</span></div>
+    </div>
+    <div class="legend-note">
+      Mostra solo strade con tag <code>maxspeed</code>; i binari non vengono inclusi.
+    </div>
+  </div>
+
+  <div class="legend-section" data-layer="lyr-hgv">
+    <div class="legend-section-title">Mezzi pesanti</div>
+    <div class="legend-list">
+      <div class="legend-item"><span class="legend-line" style="border-color:#22c55e"></span><span>Libero: <code>hgv=yes</code> / <code>goods=yes</code></span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#3b82f6"></span><span>Designato / consigliato</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#d946ef"></span><span>Solo destinazione / delivery / local</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#f59e0b"></span><span>Limiti fisici: altezza, peso, larghezza, assi</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#ef4444"></span><span>Divieto camion / merci</span></div>
+      <div class="legend-item"><span class="legend-line dashed" style="border-color:#0f766e"></span><span>Condizioni o restrizioni speciali</span></div>
+    </div>
+    <div class="legend-note">
+      Tag usati: <code>hgv</code>, <code>goods</code>, <code>maxweight</code>, <code>maxheight</code>, <code>hazmat</code> e affini.
+    </div>
+  </div>
+
+  <div class="legend-section" data-layer="lyr-strade_ref">
+    <div class="legend-section-title">Strade per proprietà</div>
+    <div class="legend-list">
+      <div class="legend-item"><span class="legend-line" style="border-color:#dc2626"></span><span><strong>SS</strong> – Strada Statale</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#7c3aed"></span><span><strong>SR</strong> – Strada Regionale</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#d97706"></span><span><strong>SP</strong> – Strada Provinciale</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#0369a1"></span><span><strong>SC</strong> – Strada Comunale</span></div>
+    </div>
+    <div class="legend-note">
+      Colorazione basata sul tag <code>ref</code> (es. <code>SP68</code>, <code>SS53</code>). Le strade senza ref non vengono mostrate.
+    </div>
+  </div>
+
+  <div class="legend-section" data-layer="lyr-fontane">
+    <div class="legend-section-title">Fontanelle d'acqua</div>
+    <div class="legend-list">
+      <div class="legend-item"><span class="legend-line" style="border-color:#16a34a"></span><span>Aperta / funzionante</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#dc2626"></span><span>Chiusa / non funzionante</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#0891b2"></span><span>Stato non specificato</span></div>
+    </div>
+    <div class="legend-note">
+      Colorazione basata sui tag <code>operational_status</code>, <code>drinking_water</code> e <code>access</code>.
+    </div>
+  </div>
+
+  <div class="legend-section" data-layer="lyr-parking">
+    <div class="legend-section-title">Parcheggi</div>
+    <div class="legend-list">
+      <div class="legend-item"><span class="legend-line" style="border-color:#15803d"></span><span>Gratuito</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#1d4ed8"></span><span>A pagamento</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#7c3aed"></span><span>Disco orario / tempo limitato</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#ea580c"></span><span>Privato / clienti / permesso</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#64748b"></span><span>Non specificato</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#eab308"></span><span>Stallo disabili</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#0284c7"></span><span>Stallo ricarica elettrica</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#d97706"></span><span>Stallo carico/scarico o mezzi pesanti</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#db2777"></span><span>Stallo famiglie / donne</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#ea580c"></span><span>Parcometro</span></div>
+    </div>
+    <div class="legend-note">
+      Tocca un'area, uno stallo o un parcometro sulla mappa per vedere accesso, costo e limitazioni.
+    </div>
+  </div>
+
+</template>
+
+<!-- Legenda colori dinamica: un solo pannello richiudibile, con una sezione
+     per ogni layer attivo che ha una legenda (vedi updateActiveLegends()). -->
+<div id="activeLegendsPanel">
+  <div id="activeLegendsHeader">
+    <div style="display:flex;align-items:center;gap:7px">
+      <i data-lucide="palette" width="14" height="14"></i>
+      <span>Legenda</span>
+    </div>
+    <i data-lucide="chevron-down" width="15" height="15" id="activeLegendsChevron"></i>
+  </div>
+  <div id="activeLegendsBody"></div>
+</div>
 
 <!-- LOGIN OVERLAY -->
 <div id="loginOverlay" class="auth-overlay">
@@ -1639,7 +1693,7 @@
     // basemap control handled by custom panel
 
     // blocca la propagazione click/scroll sui pannelli
-    ['topbar', 'authTopbar', 'infoPanel', 'legendPanel'].forEach(id => {
+    ['topbar', 'authTopbar', 'infoPanel', 'legendPanel', 'activeLegendsPanel'].forEach(id => {
       const el = document.getElementById(id);
       if (el) {
         L.DomEvent.disableClickPropagation(el);
@@ -1730,6 +1784,38 @@
         }
       });
     });
+
+    // ─── Legenda dinamica: un solo pannello richiudibile, con una sezione
+    // per ogni layer attivo che possiede una legenda colori (clonata dal
+    // <template id="legendTemplates">, non duplicata qui in JS). ───
+    const LEGEND_LAYER_IDS = ['lyr-maxspeed', 'lyr-hgv', 'lyr-strade_ref', 'lyr-fontane', 'lyr-parking'];
+    function updateActiveLegends() {
+      const body = document.getElementById('activeLegendsBody');
+      const templateContent = document.getElementById('legendTemplates').content;
+      body.innerHTML = '';
+      let anyActive = false;
+      LEGEND_LAYER_IDS.forEach(id => {
+        const cb = document.getElementById(id);
+        if (!cb || !cb.checked) return;
+        const section = templateContent.querySelector(`[data-layer="${id}"]`);
+        if (!section) return;
+        body.appendChild(section.cloneNode(true));
+        anyActive = true;
+      });
+      document.getElementById('activeLegendsPanel').classList.toggle('show', anyActive);
+    }
+    LEGEND_LAYER_IDS.forEach(id => {
+      const cb = document.getElementById(id);
+      if (cb) cb.addEventListener('change', updateActiveLegends);
+    });
+    document.getElementById('activeLegendsHeader').addEventListener('click', () => {
+      const panel = document.getElementById('activeLegendsPanel');
+      panel.classList.toggle('collapsed');
+      const chev = document.getElementById('activeLegendsChevron');
+      chev.setAttribute('data-lucide', panel.classList.contains('collapsed') ? 'chevron-right' : 'chevron-down');
+      lucide.createIcons();
+    });
+    updateActiveLegends();
 
     // ─── Percorsi ciclopedonali: nessun checkbox proprio, agganciati a
     // Ciclabili+Pedonali (vedi isSharedFootBike più sopra). Visibili quando
