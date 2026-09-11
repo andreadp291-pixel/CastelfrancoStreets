@@ -520,6 +520,24 @@
 .rp-photo-field i { color: var(--text-light); flex-shrink: 0; }
 .rp-photo-field span { font-size: 12.5px; color: var(--text-light); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rp-photo-field input[type=file] { display: none; }
+.rp-file-hint { font-size: 10.5px; color: #94a3b8; font-weight: 600; text-transform: none; letter-spacing: normal; margin-top: 6px; }
+.rp-file-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.rp-file-chip {
+  display: flex; align-items: center; gap: 8px;
+  background: #f1f5f9; border-radius: 8px; padding: 6px 6px 6px 10px;
+}
+.rp-file-chip span {
+  flex: 1; min-width: 0; font-size: 12px; font-weight: 600; color: var(--text-main);
+  text-transform: none; letter-spacing: normal;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.rp-file-chip button {
+  flex-shrink: 0; width: 22px; height: 22px; border: none; border-radius: 6px;
+  background: transparent; color: #94a3b8; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s, color .15s;
+}
+.rp-file-chip button:hover { background: #e2e8f0; color: #dc2626; }
 #reportForm .rp-submit {
   display: flex; align-items: center; justify-content: center; gap: 8px;
   width: 100%; padding: 12px; border: none; border-radius: 12px;
@@ -646,6 +664,11 @@
 .rd-card .label { color: var(--text-light); font-weight: 800; font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
 .rd-card .val { color: var(--text-main); font-weight: 600; font-size: 13.5px; line-height: 1.55; }
 #infoSections { padding: 0; }
+.rd-photo-gallery { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.rd-photo-thumb {
+  width: calc(33.333% - 6px); aspect-ratio: 1; object-fit: cover;
+  border-radius: 10px; cursor: zoom-in; background: #e2e8f0;
+}
 .map-pin-mode { cursor: crosshair !important; }
 
 /* Badge tipo (es. "Pista ciclabile") */
@@ -1480,9 +1503,11 @@
       <div class="rp-label">Foto (opzionale)
         <label class="rp-photo-field" for="rpPhoto">
           <i data-lucide="image-plus" width="16" height="16"></i>
-          <span id="rpPhotoLabel">Scegli un'immagine&hellip;</span>
-          <input type="file" id="rpPhoto" accept="image/jpeg,image/png,image/webp">
+          <span id="rpPhotoLabel">Scegli una o più immagini&hellip;</span>
+          <input type="file" id="rpPhoto" accept="image/jpeg,image/png,image/webp" multiple>
         </label>
+        <div id="rpPhotoList" class="rp-file-list"></div>
+        <div class="rp-file-hint">Fino a 5 immagini, max 8 MB ciascuna (JPG, PNG, WEBP)</div>
       </div>
       <div class="rp-label">Documento (opzionale)
         <label class="rp-photo-field" for="rpDocument">
@@ -1490,6 +1515,8 @@
           <span id="rpDocumentLabel">Scegli un documento&hellip;</span>
           <input type="file" id="rpDocument" accept="application/pdf,.pdf,.doc,.docx">
         </label>
+        <div id="rpDocumentList" class="rp-file-list"></div>
+        <div class="rp-file-hint">Max 15 MB (PDF, DOC, DOCX)</div>
       </div>
       <div id="reportFormError" class="auth-error"></div>
       <button type="submit" id="rpSubmitBtn" class="rp-submit"><i data-lucide="send" width="15" height="15"></i><span>Invia proposta</span></button>
@@ -4979,7 +5006,7 @@ setTimeout(() => {
     let currentUser = null; // {user_id, display_name, role, must_change_password}
     let pinDropMode = false;
     let pendingPinLatLng = null;
-    let currentPhotoObjectUrl = null;
+    let currentPhotoObjectUrls = [];
 
     // ─── Lightbox foto proposte (zoom + pan via transform, non scroll nativo:
     // lo scroll di un elemento centrato con flexbox raggiunge l'overflow solo
@@ -5524,10 +5551,49 @@ setTimeout(() => {
       updateDrawingLayer();
     });
 
+    const MAX_REPORT_PHOTOS = 5;
+    let selectedPhotos = [];
+    function renderPhotoList() {
+      document.getElementById('rpPhotoLabel').textContent = selectedPhotos.length
+        ? `${selectedPhotos.length} immagine${selectedPhotos.length > 1 ? 'i' : ''} selezionat${selectedPhotos.length > 1 ? 'e' : 'a'}`
+        : "Scegli una o più immagini…";
+      const list = document.getElementById('rpPhotoList');
+      list.innerHTML = '';
+      selectedPhotos.forEach((file, i) => {
+        const chip = document.createElement('div');
+        chip.className = 'rp-file-chip';
+        chip.innerHTML = `<span>${escapeHtml(file.name)}</span><button type="button" title="Rimuovi"><i data-lucide="x" width="14" height="14"></i></button>`;
+        chip.querySelector('button').addEventListener('click', () => {
+          selectedPhotos.splice(i, 1);
+          renderPhotoList();
+        });
+        list.appendChild(chip);
+      });
+      lucide.createIcons();
+    }
+    function renderDocumentChip() {
+      const input = document.getElementById('rpDocument');
+      const file = input.files[0];
+      document.getElementById('rpDocumentLabel').textContent = file ? file.name : "Scegli un documento…";
+      const list = document.getElementById('rpDocumentList');
+      list.innerHTML = '';
+      if (!file) return;
+      const chip = document.createElement('div');
+      chip.className = 'rp-file-chip';
+      chip.innerHTML = `<span>${escapeHtml(file.name)}</span><button type="button" title="Rimuovi"><i data-lucide="x" width="14" height="14"></i></button>`;
+      chip.querySelector('button').addEventListener('click', () => {
+        input.value = '';
+        renderDocumentChip();
+      });
+      list.appendChild(chip);
+      lucide.createIcons();
+    }
+
     function openReportForm() {
       document.getElementById('reportForm').reset();
-      document.getElementById('rpPhotoLabel').textContent = "Scegli un'immagine…";
-      document.getElementById('rpDocumentLabel').textContent = "Scegli un documento…";
+      selectedPhotos = [];
+      renderPhotoList();
+      renderDocumentChip();
       document.getElementById('reportFormError').textContent = '';
       if (pendingGeomType === 'point') {
         document.getElementById('reportCoords').textContent = `${pendingPinLatLng.lat.toFixed(6)}, ${pendingPinLatLng.lng.toFixed(6)}`;
@@ -5542,13 +5608,17 @@ setTimeout(() => {
     }
     document.getElementById('closeReport').addEventListener('click', () => { closePanel('reportPanel'); clearPendingPinMarker(); cancelDrawing(); });
     document.getElementById('rpPhoto').addEventListener('change', (e) => {
-      const f = e.target.files[0];
-      document.getElementById('rpPhotoLabel').textContent = f ? f.name : "Scegli un'immagine…";
+      const errEl = document.getElementById('reportFormError');
+      const picked = Array.from(e.target.files || []);
+      e.target.value = ''; // permette di riselezionare lo stesso file dopo averlo rimosso
+      const room = MAX_REPORT_PHOTOS - selectedPhotos.length;
+      if (picked.length > room) {
+        errEl.textContent = `Puoi aggiungere al massimo ${MAX_REPORT_PHOTOS} immagini`;
+      }
+      selectedPhotos.push(...picked.slice(0, room));
+      renderPhotoList();
     });
-    document.getElementById('rpDocument').addEventListener('change', (e) => {
-      const f = e.target.files[0];
-      document.getElementById('rpDocumentLabel').textContent = f ? f.name : "Scegli un documento…";
-    });
+    document.getElementById('rpDocument').addEventListener('change', renderDocumentChip);
 
     function setReportSubmitLoading(loading) {
       const btn = document.getElementById('rpSubmitBtn');
@@ -5573,8 +5643,7 @@ setTimeout(() => {
       fd.append('lng', pendingPinLatLng.lng);
       fd.append('geom_type', pendingGeomType);
       if (pendingGeomType !== 'point' && pendingGeomCoords) fd.append('geom_coords', JSON.stringify(pendingGeomCoords));
-      const photoFile = document.getElementById('rpPhoto').files[0];
-      if (photoFile) fd.append('photo', photoFile);
+      selectedPhotos.forEach(file => fd.append('photos', file));
       const documentFile = document.getElementById('rpDocument').files[0];
       if (documentFile) fd.append('document', documentFile);
 
@@ -5664,8 +5733,11 @@ setTimeout(() => {
       const canModerate = currentUser && (currentUser.role === 'superadmin' || currentUser.role === 'moderator');
       const canDelete = currentUser && (currentUser.role === 'superadmin' || (currentUser.user_id === report.author_id && report.status === 'aperto'));
 
-      const photoHtml = report.photo_path
-        ? `<img id="detailPhoto" style="max-width:100%;border-radius:10px;margin-top:6px;display:none;cursor:zoom-in">`
+      const photoPaths = report.photo_paths && report.photo_paths.length ? report.photo_paths : (report.photo_path ? [report.photo_path] : []);
+      const photoHtml = photoPaths.length
+        ? `<div class="rd-photo-gallery">${photoPaths.map((_, i) =>
+            `<img class="rd-photo-thumb" id="detailPhoto${i}" data-idx="${i}" style="display:none">`
+          ).join('')}</div>`
         : '';
 
       const statusOptions = Object.keys(REPORT_STATUS_LABEL).map(s =>
@@ -5718,21 +5790,23 @@ setTimeout(() => {
       document.getElementById('rawTags').style.display = 'none';
       document.getElementById('rawToggle').style.display = 'none';
 
-      if (report.photo_path) {
-        fetch(FUNNEL_HOST + report.photo_path, { headers: { Authorization: `Bearer ${authToken}` } })
+      currentPhotoObjectUrls.forEach(u => URL.revokeObjectURL(u));
+      currentPhotoObjectUrls = [];
+      photoPaths.forEach((path, i) => {
+        fetch(FUNNEL_HOST + path, { headers: { Authorization: `Bearer ${authToken}` } })
           .then(res => (res.ok ? res.blob() : null))
           .then(blob => {
             if (!blob) return;
-            const img = document.getElementById('detailPhoto');
+            const img = document.getElementById(`detailPhoto${i}`);
             if (!img) return;
-            if (currentPhotoObjectUrl) URL.revokeObjectURL(currentPhotoObjectUrl);
-            currentPhotoObjectUrl = URL.createObjectURL(blob);
-            img.src = currentPhotoObjectUrl;
+            const url = URL.createObjectURL(blob);
+            currentPhotoObjectUrls.push(url);
+            img.src = url;
             img.style.display = '';
-            img.addEventListener('click', () => openPhotoLightbox(currentPhotoObjectUrl));
+            img.addEventListener('click', () => openPhotoLightbox(url));
           })
           .catch(() => { /* foto non caricata, non bloccante */ });
-      }
+      });
 
       if (canModerate) {
         document.getElementById('detailStatusSelect').addEventListener('change', async (e) => {
