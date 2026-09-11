@@ -1182,6 +1182,7 @@
 
     <div style="height:1px;background:rgba(0,0,0,.07);margin:6px 10px"></div>
     <div class="lp-title" style="margin-top:2px"><i data-lucide="route" width="11" height="11" style="vertical-align:middle;margin-right:4px"></i>Viabilità</div>
+    <label><input type="checkbox" id="lyr-traffic"> <i data-lucide="triangle-alert" width="14" height="14" style="color:#dc2626"></i> Traffico (incidenti, lavori, code)</label>
     <label><input type="checkbox" id="lyr-proposed"> <i data-lucide="route" width="14" height="14" style="color:#f97316"></i> Strade proposte</label>
     <label><input type="checkbox" id="lyr-construction"> <i data-lucide="cone" width="14" height="14" style="color:#f59e0b"></i> In costruzione</label>
     <label><input type="checkbox" id="lyr-cycleway"> <i data-lucide="bike" width="14" height="14" style="color:#06b6d4"></i> Ciclabili</label>
@@ -1345,6 +1346,23 @@
      renderizzato) e clonato in #activeLegendsBody solo per i layer attivi,
      vedi updateActiveLegends(). Così non serve duplicare i colori anche in JS. -->
 <template id="legendTemplates">
+
+  <div class="legend-section" data-layer="lyr-traffic">
+    <div class="legend-section-title">Traffico</div>
+    <div class="legend-list">
+      <div class="legend-item"><span class="legend-line" style="border-color:#dc2626"></span><span>Incidente</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#f97316"></span><span>Lavori in corso</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#7f1d1d"></span><span>Strada chiusa</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#d97706"></span><span>Corsia chiusa</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#f59e0b"></span><span>Coda / traffico intenso</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#78716c"></span><span>Veicolo in panne</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#2563eb"></span><span>Pioggia / ghiaccio / allagamento</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#94a3b8"></span><span>Altro (nebbia, vento, ecc.)</span></div>
+    </div>
+    <div class="legend-note">
+      Dati in tempo reale forniti da TomTom Traffic, aggiornati ogni 5-20 minuti circa.
+    </div>
+  </div>
 
   <div class="legend-section" data-layer="lyr-maxspeed">
     <div class="legend-section-title">Limiti di velocità</div>
@@ -1762,7 +1780,8 @@
       fontane:      L.layerGroup(),
       benches:      L.layerGroup(),
       trees:        L.layerGroup(),
-      segnalazioni: L.layerGroup()
+      segnalazioni: L.layerGroup(),
+      traffic:      L.layerGroup()
     };
 
     // ─── Custom layer toggle panel ───
@@ -1790,7 +1809,8 @@
       'lyr-fontane':      layers.fontane,
       'lyr-benches':      layers.benches,
       'lyr-trees':        layers.trees,
-      'lyr-segnalazioni': layers.segnalazioni
+      'lyr-segnalazioni': layers.segnalazioni,
+      'lyr-traffic':      layers.traffic
     };
     Object.entries(layerCheckboxMap).forEach(([id, layerGroup]) => {
       const cb = document.getElementById(id);
@@ -1817,7 +1837,7 @@
     // ─── Legenda dinamica: un solo pannello richiudibile, con una sezione
     // per ogni layer attivo che possiede una legenda colori (clonata dal
     // <template id="legendTemplates">, non duplicata qui in JS). ───
-    const LEGEND_LAYER_IDS = ['lyr-maxspeed', 'lyr-hgv', 'lyr-strade_ref', 'lyr-fontane', 'lyr-parking'];
+    const LEGEND_LAYER_IDS = ['lyr-traffic', 'lyr-maxspeed', 'lyr-hgv', 'lyr-strade_ref', 'lyr-fontane', 'lyr-parking'];
     function updateActiveLegends() {
       const body = document.getElementById('activeLegendsBody');
       const templateContent = document.getElementById('legendTemplates').content;
@@ -5102,6 +5122,95 @@ setTimeout(() => {
         iconAnchor: [11, 22]
       });
     }
+
+    // ─── Layer Traffico: incidenti/lavori/code da TomTom Traffic API ───
+    // Proxato dal backend (mai chiamato direttamente dal browser): la
+    // chiave TomTom resta lato server e la risposta viene messa in cache
+    // per una decina di minuti — il piano gratuito TomTom è 2.500
+    // richieste AL MESE, non al giorno, quindi va risparmiato aggressivamente.
+    const TRAFFIC_CATEGORY_META = {
+      1:  { label: 'Incidente',            color: '#dc2626', icon: 'car-front' },
+      2:  { label: 'Nebbia',                color: '#64748b', icon: 'cloud-fog' },
+      3:  { label: 'Condizioni pericolose', color: '#ea580c', icon: 'triangle-alert' },
+      4:  { label: 'Pioggia intensa',       color: '#2563eb', icon: 'cloud-rain' },
+      5:  { label: 'Ghiaccio',              color: '#0891b2', icon: 'snowflake' },
+      6:  { label: 'Coda / traffico intenso', color: '#f59e0b', icon: 'car-front' },
+      7:  { label: 'Corsia chiusa',         color: '#d97706', icon: 'octagon-x' },
+      8:  { label: 'Strada chiusa',         color: '#7f1d1d', icon: 'octagon-x' },
+      9:  { label: 'Lavori in corso',       color: '#f97316', icon: 'cone' },
+      10: { label: 'Vento forte',           color: '#64748b', icon: 'wind' },
+      11: { label: 'Allagamento',           color: '#0284c7', icon: 'waves' },
+      14: { label: 'Veicolo in panne',      color: '#78716c', icon: 'car-front' },
+      0:  { label: 'Altro',                 color: '#94a3b8', icon: 'circle-alert' }
+    };
+    function trafficIcon(meta) {
+      return L.divIcon({
+        className: '',
+        html: `<div style="width:22px;height:22px;border-radius:50%;background:${meta.color};border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center"><i data-lucide="${meta.icon}" width="12" height="12" style="color:#fff"></i></div>`,
+        iconSize: [22, 22], iconAnchor: [11, 11]
+      });
+    }
+    function buildTrafficPopup(props, meta) {
+      const desc = (props.events || []).map(e => escapeHtml(e.description)).filter(Boolean).join('; ');
+      const fmtDate = iso => iso ? escapeHtml(new Date(iso).toLocaleString('it-IT')) : null;
+      const start = fmtDate(props.startTime);
+      const end = fmtDate(props.endTime);
+      const road = props.roadNumbers && props.roadNumbers.length ? escapeHtml(props.roadNumbers.join(', ')) : null;
+      return `
+        <div class="popup-header-container" style="background:${meta.color}">
+          <div class="popup-icon-box"><i data-lucide="${meta.icon}"></i></div>
+          <div class="popup-title">${escapeHtml(meta.label)}</div>
+        </div>
+        ${desc ? `<div class="popup-section"><span class="label">Descrizione</span><span class="val">${desc}</span></div>` : ''}
+        ${road ? `<div class="popup-section"><span class="label">Strada</span><span class="val">${road}</span></div>` : ''}
+        ${start ? `<div class="popup-section"><span class="label">Dal</span><span class="val">${start}${end ? ' al ' + end : ''}</span></div>` : ''}
+      `;
+    }
+    function renderTrafficIncidents(features) {
+      layers.traffic.clearLayers();
+      features.forEach(f => {
+        const props = f.properties || {};
+        const geom = f.geometry;
+        if (!geom) return;
+        const meta = TRAFFIC_CATEGORY_META[props.iconCategory] || TRAFFIC_CATEGORY_META[0];
+        let layer;
+        if (geom.type === 'Point') {
+          const [lon, lat] = geom.coordinates;
+          layer = L.marker([lat, lon], { icon: trafficIcon(meta) });
+        } else if (geom.type === 'LineString') {
+          layer = L.polyline(geom.coordinates.map(([lon, lat]) => [lat, lon]), {
+            color: meta.color, weight: 5, opacity: .85,
+            dashArray: props.iconCategory === 8 ? '4 6' : null
+          });
+        } else {
+          return;
+        }
+        layer.bindPopup(buildTrafficPopup(props, meta));
+        layers.traffic.addLayer(layer);
+      });
+      lucide.createIcons();
+    }
+    let trafficRefreshTimer = null;
+    async function loadTrafficIncidents() {
+      // fetch diretta, non apiFetch: endpoint pubblico (non richiede login,
+      // come il proxy Overpass) — apiFetch forzerebbe il popup di accesso
+      // per chi guarda la mappa senza essere autenticato.
+      try {
+        const res = await fetch(FUNNEL_HOST + '/segnalazioni/api/traffic/incidents');
+        if (!res.ok) return;
+        const data = await res.json();
+        renderTrafficIncidents(data.incidents || []);
+      } catch (err) { /* layer opzionale: un errore qui non deve bloccare il resto della mappa */ }
+    }
+    document.getElementById('lyr-traffic').addEventListener('change', (e) => {
+      if (e.target.checked) {
+        loadTrafficIncidents();
+        if (!trafficRefreshTimer) trafficRefreshTimer = setInterval(loadTrafficIncidents, 5 * 60 * 1000);
+      } else if (trafficRefreshTimer) {
+        clearInterval(trafficRefreshTimer);
+        trafficRefreshTimer = null;
+      }
+    });
 
     // Backend su Tailscale Funnel, esposto come path aggiuntivo sull'hostname
     // condiviso con gli altri servizi del Pi (CastelSafe/CastelEventi).
