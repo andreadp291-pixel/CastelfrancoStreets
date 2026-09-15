@@ -934,6 +934,18 @@
       flex-shrink: 0;
     }
     .legend-line.dashed { border-top-style: dashed; }
+    .legend-gradient-bar {
+      height: 10px;
+      border-radius: 999px;
+      background: linear-gradient(to right, #22c55e, #eab308, #f97316, #dc2626, #7f1d1d);
+    }
+    .legend-gradient-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--text-light);
+      margin-top: 3px;
+    }
     .legend-note {
       font-size: 11px;
       color: var(--text-light);
@@ -1183,6 +1195,7 @@
     <div style="height:1px;background:rgba(0,0,0,.07);margin:6px 10px"></div>
     <div class="lp-title" style="margin-top:2px"><i data-lucide="route" width="11" height="11" style="vertical-align:middle;margin-right:4px"></i>Viabilità</div>
     <label><input type="checkbox" id="lyr-traffic"> <i data-lucide="triangle-alert" width="14" height="14" style="color:#dc2626"></i> Traffico (incidenti, lavori, code)</label>
+    <label><input type="checkbox" id="lyr-trafficflow"> <svg width="14" height="14" viewBox="0 0 24 24" style="flex-shrink:0"><rect x="1" y="10" width="6" height="6" rx="1.5" fill="#22c55e"/><rect x="9" y="10" width="6" height="6" rx="1.5" fill="#f59e0b"/><rect x="17" y="10" width="6" height="6" rx="1.5" fill="#7f1d1d"/></svg> Traffico (flusso/intensità)</label>
     <label><input type="checkbox" id="lyr-proposed"> <i data-lucide="route" width="14" height="14" style="color:#f97316"></i> Strade proposte</label>
     <label><input type="checkbox" id="lyr-construction"> <i data-lucide="cone" width="14" height="14" style="color:#f59e0b"></i> In costruzione</label>
     <label><input type="checkbox" id="lyr-cycleway"> <i data-lucide="bike" width="14" height="14" style="color:#06b6d4"></i> Ciclabili</label>
@@ -1361,6 +1374,15 @@
     </div>
     <div class="legend-note">
       Dati in tempo reale forniti da TomTom Traffic, aggiornati ogni 5-20 minuti circa.
+    </div>
+  </div>
+
+  <div class="legend-section" data-layer="lyr-trafficflow">
+    <div class="legend-section-title">Flusso del traffico</div>
+    <div class="legend-gradient-bar"></div>
+    <div class="legend-gradient-labels"><span>Scorrevole</span><span>Congestionato</span></div>
+    <div class="legend-note">
+      Colore della strada in base alla velocità media rispetto al flusso libero. Dati TomTom Traffic Flow, aggiornati ogni pochi minuti.
     </div>
   </div>
 
@@ -1714,6 +1736,10 @@
     map.getPane('parkingSpacesPane').style.zIndex = 420;
     map.createPane('parkometersPane');
     map.getPane('parkometersPane').style.zIndex = 430;
+    // Pane dedicato al layer raster "flusso traffico" (TomTom): deve stare
+    // sopra le tile della mappa base ma sotto marker/linee/poligoni.
+    map.createPane('trafficFlowPane');
+    map.getPane('trafficFlowPane').style.zIndex = 350;
 
     const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
@@ -1781,7 +1807,20 @@
       benches:      L.layerGroup(),
       trees:        L.layerGroup(),
       segnalazioni: L.layerGroup(),
-      traffic:      L.layerGroup()
+      traffic:      L.layerGroup(),
+      // Tile raster TomTom Traffic Flow (velocità media rispetto al flusso
+      // libero, verde→rosso scuro): proxate dal backend come le altre
+      // chiamate TomTom, per non esporre la chiave lato client.
+      // NB: l'host è lo stesso hardcoded in FUNNEL_HOST più sotto nel file —
+      // non si può referenziare quella const qui perché non è ancora stata
+      // dichiarata a questo punto dello script.
+      trafficflow: L.tileLayer('https://andrea.tail04be23.ts.net/segnalazioni/api/traffic/flow/{z}/{x}/{y}.png', {
+        pane: 'trafficFlowPane',
+        opacity: 0.75,
+        maxNativeZoom: 18,
+        maxZoom: 22,
+        minZoom: 0
+      })
     };
 
     // ─── Custom layer toggle panel ───
@@ -1810,7 +1849,8 @@
       'lyr-benches':      layers.benches,
       'lyr-trees':        layers.trees,
       'lyr-segnalazioni': layers.segnalazioni,
-      'lyr-traffic':      layers.traffic
+      'lyr-traffic':      layers.traffic,
+      'lyr-trafficflow':  layers.trafficflow
     };
     Object.entries(layerCheckboxMap).forEach(([id, layerGroup]) => {
       const cb = document.getElementById(id);
@@ -1837,7 +1877,7 @@
     // ─── Legenda dinamica: un solo pannello richiudibile, con una sezione
     // per ogni layer attivo che possiede una legenda colori (clonata dal
     // <template id="legendTemplates">, non duplicata qui in JS). ───
-    const LEGEND_LAYER_IDS = ['lyr-traffic', 'lyr-maxspeed', 'lyr-hgv', 'lyr-strade_ref', 'lyr-fontane', 'lyr-parking'];
+    const LEGEND_LAYER_IDS = ['lyr-traffic', 'lyr-trafficflow', 'lyr-maxspeed', 'lyr-hgv', 'lyr-strade_ref', 'lyr-fontane', 'lyr-parking'];
     function updateActiveLegends() {
       const body = document.getElementById('activeLegendsBody');
       const templateContent = document.getElementById('legendTemplates').content;
