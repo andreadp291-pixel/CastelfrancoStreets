@@ -2329,8 +2329,23 @@
       parking:      { color: '#0ea5e9', weight: 2, fillColor: '#38bdf8', fillOpacity: .35, opacity: .85 },
       waterway:     { color: '#0284c7', weight: 3, lineCap: 'round', opacity: .8 },
       trees:        { color: '#15803d', weight: 4, lineCap: 'round', opacity: .85, dashArray: '1 6' },
+      crossingRaised: { color: '#d946ef', weight: 6, dashArray: '2 5', lineCap: 'square', opacity: .95 },
       default:      { color: '#94a3b8', weight: 2, opacity: .6 }
     };
+
+    // Attraversamento rialzato (dosso/plateau pedonale)
+    function isRaisedCrossing(tags) {
+      return getType(tags) === 'crossing' && (
+        ['table', 'hump', 'bump', 'yes'].includes(tags.traffic_calming) ||
+        tags.raised === 'yes' ||
+        tags['crossing:raised'] === 'yes' ||
+        tags.kerb === 'raised' && tags.traffic_calming
+      );
+    }
+    function styleForTags(tags) {
+      if (isRaisedCrossing(tags)) return STYLES.crossingRaised;
+      return STYLES[getType(tags)] || STYLES.default;
+    }
 
     function maxspeedStyle(speed) {
       const s = parseInt(String(speed).match(/\d+/)?.[0] || '50', 10);
@@ -4738,7 +4753,7 @@
 
       L.geoJSON(geojson, {
         filter: feature => feature.geometry && feature.geometry.type !== 'Point',
-        style: feature => ({ ...(STYLES[getType(feature.properties || {})] || STYLES.default) }),
+        style: feature => ({ ...styleForTags(feature.properties || {}) }),
         onEachFeature: (feature, layer) => {
           const tags = feature.properties || {};
           const type = getType(tags);
@@ -4759,7 +4774,7 @@
             addTracked(layers.cyclopedonale, layer);
             sharedPathEntries.push({ styleObj: base, geoLayer: layer, groupName });
           } else if (type !== 'default') {
-            const base = { ...(STYLES[type] || STYLES.default) };
+            const base = { ...styleForTags(tags) };
             wireLayerInteractions(layer, feature, base, name);
             addTracked(layers[type], layer);
           } else if (hasHGVData(tags) || (tags.maxspeed && isRoadForMaxspeed(tags))) {
