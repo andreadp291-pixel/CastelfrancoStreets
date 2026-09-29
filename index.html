@@ -442,6 +442,58 @@
   font-family: inherit;
 }
 .auth-error { color: #dc2626; font-size: 12px; min-height: 16px; margin-bottom: 8px; }
+
+/* ─── Statistiche del territorio ─── */
+.stats-box {
+  background: #fff; border-radius: 20px; width: min(640px, 94vw); max-height: 88vh;
+  display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,.25);
+}
+.stats-head {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+  padding: 18px 20px 14px; border-bottom: 1px solid #eef2f7; flex-shrink: 0;
+}
+.stats-title { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: var(--text-main); }
+.stats-subtitle { font-size: 12px; color: var(--text-light); margin-top: 3px; }
+.stats-body { overflow-y: auto; padding: 18px 20px 22px; overscroll-behavior: contain; }
+.stats-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); gap: 10px; margin-bottom: 24px; }
+.stats-retry {
+  margin-left: auto; flex-shrink: 0; border: none; border-radius: 8px; padding: 6px 12px;
+  background: var(--primary); color: #fff; font: inherit; font-weight: 600; cursor: pointer;
+}
+.stat-tile { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 12px 14px; }
+.stat-tile .st-label { font-size: 11.5px; font-weight: 600; color: var(--text-light); }
+.stat-tile .st-value { font-size: 22px; font-weight: 700; color: var(--text-main); margin-top: 4px; line-height: 1.1; }
+.stat-tile .st-unit { font-size: 12px; font-weight: 600; color: var(--text-light); margin-left: 3px; }
+.stats-section { margin-bottom: 26px; }
+.stats-section:last-child { margin-bottom: 0; }
+.stats-section h3 { font-size: 13.5px; font-weight: 700; color: var(--text-main); margin: 0 0 3px; }
+.stats-section .ss-sub { font-size: 11.5px; color: var(--text-light); margin: 0 0 14px; line-height: 1.45; }
+.stats-loading { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-light); padding: 6px 0; }
+.stats-loading .spinner { border-color: #e2e8f0; border-top-color: var(--primary); }
+.hbar-row { display: grid; grid-template-columns: minmax(96px, 38%) 1fr; align-items: center; gap: 10px; padding: 3px 0; cursor: default; }
+.hbar-label { font-size: 12px; font-weight: 600; color: var(--text-main); text-align: right; }
+.hbar-track { display: flex; align-items: center; min-width: 0; }
+.hbar-fill { height: 16px; background: var(--primary); border-radius: 0 4px 4px 0; min-width: 2px; flex-shrink: 0; }
+.hbar-fill.muted { background: #94a3b8; }
+.hbar-value { font-size: 11.5px; color: var(--text-light); margin-left: 7px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.hbar-row:hover .hbar-fill, .hbar-row:focus .hbar-fill { filter: brightness(1.12); }
+.meter-row { margin-bottom: 13px; }
+.meter-head { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 5px; }
+.meter-head .mh-label { font-size: 12px; font-weight: 600; color: var(--text-main); }
+.meter-head .mh-value { font-size: 11.5px; color: var(--text-light); white-space: nowrap; }
+.meter-track { height: 8px; border-radius: 999px; background: var(--primary-light); overflow: hidden; }
+.meter-fill { height: 100%; background: var(--primary); border-radius: 999px; }
+.stats-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.stats-table td { padding: 7px 4px; border-bottom: 1px solid #f1f5f9; color: var(--text-main); }
+.stats-table td:last-child { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stats-table tr:last-child td { border-bottom: none; }
+.stats-table .st-icon { color: var(--text-light); vertical-align: -2px; margin-right: 7px; }
+.stats-note { font-size: 11px; color: var(--text-light); line-height: 1.5; margin-top: 18px; padding-top: 12px; border-top: 1px solid #eef2f7; }
+#statsTooltip {
+  position: fixed; z-index: 3100; pointer-events: none; display: none;
+  background: var(--bg-dark); color: #fff; font-size: 12px; padding: 7px 10px; border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.25); max-width: 260px;
+}
 .pwd-requirements { margin: -6px 0 8px; font-size: 11px; color: var(--text-light); line-height: 1.4; }
 .pwd-strength-track {
   width: 100%; height: 6px; border-radius: 999px; background: #e2e8f0; overflow: hidden; margin-bottom: 4px;
@@ -1454,6 +1506,9 @@
     <i data-lucide="layers" width="15" height="15"></i>
     <span>Layer</span>
   </button>
+  <button id="statsBtn" class="ctrl-btn" title="Statistiche">
+    <i data-lucide="chart-column" width="15" height="15"></i>
+  </button>
   <button id="newReportBtn" class="ctrl-btn" title="Nuova proposta" style="display:none">
     <i data-lucide="map-pin-plus" width="15" height="15"></i>
   </button>
@@ -1782,6 +1837,21 @@
   </div>
 
 </template>
+
+<!-- STATISTICHE DEL TERRITORIO -->
+<div id="statsOverlay" class="auth-overlay">
+  <div class="stats-box" role="dialog" aria-labelledby="statsTitle">
+    <div class="stats-head">
+      <div>
+        <div class="stats-title" id="statsTitle"><i data-lucide="chart-column" width="17" height="17"></i>Statistiche del territorio</div>
+        <div class="stats-subtitle">Castelfranco Veneto · dati OpenStreetMap entro il confine comunale</div>
+      </div>
+      <span id="closeStats" class="panel-close" style="background:#e2e8f0"><i data-lucide="x" width="16" height="16"></i></span>
+    </div>
+    <div class="stats-body" id="statsBody"></div>
+  </div>
+  <div id="statsTooltip" role="tooltip"></div>
+</div>
 
 <!-- Legenda colori dinamica: un solo pannello richiudibile, con una sezione
      per ogni layer attivo che ha una legenda (vedi updateActiveLegends()). -->
@@ -4179,7 +4249,7 @@
     // quello mostrato finora. Non si aspetta più "result" (tutti i mirror)
     // per vedere qualcosa sulla mappa — basta il primo, e viene sostituito
     // silenziosamente se ne arriva uno migliore.
-    function fetchOverpassDirect(query, groupKey, onUpdate) {
+    function fetchOverpassDirect(query, groupKey, onUpdate, timeoutMs = OVERPASS_TIMEOUT_MS) {
       let best = null;
       const requests = OVERPASS_MIRRORS.map(url => {
         const label = shortOverpassLabel(url);
@@ -4188,7 +4258,7 @@
         return fetch(url, {
           method: 'POST',
           body: 'data=' + encodeURIComponent(query),
-          signal: AbortSignal.timeout(OVERPASS_TIMEOUT_MS)
+          signal: AbortSignal.timeout(timeoutMs)
         })
           .then(res => {
             // Una risposta HTTP, qualunque sia lo status, dimostra che il
@@ -4268,13 +4338,13 @@
     // inoltrato: per il proxy (un solo tentativo) scatta una volta sola al
     // suo successo, per i mirror diretti scatta più volte man mano che
     // arriva un dato migliore — vedi fetchOverpassDirect.
-    function fetchOverpass(query, groupKey, onUpdate) {
+    function fetchOverpass(query, groupKey, onUpdate, timeoutMs) {
       if (isOsmDirectBlocked()) {
         const result = fetchOverpassViaProxy(query, groupKey);
         if (onUpdate) result.then(onUpdate).catch(() => {});
         return { firstSettled: result.then(() => {}, () => {}), result };
       }
-      const direct = fetchOverpassDirect(query, groupKey, onUpdate);
+      const direct = fetchOverpassDirect(query, groupKey, onUpdate, timeoutMs);
       const result = direct.result.catch(() => {
         osmDirectBlockedUntil = Date.now() + OSM_DIRECT_RETRY_COOLDOWN_MS;
         const proxyResult = fetchOverpassViaProxy(query, groupKey);
@@ -4678,6 +4748,9 @@
     // arriva un dato valido pronto a prenderne il posto — niente più
     // azzeramento cieco di tutto a ogni chiamata.
     const groupRenderedLayers = {};
+    // Ultime feature valide (già filtrate sul confine comunale) per gruppo:
+    // base del pannello Statistiche, senza dover rifare le query.
+    const osmGroupFeatures = {};
 
     // Converte e disegna il lotto di elementi grezzi di UN gruppo, per
     // conto suo — niente merge globale di tutti i gruppi prima di
@@ -4722,6 +4795,7 @@
       // PRIMA di sapere se questo nuovo lotto ha davvero qualcosa da
       // mettere al suo posto lo farebbe sparire senza sostituirlo.
       if (!geojson.features.length) return 0;
+      osmGroupFeatures[groupName] = geojson.features;
 
       // Solo ORA, con dati validi in mano, si rimuove quanto disegnato
       // in precedenza per QUESTO gruppo (da un mirror precedente nella
@@ -4914,6 +4988,7 @@
     // ancora finito, con due renderBatch potenzialmente in corsa tra loro
     // sullo stesso gruppo.
     let loadDataInFlight = false;
+    const OSM_BBOX = '45.6100,11.8648,45.7109,12.0001';
     async function loadData(force = false, isBackgroundRetry = false) {
       if (loadDataInFlight) {
         if (!isBackgroundRetry) setStatus('Caricamento già in corso…', 'loading', 2000);
@@ -4954,8 +5029,8 @@
       // fetta a ovest: quella parte di comune (con le sue strade, incroci,
       // semafori...) non veniva proprio interrogata, a prescindere dal
       // filtro sul confine reale applicato dopo. Min/max di
-      // CASTELFRANCO_BOUNDARY più un margine di sicurezza di 0.003° (~330m).
-      const OSM_BBOX = '45.6100,11.8648,45.7109,12.0001';
+      // CASTELFRANCO_BOUNDARY più un margine di sicurezza di 0.003° (~330m):
+      // vedi OSM_BBOX (a livello di modulo, condiviso con le statistiche).
       const QUERY_GROUPS = [
         {
           name: 'strade',
@@ -5498,6 +5573,349 @@ setTimeout(() => {
         iconAnchor: [11, 22]
       });
     }
+
+    // ─── Statistiche del territorio ───
+    // Km e conteggi dai dati OSM già caricati per la mappa (osmGroupFeatures),
+    // più una query dedicata lanciata solo all'apertura del pannello: rete
+    // stradale completa e attraversamenti come nodi con tutti i tag, che i
+    // gruppi della mappa non scaricano.
+    const STATS_ROAD_RE = /^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street)(_link)?$/;
+    let statsExtraFeatures = null;
+    let statsExtraPromise = null;
+    let statsExtraFailed = false;
+
+    function segmentKm([lon1, lat1], [lon2, lat2]) {
+      const rad = Math.PI / 180;
+      const dLat = (lat2 - lat1) * rad, dLon = (lon2 - lon1) * rad;
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLon / 2) ** 2;
+      return 2 * 6371 * Math.asin(Math.sqrt(a));
+    }
+    function lineParts(geometry) {
+      if (!geometry) return [];
+      if (geometry.type === 'LineString') return [geometry.coordinates];
+      if (geometry.type === 'MultiLineString') return geometry.coordinates;
+      return [];
+    }
+    // Solo i tratti con il punto medio dentro il comune: una via che
+    // attraversa il confine conta per la parte in Castelfranco.
+    function kmInsideComune(geometry) {
+      let km = 0;
+      lineParts(geometry).forEach(c => {
+        for (let i = 1; i < c.length; i++) {
+          const a = c[i - 1], b = c[i];
+          if (isPointInCastelfranco((a[1] + b[1]) / 2, (a[0] + b[0]) / 2)) km += segmentKm(a, b);
+        }
+      });
+      return km;
+    }
+    const isLineFeature = f => lineParts(f.geometry).length > 0;
+    const isNodeFeature = f => String(f.id || '').startsWith('node/');
+    function countInGroup(group, pred = () => true) {
+      const fs = osmGroupFeatures[group];
+      return fs ? fs.filter(f => pred(f.properties || {}, f)).length : null;
+    }
+    function speedKmh(value) {
+      const v = String(value).trim().toLowerCase();
+      const num = v.match(/\d+/);
+      if (num) return parseInt(num[0], 10);
+      if (v.includes('walk')) return 10;
+      if (v.includes('urban')) return 50;
+      if (v.includes('rural')) return 90;
+      if (v.includes('motorway')) return 130;
+      return null;
+    }
+
+    function loadStatsExtra() {
+      if (statsExtraFeatures) return Promise.resolve(statsExtraFeatures);
+      if (statsExtraPromise) return statsExtraPromise;
+      statsExtraFailed = false;
+      // "out tags geom": geometria delle vie in linea, senza scaricare a
+      // parte tutti i loro nodi — più leggera, e non serve osmtogeojson.
+      const ql = `[out:json][timeout:60][bbox:${OSM_BBOX}];(
+        way["highway"~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street)(_link)?$"];
+        way["footway"="crossing"];
+        way["cycleway"="crossing"];
+      );out tags geom;node["highway"="crossing"];out body;`;
+      // Query pesante (~4 MB): parte solo a mappa caricata, altrimenti i
+      // mirror (già occupati dai gruppi della mappa) la rifiutano o la
+      // rallentano; e ha un timeout più lungo di quello dei gruppi mappa.
+      const waitMapLoaded = () => new Promise(resolve => {
+        const check = () => (loadDataInFlight ? setTimeout(check, 1000) : resolve());
+        check();
+      });
+      statsExtraPromise = waitMapLoaded()
+        .then(() => fetchOverpass(ql, 'statistiche', null, 90000).result)
+        .then(data => {
+          const features = (data.elements || []).map(e => {
+            if (e.type === 'node') {
+              return { id: `node/${e.id}`, properties: e.tags || {}, geometry: { type: 'Point', coordinates: [e.lon, e.lat] } };
+            }
+            if (e.type === 'way' && e.geometry) {
+              const coords = e.geometry.filter(Boolean).map(p => [p.lon, p.lat]);
+              return { id: `way/${e.id}`, properties: e.tags || {}, geometry: { type: 'LineString', coordinates: coords } };
+            }
+            return null;
+          }).filter(Boolean);
+          statsExtraFeatures = features.filter(f => geometryInCastelfranco(f.geometry));
+          return statsExtraFeatures;
+        })
+        .catch(err => { statsExtraFailed = true; throw err; })
+        .finally(() => { statsExtraPromise = null; });
+      return statsExtraPromise;
+    }
+
+    const fmtKm = km => km.toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const fmtInt = n => n.toLocaleString('it-IT');
+    const pctOf = (part, total) => (total ? Math.round(part / total * 100) : 0);
+
+    function statTileHtml(label, value, unit) {
+      return `<div class="stat-tile"><div class="st-label">${label}</div>` +
+        `<div class="st-value">${value}${unit ? `<span class="st-unit">${unit}</span>` : ''}</div></div>`;
+    }
+    // Barre orizzontali, una sola tinta (confronto di grandezze); la voce
+    // "residua" (es. vie senza sigla) in grigio. Ogni barra ha il valore in
+    // chiaro accanto, il tooltip aggiunge la quota sul totale.
+    function hbarChartHtml(rows, fmt, total) {
+      const max = Math.max(...rows.map(r => r.value), 0) || 1;
+      return rows.map(r => {
+        const share = total ? ` · ${pctOf(r.value, total)}% del totale` : '';
+        const tip = `${r.label}: ${fmt(r.value)}${share}`;
+        const width = `width:calc((100% - 84px) * ${(r.value / max).toFixed(4)})${r.value ? '' : ';min-width:0'}`;
+        return `<div class="hbar-row" tabindex="0" data-tip="${escapeHtml(tip)}">` +
+          `<div class="hbar-label">${escapeHtml(r.label)}</div>` +
+          `<div class="hbar-track"><div class="hbar-fill${r.muted ? ' muted' : ''}" style="${width}"></div>` +
+          `<span class="hbar-value">${fmt(r.value)}</span></div></div>`;
+      }).join('');
+    }
+    function meterHtml(label, part, total, fmt = fmtInt) {
+      const p = total ? Math.min(100, part / total * 100) : 0;
+      return `<div class="meter-row"><div class="meter-head"><span class="mh-label">${label}</span>` +
+        `<span class="mh-value">${fmt(part)} su ${fmt(total)} · ${pctOf(part, total)}%</span></div>` +
+        `<div class="meter-track" role="meter" aria-label="${label}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(p)}">` +
+        `<div class="meter-fill" style="width:${p.toFixed(2)}%"></div></div></div>`;
+    }
+    function statsPendingHtml() {
+      return statsExtraFailed
+        ? `<div class="stats-loading">I server OpenStreetMap non hanno risposto (spesso sono occupati mentre la mappa carica).` +
+          `<button type="button" class="stats-retry" data-stats-retry>Riprova</button></div>`
+        : `<div class="stats-loading"><div class="spinner"></div>Calcolo in corso…</div>`;
+    }
+
+    function computeMobility() {
+      const strade = osmGroupFeatures.strade;
+      if (!strade) return null;
+      const m = { piste: 0, corsie: 0, ciclopedonali: 0, marciapiedi: 0, pedonali: 0 };
+      const laneValues = ['lane', 'track', 'shared_lane', 'share_busway', 'opposite_lane', 'opposite_track'];
+      strade.forEach(f => {
+        if (!isLineFeature(f)) return;
+        const t = f.properties || {};
+        const type = getType(t);
+        if (type !== 'cycleway' && type !== 'pedestrian') return;
+        const km = kmInsideComune(f.geometry);
+        if (isSharedFootBike(t)) m.ciclopedonali += km;
+        else if (type === 'cycleway') {
+          if (t.highway === 'cycleway') m.piste += km;
+          else if (laneValues.includes(t.cycleway)) m.corsie += km;
+        }
+        else if (t.highway === 'footway' && t.footway === 'sidewalk') m.marciapiedi += km;
+        else m.pedonali += km;
+      });
+      return m;
+    }
+
+    function computeExtra(extra) {
+      const roads = extra.filter(f => isLineFeature(f) && STATS_ROAD_RE.test((f.properties || {}).highway || ''));
+      const speedBands = [
+        { label: 'Fino a 10 km/h', max: 10 }, { label: '30 km/h', max: 30 }, { label: '50 km/h', max: 50 },
+        { label: '70 km/h', max: 70 }, { label: '90 km/h', max: 90 }, { label: 'Oltre 90 km/h', max: Infinity }
+      ].map(b => ({ ...b, value: 0 }));
+      const owners = { SS: 0, SR: 0, SP: 0, SC: 0 };
+      let reteKm = 0, withLimitKm = 0, noRefKm = 0;
+      roads.forEach(f => {
+        const t = f.properties;
+        const km = kmInsideComune(f.geometry);
+        reteKm += km;
+        const speed = t.maxspeed != null ? speedKmh(t.maxspeed) : null;
+        if (speed != null) {
+          withLimitKm += km;
+          speedBands.find(b => speed <= b.max).value += km;
+        }
+        const ref = t.ref ? classifyRef(t.ref) : null;
+        if (ref) owners[ref.label.slice(0, 2)] += km;
+        else noRefKm += km;
+      });
+
+      const litCoords = new Set();
+      extra.forEach(f => {
+        const t = f.properties || {};
+        const isCrossingWay = t.footway === 'crossing' || t.cycleway === 'crossing' || t.highway === 'crossing';
+        if (isCrossingWay && t.lit === 'yes') {
+          lineParts(f.geometry).forEach(c => c.forEach(([lon, lat]) => litCoords.add(`${lon.toFixed(7)},${lat.toFixed(7)}`)));
+        }
+      });
+      const crossings = extra.filter(f => isNodeFeature(f) && (f.properties || {}).highway === 'crossing');
+      const cross = { total: crossings.length, marked: 0, raised: 0, lit: 0, signals: 0 };
+      crossings.forEach(f => {
+        const t = f.properties;
+        const [lon, lat] = f.geometry.coordinates;
+        if (['marked', 'zebra', 'uncontrolled'].includes(t.crossing) || t.crossing_ref === 'zebra' ||
+            (t['crossing:markings'] && t['crossing:markings'] !== 'no')) cross.marked++;
+        if (['table', 'hump'].includes(t.traffic_calming) || t['crossing:raised'] === 'yes') cross.raised++;
+        if (t.lit === 'yes' || litCoords.has(`${lon.toFixed(7)},${lat.toFixed(7)}`)) cross.lit++;
+        if (t.crossing === 'traffic_signals' || t['crossing:signals'] === 'yes') cross.signals++;
+      });
+      return { reteKm, withLimitKm, speedBands, owners, noRefKm, cross };
+    }
+
+    function renderStats() {
+      const mob = computeMobility();
+      const ex = statsExtraFeatures ? computeExtra(statsExtraFeatures) : null;
+      const pending = statsExtraFailed ? '—' : '…';
+      const semafori = countInGroup('semafori', (t, f) => isNodeFeature(f) && t.highway === 'traffic_signals');
+      const cicloKm = mob ? mob.piste + mob.corsie + mob.ciclopedonali : null;
+      const pedKm = mob ? mob.marciapiedi + mob.pedonali : null;
+
+      let html = `<div class="stats-kpis">` +
+        statTileHtml('Rete stradale', ex ? fmtKm(ex.reteKm) : pending, 'km') +
+        statTileHtml('Percorsi ciclabili', cicloKm != null ? fmtKm(cicloKm) : pending, 'km') +
+        statTileHtml('Percorsi pedonali', pedKm != null ? fmtKm(pedKm) : pending, 'km') +
+        statTileHtml('Attraversamenti', ex ? fmtInt(ex.cross.total) : pending, '') +
+        statTileHtml('Semafori', semafori != null ? fmtInt(semafori) : pending, '') +
+        `</div>`;
+
+      html += `<section class="stats-section"><h3>Limiti di velocità</h3>` +
+        `<p class="ss-sub">Km di strade carrabili per limite indicato su OpenStreetMap.</p>`;
+      html += ex
+        ? meterHtml('Rete con limite di velocità indicato', ex.withLimitKm, ex.reteKm, v => `${fmtKm(v)} km`) +
+          hbarChartHtml(ex.speedBands, v => `${fmtKm(v)} km`, ex.withLimitKm)
+        : statsPendingHtml();
+      html += `</section>`;
+
+      html += `<section class="stats-section"><h3>Proprietà delle strade</h3>` +
+        `<p class="ss-sub">Km per ente gestore, dalla sigla della strada (SS, SR, SP, SC). Le vie senza sigla sono in grigio.</p>`;
+      html += ex
+        ? hbarChartHtml([
+            { label: 'Statali (SS)', value: ex.owners.SS },
+            { label: 'Regionali (SR)', value: ex.owners.SR },
+            { label: 'Provinciali (SP)', value: ex.owners.SP },
+            { label: 'Comunali con sigla (SC)', value: ex.owners.SC },
+            { label: 'Senza sigla', value: ex.noRefKm, muted: true }
+          ], v => `${fmtKm(v)} km`, ex.reteKm)
+        : statsPendingHtml();
+      html += `</section>`;
+
+      html += `<section class="stats-section"><h3>Mobilità ciclabile e pedonale</h3>` +
+        `<p class="ss-sub">Km di percorsi. I marciapiedi contano solo se mappati come percorso separato dalla strada.</p>`;
+      html += mob
+        ? hbarChartHtml([
+            { label: 'Piste ciclabili', value: mob.piste },
+            { label: 'Corsie ciclabili su strada', value: mob.corsie },
+            { label: 'Percorsi ciclopedonali', value: mob.ciclopedonali },
+            { label: 'Marciapiedi', value: mob.marciapiedi },
+            { label: 'Altri percorsi pedonali', value: mob.pedonali }
+          ], v => `${fmtKm(v)} km`, cicloKm + pedKm)
+        : `<div class="stats-loading"><div class="spinner"></div>Dati della mappa in caricamento…</div>`;
+      html += `</section>`;
+
+      html += `<section class="stats-section"><h3>Attraversamenti pedonali</h3>` +
+        `<p class="ss-sub">Quanti attraversamenti hanno ciascuna caratteristica, sul totale mappato.</p>`;
+      html += ex
+        ? meterHtml('Con strisce pedonali', ex.cross.marked, ex.cross.total) +
+          meterHtml('Rialzati', ex.cross.raised, ex.cross.total) +
+          meterHtml('Illuminati', ex.cross.lit, ex.cross.total) +
+          meterHtml('Semaforizzati', ex.cross.signals, ex.cross.total)
+        : statsPendingHtml();
+      html += `</section>`;
+
+      const tree = (t, f) => isNodeFeature(f) && t.natural === 'tree';
+      const parkingAreas = osmGroupFeatures.parcheggi
+        ? osmGroupFeatures.parcheggi.filter(f => (f.properties || {}).amenity === 'parking') : null;
+      const postiAuto = parkingAreas
+        ? parkingAreas.reduce((n, f) => n + (parseInt((f.properties || {}).capacity, 10) || 0), 0) : null;
+      const furniture = [
+        ['octagon-alert', 'Segnali stradali', countInGroup('segnali', (t, f) => isNodeFeature(f) && (t.traffic_sign || t.highway === 'stop' || t.highway === 'give_way'))],
+        ['circle-dot', 'Specchi stradali', countInGroup('specchi')],
+        ['train-front', 'Passaggi a livello', countInGroup('passaggi_livello')],
+        ['lightbulb', 'Lampioni', countInGroup('lampioni')],
+        ['bus', 'Fermate bus', countInGroup('fermate_bus', (t, f) => isNodeFeature(f))],
+        ['square-parking', 'Aree di parcheggio', parkingAreas ? parkingAreas.length : null],
+        ['car', 'Posti auto dichiarati nelle aree', postiAuto],
+        ['rectangle-horizontal', 'Stalli di sosta mappati', countInGroup('parcheggi', t => t.amenity === 'parking_space')],
+        ['ticket', 'Parcometri', countInGroup('parcometri')],
+        ['bike', 'Parcheggi bici', countInGroup('parcheggi_bici')],
+        ['armchair', 'Panchine', countInGroup('panchine')],
+        ['trash-2', 'Cestini', countInGroup('cestini')],
+        ['droplet', "Fontanelle d'acqua", countInGroup('fontanelle')],
+        ['circle', 'Tombini', countInGroup('tombini')],
+        ['trees', 'Alberi', countInGroup('alberi', tree)]
+      ];
+      html += `<section class="stats-section"><h3>Segnaletica, sosta e arredo urbano</h3>` +
+        `<p class="ss-sub">Elementi mappati nel territorio comunale.</p><table class="stats-table"><tbody>` +
+        furniture.map(([icon, label, n]) =>
+          `<tr><td><i data-lucide="${icon}" width="14" height="14" class="st-icon"></i>${label}</td>` +
+          `<td>${n != null ? fmtInt(n) : '—'}</td></tr>`).join('') +
+        `</tbody></table></section>`;
+
+      html += `<div class="stats-note">Le statistiche riflettono quanto è mappato su OpenStreetMap: elementi non ancora ` +
+        `mappati o con dati incompleti danno valori più bassi di quelli reali. I km contano solo i tratti dentro il confine comunale.</div>`;
+
+      document.getElementById('statsBody').innerHTML = html;
+      lucide.createIcons();
+    }
+
+    function refreshStatsExtra() {
+      if (statsExtraFeatures) return;
+      statsExtraFailed = false;
+      renderStats();
+      loadStatsExtra().then(renderStats, renderStats);
+    }
+    function openStats() {
+      document.getElementById('statsOverlay').classList.add('active');
+      renderStats();
+      if (!statsExtraPromise) refreshStatsExtra();
+    }
+    document.getElementById('statsBody').addEventListener('click', (e) => {
+      if (e.target.closest('[data-stats-retry]')) refreshStatsExtra();
+    });
+    function closeStats() {
+      document.getElementById('statsOverlay').classList.remove('active');
+      document.getElementById('statsTooltip').style.display = 'none';
+    }
+    document.getElementById('statsBtn').addEventListener('click', openStats);
+    document.getElementById('closeStats').addEventListener('click', closeStats);
+    document.getElementById('statsOverlay').addEventListener('click', (e) => {
+      if (e.target.id === 'statsOverlay') closeStats();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.getElementById('statsOverlay').classList.contains('active')) closeStats();
+    });
+    (() => {
+      const body = document.getElementById('statsBody');
+      const tip = document.getElementById('statsTooltip');
+      const place = (x, y) => {
+        tip.style.display = 'block';
+        const w = tip.offsetWidth, h = tip.offsetHeight;
+        tip.style.left = `${Math.min(x + 14, window.innerWidth - w - 8)}px`;
+        tip.style.top = `${Math.min(y + 16, window.innerHeight - h - 8)}px`;
+      };
+      const hide = () => { tip.style.display = 'none'; };
+      body.addEventListener('mousemove', (e) => {
+        const row = e.target.closest('.hbar-row');
+        if (!row) return hide();
+        tip.textContent = row.dataset.tip;
+        place(e.clientX, e.clientY);
+      });
+      body.addEventListener('mouseleave', hide);
+      body.addEventListener('scroll', hide);
+      body.addEventListener('focusin', (e) => {
+        const row = e.target.closest('.hbar-row');
+        if (!row) return;
+        const r = row.getBoundingClientRect();
+        tip.textContent = row.dataset.tip;
+        place(r.left + r.width / 2, r.bottom - 8);
+      });
+      body.addEventListener('focusout', hide);
+    })();
 
     // ─── Layer Traffico: incidenti/lavori/code da TomTom Traffic API ───
     // Proxato dal backend (mai chiamato direttamente dal browser): la
