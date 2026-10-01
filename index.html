@@ -482,7 +482,11 @@
 .meter-head .mh-label { font-size: 12px; font-weight: 600; color: var(--text-main); }
 .meter-head .mh-value { font-size: 11.5px; color: var(--text-light); white-space: nowrap; }
 .meter-track { height: 8px; border-radius: 999px; background: var(--primary-light); overflow: hidden; }
+.meter-track { display: flex; }
 .meter-fill { height: 100%; background: var(--primary); border-radius: 999px; }
+.meter-missing { height: 100%; margin-left: auto; background: repeating-linear-gradient(45deg, #cbd5e1 0 3px, #e2e8f0 3px 6px); }
+.meter-foot { font-size: 11px; color: #b45309; margin-top: 3px; }
+.stats-missing { font-size: 11.5px; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 6px 9px; margin: 6px 0 10px; }
 .stats-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .stats-table td { padding: 7px 4px; border-bottom: 1px solid #f1f5f9; color: var(--text-main); }
 .stats-table td:last-child { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -1762,6 +1766,20 @@
     </div>
   </div>
 
+  <!-- Unica sezione per i layer Ciclabili e Pedonali: vedi updateActiveLegends -->
+  <div class="legend-section" data-layer="lyr-paths">
+    <div class="legend-section-title">Percorsi ciclabili e pedonali</div>
+    <div class="legend-list">
+      <div class="legend-item"><span class="legend-line" style="border-color:#06b6d4"></span><span>Ciclabile</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#22c55e"></span><span>Pedonale</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#d946ef"></span><span>Ciclopedonale</span></div>
+      <div class="legend-item"><span class="legend-line" style="border-color:#a16207"></span><span>Sentiero</span></div>
+    </div>
+    <div class="legend-note">
+      Ciclopedonali e sentieri compaiono con l'uno o l'altro layer attivo. I ciclopedonali prendono il colore del layer attivo, e il fucsia quando li attivi entrambi.
+    </div>
+  </div>
+
   <div class="legend-section" data-layer="lyr-crossing">
     <div class="legend-section-title">Attraversamenti</div>
     <div class="legend-list">
@@ -2279,15 +2297,16 @@
     // ─── Legenda dinamica: un solo pannello richiudibile, con una sezione
     // per ogni layer attivo che possiede una legenda colori (clonata dal
     // <template id="legendTemplates">, non duplicata qui in JS). ───
-    const LEGEND_LAYER_IDS = ['lyr-traffic', 'lyr-trafficflow', 'lyr-crossing', 'lyr-maxspeed', 'lyr-hgv', 'lyr-strade_ref', 'lyr-fontane', 'lyr-parking'];
+    // 'lyr-paths' non è un checkbox: è attivo se lo è Ciclabili o Pedonali.
+    const LEGEND_LAYER_IDS = ['lyr-traffic', 'lyr-trafficflow', 'lyr-paths', 'lyr-crossing', 'lyr-maxspeed', 'lyr-hgv', 'lyr-strade_ref', 'lyr-fontane', 'lyr-parking'];
     function updateActiveLegends() {
       const body = document.getElementById('activeLegendsBody');
       const templateContent = document.getElementById('legendTemplates').content;
       body.innerHTML = '';
       let anyActive = false;
       LEGEND_LAYER_IDS.forEach(id => {
-        const cb = document.getElementById(id);
-        if (!cb || !cb.checked) return;
+        const isOn = cid => { const el = document.getElementById(cid); return !!(el && el.checked); };
+        if (id === 'lyr-paths' ? !(isOn('lyr-cycleway') || isOn('lyr-pedestrian')) : !isOn(id)) return;
         const section = templateContent.querySelector(`[data-layer="${id}"]`);
         if (!section) return;
         body.appendChild(section.cloneNode(true));
@@ -2295,7 +2314,7 @@
       });
       document.getElementById('activeLegendsPanel').classList.toggle('show', anyActive);
     }
-    LEGEND_LAYER_IDS.forEach(id => {
+    [...LEGEND_LAYER_IDS, 'lyr-cycleway', 'lyr-pedestrian'].forEach(id => {
       const cb = document.getElementById(id);
       if (cb) cb.addEventListener('change', updateActiveLegends);
     });
@@ -2314,6 +2333,9 @@
     // uno solo, un terzo colore quando sono attivi ENTRAMBI insieme —
     // ricalcolato ogni volta che uno dei due checkbox cambia stato.
     const SHARED_PATH_COLOR = '#d946ef';
+    // Sentieri (highway=path): stesso layer dei ciclopedonali (visibili con
+    // Ciclabili O Pedonali attivo) ma sempre con un colore proprio.
+    const TRAIL_COLOR = '#a16207';
     let sharedPathEntries = []; // { styleObj, geoLayer, groupName } — voci rimosse/sostituite per gruppo da renderBatch, non azzerato in blocco
     function sharedPathColor() {
       const cycleOn = document.getElementById('lyr-cycleway').checked;
@@ -2324,7 +2346,8 @@
     function updateSharedPathLayers() {
       const visible = document.getElementById('lyr-cycleway').checked || document.getElementById('lyr-pedestrian').checked;
       const color = sharedPathColor();
-      sharedPathEntries.forEach(({ styleObj, geoLayer }) => {
+      sharedPathEntries.forEach(({ styleObj, geoLayer, fixedColor }) => {
+        if (fixedColor) return;
         // Si muta l'oggetto stile invece di sostituirlo: wireLayerInteractions
         // tiene lo STESSO riferimento per il mouseout, quindi il colore
         // aggiornato si applica anche lì senza dover ri-agganciare gli eventi.
@@ -3563,8 +3586,8 @@
         meta.label = 'Semaforo pedonale';
       }
       if ((type === 'cycleway' || type === 'pedestrian') && isSharedFootBike(tags)) {
-        meta.label = 'Ciclopedonale';
-        meta.bg = SHARED_PATH_COLOR;
+        meta.label = tags.highway === 'path' ? 'Sentiero' : 'Ciclopedonale';
+        meta.bg = tags.highway === 'path' ? TRAIL_COLOR : SHARED_PATH_COLOR;
       }
 
       document.getElementById('infoHeader').style.background = meta.bg;
@@ -4863,11 +4886,12 @@
             // Ciclopedonale: niente colore fisso, va nel layer dedicato con
             // uno stile ricalcolato da updateSharedPathLayers in base ai
             // checkbox Ciclabili/Pedonali attivi in quel momento.
-            const base = { color: sharedPathColor(), weight: 4, lineCap: 'round', opacity: .9 };
+            const isTrail = tags.highway === 'path';
+            const base = { color: isTrail ? TRAIL_COLOR : sharedPathColor(), weight: 4, lineCap: 'round', opacity: .9 };
             wireLayerInteractions(layer, feature, base, name);
             layer.setStyle(base);
             addTracked(layers.cyclopedonale, layer);
-            sharedPathEntries.push({ styleObj: base, geoLayer: layer, groupName });
+            sharedPathEntries.push({ styleObj: base, geoLayer: layer, groupName, fixedColor: isTrail });
           } else if (type !== 'default') {
             const base = { ...styleForTags(tags) };
             wireLayerInteractions(layer, feature, base, name);
@@ -5708,12 +5732,22 @@ setTimeout(() => {
           `<span class="hbar-value">${fmt(r.value)}</span></div></div>`;
       }).join('');
     }
-    function meterHtml(label, part, total, fmt = fmtInt) {
+    // missing (facoltativo): quanti elementi non hanno proprio il dato —
+    // mostrati a parte (tratteggio grigio a destra + nota), così non si
+    // confondono con quelli che hanno il dato ma negativo.
+    function meterHtml(label, part, total, fmt = fmtInt, missing = null) {
       const p = total ? Math.min(100, part / total * 100) : 0;
+      const pm = total && missing ? Math.min(100 - p, missing / total * 100) : 0;
       return `<div class="meter-row"><div class="meter-head"><span class="mh-label">${label}</span>` +
         `<span class="mh-value">${fmt(part)} su ${fmt(total)} · ${pctOf(part, total)}%</span></div>` +
         `<div class="meter-track" role="meter" aria-label="${label}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(p)}">` +
-        `<div class="meter-fill" style="width:${p.toFixed(2)}%"></div></div></div>`;
+        `<div class="meter-fill" style="width:${p.toFixed(2)}%"></div>` +
+        (pm ? `<div class="meter-missing" style="width:${pm.toFixed(2)}%"></div>` : '') + `</div>` +
+        (missing ? `<div class="meter-foot">Dato non indicato: ${fmt(missing)} su ${fmt(total)} (${pctOf(missing, total)}%)</div>` : '') +
+        `</div>`;
+    }
+    function missingNoteHtml(text) {
+      return `<div class="stats-missing">${text}</div>`;
     }
     function statsPendingHtml() {
       return statsExtraFailed
@@ -5725,7 +5759,7 @@ setTimeout(() => {
     function computeMobility() {
       const strade = osmGroupFeatures.strade;
       if (!strade) return null;
-      const m = { piste: 0, corsie: 0, ciclopedonali: 0, marciapiedi: 0, pedonali: 0 };
+      const m = { piste: 0, corsie: 0, ciclopedonali: 0, sentieri: 0, marciapiedi: 0, pedonali: 0 };
       const laneValues = ['lane', 'track', 'shared_lane', 'share_busway', 'opposite_lane', 'opposite_track'];
       strade.forEach(f => {
         if (!isLineFeature(f)) return;
@@ -5733,7 +5767,9 @@ setTimeout(() => {
         const type = getType(t);
         if (type !== 'cycleway' && type !== 'pedestrian') return;
         const km = kmInsideComune(f.geometry);
-        if (isSharedFootBike(t)) m.ciclopedonali += km;
+        // highway=path: sentieri multiuso, tenuti separati dai ciclopedonali veri
+        if (t.highway === 'path') m.sentieri += km;
+        else if (isSharedFootBike(t)) m.ciclopedonali += km;
         else if (type === 'cycleway') {
           if (t.highway === 'cycleway') m.piste += km;
           else if (laneValues.includes(t.cycleway)) m.corsie += km;
@@ -5775,7 +5811,8 @@ setTimeout(() => {
         }
       });
       const crossings = extra.filter(f => isNodeFeature(f) && (f.properties || {}).highway === 'crossing');
-      const cross = { total: crossings.length, marked: 0, raised: 0, lit: 0, signals: 0 };
+      const cross = { total: crossings.length, marked: 0, raised: 0, lit: 0, signals: 0,
+        noType: 0, noCalming: 0, noLit: 0 };
       crossings.forEach(f => {
         const t = f.properties;
         const [lon, lat] = f.geometry.coordinates;
@@ -5784,6 +5821,9 @@ setTimeout(() => {
         if (hasRaisedCrossingTags(t)) cross.raised++;
         if (t.lit === 'yes' || litCoords.has(`${lon.toFixed(7)},${lat.toFixed(7)}`)) cross.lit++;
         if (t.crossing === 'traffic_signals' || t['crossing:signals'] === 'yes') cross.signals++;
+        if (!t.crossing && !t['crossing:markings'] && !t.crossing_ref && !t['crossing:signals']) cross.noType++;
+        if (!t.traffic_calming && !hasRaisedCrossingTags(t)) cross.noCalming++;
+        if (!t.lit && !litCoords.has(`${lon.toFixed(7)},${lat.toFixed(7)}`)) cross.noLit++;
       });
       const calmingLabels = {
         bump: 'Dossi', hump: 'Dossi', mini_bumps: 'Dossi',
@@ -5821,13 +5861,17 @@ setTimeout(() => {
     function computeParking() {
       const fs = osmGroupFeatures.parcheggi;
       if (!fs) return null;
+      // Tipo di sosta solo dalle AREE (amenity=parking): gli stalli singoli
+      // non hanno il dato del costo.
       const posti = { free: 0, fee: 0, disc: 0, private: 0, unknown: 0 };
+      const aree = { free: 0, fee: 0, disc: 0, private: 0, unknown: 0 };
       let areas = 0, areasWithCapacity = 0;
       const special = {};
       fs.forEach(f => {
         const t = f.properties || {};
         if (t.amenity === 'parking') {
           areas++;
+          aree[parkingAreaCategory(t)]++;
           const cap = parseInt(t.capacity, 10);
           if (cap > 0) { areasWithCapacity++; posti[parkingAreaCategory(t)] += cap; }
         } else if (t.amenity === 'parking_space' && t.parking_space && t.parking_space !== 'normal') {
@@ -5835,7 +5879,7 @@ setTimeout(() => {
           special[name] = (special[name] || 0) + 1;
         }
       });
-      return { posti, areas, areasWithCapacity, special };
+      return { posti, aree, areas, areasWithCapacity, special };
     }
 
     function renderStats() {
@@ -5845,11 +5889,13 @@ setTimeout(() => {
       const semafori = countInGroup('semafori', (t, f) => isNodeFeature(f) && t.highway === 'traffic_signals');
       const cicloKm = mob ? mob.piste + mob.corsie + mob.ciclopedonali : null;
       const pedKm = mob ? mob.marciapiedi + mob.pedonali : null;
+      const sentKm = mob ? mob.sentieri : null;
 
       let html = `<div class="stats-kpis">` +
         statTileHtml('Rete stradale', ex ? fmtKm(ex.reteKm) : pending, 'km') +
         statTileHtml('Percorsi ciclabili', cicloKm != null ? fmtKm(cicloKm) : pending, 'km') +
         statTileHtml('Percorsi pedonali', pedKm != null ? fmtKm(pedKm) : pending, 'km') +
+        statTileHtml('Sentieri', sentKm != null ? fmtKm(sentKm) : pending, 'km') +
         statTileHtml('Attraversamenti', ex ? fmtInt(ex.cross.total) : pending, '') +
         statTileHtml('Semafori', semafori != null ? fmtInt(semafori) : pending, '') +
         `</div>`;
@@ -5858,7 +5904,8 @@ setTimeout(() => {
         `<p class="ss-sub">Km di strade carrabili per limite indicato su OpenStreetMap.</p>`;
       html += ex
         ? meterHtml('Rete con limite di velocità indicato', ex.withLimitKm, ex.reteKm, v => `${fmtKm(v)} km`) +
-          hbarChartHtml(ex.speedBands, v => `${fmtKm(v)} km`, ex.withLimitKm)
+          hbarChartHtml([...ex.speedBands, { label: 'Limite non indicato', value: ex.reteKm - ex.withLimitKm, muted: true }],
+            v => `${fmtKm(v)} km`, ex.reteKm)
         : statsPendingHtml();
       html += `</section>`;
 
@@ -5876,25 +5923,31 @@ setTimeout(() => {
       html += `</section>`;
 
       html += `<section class="stats-section"><h3>Mobilità ciclabile e pedonale</h3>` +
-        `<p class="ss-sub">Km di percorsi. I marciapiedi contano solo se mappati come percorso separato dalla strada.</p>`;
+        `<p class="ss-sub">Km di percorsi. I marciapiedi contano solo se mappati come percorso separato dalla strada. ` +
+        `I sentieri (highway=path) sono una categoria a sé, né ciclabile né pedonale.</p>`;
       html += mob
         ? hbarChartHtml([
             { label: 'Piste ciclabili', value: mob.piste },
             { label: 'Corsie ciclabili su strada', value: mob.corsie },
             { label: 'Percorsi ciclopedonali', value: mob.ciclopedonali },
+            { label: 'Sentieri', value: mob.sentieri },
             { label: 'Marciapiedi', value: mob.marciapiedi },
             { label: 'Altri percorsi pedonali', value: mob.pedonali }
-          ], v => `${fmtKm(v)} km`, cicloKm + pedKm)
+          ], v => `${fmtKm(v)} km`, cicloKm + pedKm + sentKm) +
+          `<p class="ss-sub" style="margin-top:12px">Ripartizione sul totale dei percorsi.</p>` +
+          meterHtml('Ciclabili', cicloKm, cicloKm + pedKm + sentKm, v => `${fmtKm(v)} km`) +
+          meterHtml('Pedonali', pedKm, cicloKm + pedKm + sentKm, v => `${fmtKm(v)} km`) +
+          meterHtml('Sentieri', sentKm, cicloKm + pedKm + sentKm, v => `${fmtKm(v)} km`)
         : `<div class="stats-loading"><div class="spinner"></div>Dati della mappa in caricamento…</div>`;
       html += `</section>`;
 
       html += `<section class="stats-section"><h3>Attraversamenti pedonali</h3>` +
         `<p class="ss-sub">Quanti attraversamenti hanno ciascuna caratteristica, sul totale mappato.</p>`;
       html += ex
-        ? meterHtml('Con strisce pedonali', ex.cross.marked, ex.cross.total) +
-          meterHtml('Rialzati', ex.cross.raised, ex.cross.total) +
-          meterHtml('Illuminati', ex.cross.lit, ex.cross.total) +
-          meterHtml('Semaforizzati', ex.cross.signals, ex.cross.total)
+        ? meterHtml('Con strisce pedonali', ex.cross.marked, ex.cross.total, fmtInt, ex.cross.noType) +
+          meterHtml('Rialzati', ex.cross.raised, ex.cross.total, fmtInt, ex.cross.noCalming) +
+          meterHtml('Illuminati', ex.cross.lit, ex.cross.total, fmtInt, ex.cross.noLit) +
+          meterHtml('Semaforizzati', ex.cross.signals, ex.cross.total, fmtInt, ex.cross.noType)
         : statsPendingHtml();
       html += `</section>`;
 
@@ -5906,7 +5959,8 @@ setTimeout(() => {
       const emptyNote = text => `<div class="stats-loading">${text}</div>`;
 
       html += `<section class="stats-section"><h3>Dossi e rallentatori</h3>` +
-        `<p class="ss-sub">Elementi di moderazione del traffico mappati. Le piattaforme rialzate includono quelle sugli attraversamenti.</p>`;
+        `<p class="ss-sub">Elementi di moderazione del traffico mappati. Le piattaforme rialzate includono quelle sugli attraversamenti. ` +
+        `Fonte: nodi OSM con tag traffic_calming (chicane e restringimenti = chicane / choker).</p>`;
       html += ex
         ? (Object.keys(ex.calming).length
             ? hbarChartHtml(dictRows(ex.calming, ['Altro']), fmtInt,
@@ -5939,14 +5993,24 @@ setTimeout(() => {
       html += `<section class="stats-section"><h3>Sosta</h3>`;
       if (pk) {
         const totPosti = Object.values(pk.posti).reduce((a, b) => a + b, 0);
-        html += `<p class="ss-sub">Posti auto per tipo di sosta, nelle ${fmtInt(pk.areasWithCapacity)} aree ` +
+        const noCap = pk.areas - pk.areasWithCapacity;
+        html += `<p class="ss-sub">Aree di parcheggio per tipo di sosta. Calcolato solo sulle aree: gli stalli singoli non hanno il dato del costo.</p>` +
+          hbarChartHtml([
+            { label: 'Gratuita', value: pk.aree.free },
+            { label: 'A pagamento', value: pk.aree.fee },
+            { label: 'Disco orario / tempo limitato', value: pk.aree.disc },
+            { label: 'Privata / clienti / permesso', value: pk.aree.private },
+            { label: 'Tipo di sosta non indicato', value: pk.aree.unknown, muted: true }
+          ], v => `${fmtInt(v)} aree`, pk.areas) +
+          `<p class="ss-sub" style="margin-top:16px">Posti auto per tipo di sosta, nelle ${fmtInt(pk.areasWithCapacity)} aree ` +
           `(su ${fmtInt(pk.areas)}) che indicano il numero di posti.</p>` +
+          (noCap ? missingNoteHtml(`${fmtInt(noCap)} aree su ${fmtInt(pk.areas)} (${pctOf(noCap, pk.areas)}%) non indicano il numero di stalli: i loro posti non sono conteggiati.`) : '') +
           hbarChartHtml([
             { label: 'Gratuita', value: pk.posti.free },
             { label: 'A pagamento', value: pk.posti.fee },
             { label: 'Disco orario / tempo limitato', value: pk.posti.disc },
             { label: 'Privata / clienti / permesso', value: pk.posti.private },
-            { label: 'Non specificato', value: pk.posti.unknown, muted: true }
+            { label: 'Tipo di sosta non indicato', value: pk.posti.unknown, muted: true }
           ], v => `${fmtInt(v)} posti`, totPosti);
         if (Object.keys(pk.special).length) {
           html += `<p class="ss-sub" style="margin-top:16px">Stalli riservati disegnati singolarmente, per tipo.</p>` +
@@ -5960,12 +6024,23 @@ setTimeout(() => {
 
       const stops = osmGroupFeatures.fermate_bus
         ? osmGroupFeatures.fermate_bus.filter(isNodeFeature).map(f => f.properties || {}) : null;
+      // Linee: dal campo sintetico bus_routes (vedi buildBusRouteIndex).
+      const busLines = stops ? [...new Set(stops.flatMap(t => t.bus_routes ? t.bus_routes.split(', ') : []))]
+        .sort((a, b) => a.localeCompare(b, 'it', { numeric: true })) : null;
+      const stopsNoLine = stops ? stops.filter(t => !t.bus_routes).length : 0;
+      const busMeter = (label, key) => meterHtml(label, stops.filter(t => t[key] === 'yes').length, stops.length,
+        fmtInt, stops.filter(t => !t[key]).length);
       html += `<section class="stats-section"><h3>Fermate bus</h3>` +
-        `<p class="ss-sub">Dotazioni delle fermate, sul totale mappato.</p>`;
+        `<p class="ss-sub">Linee che servono il comune e dotazioni delle fermate, sul totale mappato.</p>`;
       html += stops
-        ? meterHtml('Con pensilina', stops.filter(t => t.shelter === 'yes').length, stops.length) +
-          meterHtml('Con panchina', stops.filter(t => t.bench === 'yes').length, stops.length) +
-          meterHtml('Accessibili in sedia a rotelle', stops.filter(t => t.wheelchair === 'yes').length, stops.length)
+        ? `<div class="stats-kpis">` +
+          statTileHtml('Fermate', fmtInt(stops.length), '') +
+          statTileHtml('Linee bus', fmtInt(busLines.length), '') + `</div>` +
+          (busLines.length ? `<p class="ss-sub">Linee: ${escapeHtml(busLines.join(', '))}</p>` : '') +
+          (stopsNoLine ? missingNoteHtml(`${fmtInt(stopsNoLine)} fermate su ${fmtInt(stops.length)} non risultano in nessuna linea mappata.`) : '') +
+          busMeter('Con pensilina', 'shelter') +
+          busMeter('Con panchina', 'bench') +
+          busMeter('Accessibili in sedia a rotelle', 'wheelchair')
         : `<div class="stats-loading"><div class="spinner"></div>Dati della mappa in caricamento…</div>`;
       html += `</section>`;
 
@@ -5974,6 +6049,7 @@ setTimeout(() => {
         ? osmGroupFeatures.parcheggi.filter(f => (f.properties || {}).amenity === 'parking') : null;
       const postiAuto = parkingAreas
         ? parkingAreas.reduce((n, f) => n + (parseInt((f.properties || {}).capacity, 10) || 0), 0) : null;
+      const areasNoCap = parkingAreas ? parkingAreas.filter(f => !(parseInt((f.properties || {}).capacity, 10) > 0)).length : 0;
       const furniture = [
         ['octagon-alert', 'Segnali stradali', countInGroup('segnali', (t, f) => isNodeFeature(f) && (t.traffic_sign || t.highway === 'stop' || t.highway === 'give_way'))],
         ['circle-dot', 'Specchi stradali', countInGroup('specchi')],
@@ -5981,7 +6057,7 @@ setTimeout(() => {
         ['lightbulb', 'Lampioni', countInGroup('lampioni')],
         ['bus', 'Fermate bus', countInGroup('fermate_bus', (t, f) => isNodeFeature(f))],
         ['square-parking', 'Aree di parcheggio', parkingAreas ? parkingAreas.length : null],
-        ['car', 'Posti auto dichiarati nelle aree', postiAuto],
+        ['car', 'Posti auto dichiarati nelle aree' + (areasNoCap ? ` (${fmtInt(areasNoCap)} aree senza dato)` : ''), postiAuto],
         ['rectangle-horizontal', 'Stalli di sosta mappati', countInGroup('parcheggi', t => t.amenity === 'parking_space')],
         ['ticket', 'Parcometri', countInGroup('parcometri')],
         ['bike', 'Parcheggi bici', countInGroup('parcheggi_bici')],
